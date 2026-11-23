@@ -1643,6 +1643,7 @@ try {
     # Machine God launcher next to claude-rs.exe (same directory, already on PATH): first-run companion once, then claude-rs
     $mgLines = @(
         '@echo off',
+        'if /i "%~1"=="interests" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0interest\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
         'if exist "%~dp0claude-rs-bridge-bun.exe" if exist "%~dp0firstrun\mg-firstrun.js" "%~dp0claude-rs-bridge-bun.exe" "%~dp0firstrun\mg-firstrun.js" %*',
         '"%~dp0claude-rs.exe" %*'
     )

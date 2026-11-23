@@ -295,14 +295,14 @@ function copyAgentSdkRuntime(destinationDir) {
 
 // Machine God additions: first-run companion (runs on the bundled Bun) and the optional ChatGPT bridge (Python, set up on demand).
 function copyMachineGodExtras(appRoot) {
-  for (const dir of ["firstrun", "bridge"]) {
+  for (const dir of ["firstrun", "bridge", "interest"]) {
     const source = path.join(repoRoot, dir);
     if (!fs.existsSync(source)) {
       throw new Error(`Missing ${dir}/ in the repository root; the install archive needs it.`);
     }
     copyDirectoryFiltered(source, path.join(appRoot, dir), (sourcePath) => {
       const name = path.basename(sourcePath);
-      return !name.endsWith(".test.js") && !name.endsWith(".pyc") && name !== "__pycache__" && name !== "node_modules";
+      return !name.endsWith(".test.js") && !name.endsWith(".test.ts") && !name.endsWith(".pyc") && name !== "__pycache__" && name !== "node_modules";
     });
   }
 }

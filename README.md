@@ -75,6 +75,22 @@ registers one MCP tool for you: `claude mcp add --scope user machine-god-chatgpt
 (Windows: `%LOCALAPPDATA%\machine-god`). Honest limits: it drives a web page, so a ChatGPT UI change can break it, and
 it was written on Linux; the macOS and Windows paths are untested.
 
+### Interests (optional)
+
+Machine God can keep its own interests and research them. Each topic has a weight, a novelty and a boredom value:
+good research makes a topic stronger, repeating it makes it boring for a while, untouched topics fade after about two
+weeks, and every round can discover new subtopics that become interests of their own. You can steer with like/dislike,
+and `history` shows how its interests changed. Nothing runs in the background; you start rounds yourself.
+
+```bash
+machine-god interests seed "deep sea ecology" "jazz harmony"
+machine-god interests run --rounds 3   # uses your `claude` login; --backend chatgpt uses the bridge
+machine-god interests list
+machine-god interests history
+```
+
+Details and the exact model: [interest/README.md](interest/README.md).
+
 ### Planned (not in v0.1.0 yet)
 
 - `/features` overview, `/retina` window, live token meter in the status line
