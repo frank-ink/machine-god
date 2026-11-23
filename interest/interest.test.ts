@@ -3,7 +3,8 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as M from "./model.ts";
-import { parseResult, dry } from "./research.ts";
+import { parseResult, dry, research, fuse, BACKENDS } from "./research.ts";
+import { writeFileSync } from "node:fs";
 import { Store, open } from "./store.ts";
 import { runRounds } from "./cli.ts";
 
@@ -146,4 +147,46 @@ describe("end to end (dry, 20 rounds)", () => {
     expect(await runRounds(s, "dry", 3, Math.random, tmpdir(), (l) => out.push(l))).toBe(1);
     expect(out[0]).toContain("seed"); expect(s.all().length).toBe(0);
   });
+});
+
+describe("fusion backends (mock HTTP servers, no real keys)", () => {
+  const answer = (reward: number, sub: string) => `A short note.\n{"reward": ${reward}, "subtopics": ["${sub}", "shared"]}`;
+  const servers: any[] = [];
+  const mock = (fn: (req: Request) => Response) => { const s = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: fn }); servers.push(s); return `http://127.0.0.1:${s.port}`; };
+  const setup = (connected: string[]) => {
+    const d = mkdtempSync(join(tmpdir(), "mg-int-fu-"));
+    writeFileSync(join(d, "ais.json"), JSON.stringify({ version: 1, connected: Object.fromEntries(connected.map((c) => [c, {}])) }));
+    writeFileSync(join(d, "keys.json"), JSON.stringify({ gemini: { key: "MOCKKEY-not-a-real-key-123" } }));
+    return d;
+  };
+  const env = (d: string, extra: Record<string, string>) => { for (const k of Object.keys(extra)) process.env[k] = extra[k]; process.env.MG_CONFIG_DIR = d; process.env.MG_DATA_DIR = d; };
+  test("backends list", () => expect(BACKENDS).toEqual(["claude", "chatgpt", "gemini", "ollama", "fusion", "dry"]));
+  test("gemini backend uses the stored key in a header, not the URL", async () => {
+    let seen: any = null;
+    const gem = mock((req) => { seen = { url: req.url, key: req.headers.get("x-goog-api-key") }; return Response.json({ candidates: [{ content: { parts: [{ text: answer(0.9, "g-sub") }] } }] }); });
+    env(setup(["gemini"]), { MG_FUSION_BASE_GEMINI: gem });
+    const r = await research("deep sea", "gemini");
+    expect(r.reward).toBe(0.9); expect(r.subtopics).toEqual(["g-sub", "shared"]);
+    expect(seen.key).toBe("MOCKKEY-not-a-real-key-123"); expect(seen.url).not.toContain("MOCKKEY");
+  });
+  test("ollama backend talks to the local server only", async () => {
+    const ol = mock((req) => req.url.endsWith("/api/tags") ? Response.json({ models: [{ name: "m1" }] }) : Response.json({ message: { content: answer(0.4, "o-sub") } }));
+    env(setup([]), { MG_OLLAMA_URL: ol, MG_LMSTUDIO_URL: "http://127.0.0.1:1" });
+    const r = await research("jazz", "ollama");
+    expect(r.reward).toBe(0.4); expect(r.subtopics[0]).toBe("o-sub");
+  });
+  test("fusion merges all connected AIs: mean reward, labelled notes, distinct subtopics; one failure is tolerated", async () => {
+    const gem = mock(() => Response.json({ candidates: [{ content: { parts: [{ text: answer(0.8, "g-sub") }] } }] }));
+    const ol = mock((req) => req.url.endsWith("/api/tags") ? Response.json({ models: [{ name: "m1" }] }) : Response.json({ message: { content: answer(0.4, "o-sub") } }));
+    env(setup(["gemini", "local", "grok"]), { MG_FUSION_BASE_GEMINI: gem, MG_OLLAMA_URL: ol, MG_LMSTUDIO_URL: "http://127.0.0.1:1" }); // grok has no key -> fails
+    const r = await fuse("p");
+    expect(r.reward).toBeCloseTo(0.6, 9);
+    expect(r.note).toContain("## gemini"); expect(r.note).toContain("## local");
+    expect(r.subtopics).toEqual(["g-sub", "shared", "o-sub"]);
+  });
+  test("fusion with nothing connected says so", async () => {
+    env(setup([]), {});
+    await expect(research("x", "fusion")).rejects.toThrow(/no AIs connected/);
+  });
+  test("cleanup", () => { for (const s of servers) s.stop(true); });
 });

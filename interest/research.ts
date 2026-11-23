@@ -1,7 +1,8 @@
-// Research backends: claude (local CLI), chatgpt (bridge), dry (deterministic fake).
+// Research backends: claude (local CLI), chatgpt (bridge), gemini / ollama (one connected AI via the fusion client), fusion (all connected AIs), dry (deterministic fake).
 import { tmpdir } from "node:os";
 export interface Round { note: string; reward: number; subtopics: string[] }
-export type Backend = "claude" | "chatgpt" | "dry";
+export type Backend = "claude" | "chatgpt" | "gemini" | "ollama" | "fusion" | "dry";
+export const BACKENDS: Backend[] = ["claude", "chatgpt", "gemini", "ollama", "fusion", "dry"];
 
 export const buildPrompt = (topic: string) =>
   `Write a short research note (max 250 words) on this topic: ${JSON.stringify(topic)}.\n` +
@@ -66,5 +67,26 @@ export async function research(topic: string, backend: Backend): Promise<Round> 
     if (!Bun.which("claude")) throw new Error("`claude` not on PATH");
     return parseResult(await claude(prompt));
   }
+  if (backend === "gemini" || backend === "ollama") {
+    const F = await import("../fusion/fusion.js"); // keys and connections are the ones set up with `machine-god ais`
+    return parseResult(await F.askProvider(backend === "gemini" ? "gemini" : "local", prompt, backend === "ollama" ? { kind: "ollama" } : {}));
+  }
+  if (backend === "fusion") return fuse(prompt);
   return parseResult(await (await import("./backend_chatgpt.ts")).send(prompt));
+}
+
+/** Ask every connected AI, parse each answer, merge: mean reward, labelled notes, up to 3 distinct subtopics. */
+export async function fuse(prompt: string): Promise<Round> {
+  const F = await import("../fusion/fusion.js");
+  const all: { id: string; ok: boolean; text?: string; error?: string }[] = await F.askAll(prompt);
+  if (!all.length) throw new Error("no AIs connected (machine-god ais)");
+  const good = all.filter((r) => r.ok).map((r) => ({ id: r.id, round: parseResult(r.text!) }));
+  if (!good.length) throw new Error(`all AIs failed: ${all.map((r) => `${r.id}: ${r.error}`).join("; ").slice(0, 200)}`);
+  const seen = new Set<string>(), subtopics: string[] = [];
+  for (const g of good) for (const t of g.round.subtopics) { const k = t.toLowerCase(); if (!seen.has(k) && subtopics.length < 3) { seen.add(k); subtopics.push(t); } }
+  return {
+    note: good.map((g) => `## ${g.id}\n${g.round.note}`).join("\n\n"),
+    reward: good.reduce((a, g) => a + g.round.reward, 0) / good.length,
+    subtopics,
+  };
 }

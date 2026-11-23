@@ -1006,10 +1006,15 @@ machine_god_launcher_contents() {
   printf "app='%s'\n" "$quoted_app"
   cat <<'MG_LAUNCHER_EOF'
 d="${app%/*}"
-if [ "${1:-}" = interests ] && [ -x "$d/claude-rs-bridge-bun" ]; then shift; exec "$d/claude-rs-bridge-bun" "$d/interest/cli.ts" "$@"; fi
+if [ -x "$d/claude-rs-bridge-bun" ]; then
+  case "${1:-}" in
+    interests) t=interest/cli.ts ;; mailbox) t=mailbox/mailbox.js ;; ais) t=fusion/ais.js ;; grid) t=firstrun/mg-github.js ;; *) t= ;;
+  esac
+  if [ -n "$t" ] && [ -f "$d/$t" ]; then shift; exec "$d/claude-rs-bridge-bun" "$d/$t" "$@"; fi
+fi
 st="${MG_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/machine-god}/firstrun.json"
 if [ -t 0 ] && [ -t 1 ] && [ -x "$d/claude-rs-bridge-bun" ] && [ -f "$d/firstrun/mg-firstrun.js" ]; then
-  if [ "${MG_FIRSTRUN_FORCE:-}" = 1 ] || ! { [ -f "$st" ] && grep -Eq '"status": "(done|declined)"' "$st" 2>/dev/null; }; then
+  if [ "${MG_FIRSTRUN_FORCE:-}" = 1 ] || ! { [ -f "$st" ] && grep -Eq '"status": "(done|declined)"' "$st" 2>/dev/null && ! grep -q '"version": 1,' "$st" 2>/dev/null; }; then
     "$d/claude-rs-bridge-bun" "$d/firstrun/mg-firstrun.js" "$@" || true
   fi
 fi

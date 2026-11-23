@@ -91,6 +91,37 @@ machine-god interests history
 
 Details and the exact model: [interest/README.md](interest/README.md).
 
+### Connect your AIs and GitHub (optional)
+
+After the ChatGPT question, the first-start companion asks two more things, once. Every question can be answered no and
+the step is skipped; users of an earlier version get only these new questions on their next start.
+Run them again any time with `machine-god grid` and `machine-god ais`.
+
+- **GitHub.** Do you have an account (if not: https://github.com/signup)? It checks `~/.ssh/id_ed25519.pub`; if missing it offers
+  `ssh-keygen -t ed25519 -C machine-god` (you type the passphrase yourself, Machine God never sees it), prints your *public* key,
+  points you to https://github.com/settings/ssh/new and tests `ssh -T git@github.com`. Then it sets up a **private** repo
+  `machine-god-grid` (with the `gh` CLI, if installed and logged in, it offers `gh repo create machine-god-grid --private`; otherwise it shows
+  https://github.com/new and the exact name) and clones it over SSH into the data dir. Layout: `control/` (requests from AIs),
+  `results/` (answers), `memory/` (shared notes), `README.md`. Windows uses the OpenSSH that ships with Windows 10/11.
+- **Your AIs.** Pick any of ChatGPT, Claude, Gemini, local Ollama / LM Studio, Copilot (GitHub Models), Grok, Perplexity; each is
+  connected only after another yes. API keys are typed hidden and stored only in `keys.json` in the data dir (mode 600, never printed,
+  logged or sent anywhere but that provider); each key is tested with one small request. Claude uses your own `claude /login`; local models are
+  found on 127.0.0.1 (`:11434`, `:1234`). All connected AIs become one MCP server for Claude Code, registered with
+  `claude mcp add --scope user machine-god-fusion -- <bun> <path>` (the exact command is printed if `claude` is missing):
+  tools `ask_<ai>` per AI and `ask_all` (asks all, answers labelled). `machine-god ais` lists, connects, disconnects and tests.
+  The interest organ can use `--backend gemini|ollama|fusion` too.
+
+**The security rule.** Other AIs can only **read**. `machine-god mailbox` is a foreground program you start yourself (no daemon, no
+autostart): it polls your GRID repo every 30 seconds. A short fixed list of read-only commands (`ls`, `cat` and `head` of files, `git status`,
+`git log`, `uname`, `df`) runs automatically, only inside folders you approved with `machine-god mailbox approve <dir>`. Everything else is
+shown in your terminal and runs only after you type `yes`; when there is no terminal, everything else is rejected. A deny list (such as
+`rm -rf /`, disk formatting, shutdown, anything touching SSH keys or your key file) is refused even if you say yes. Every request and decision is written to
+`mailbox.log` in the data dir. Keep the GRID repo private: anyone who can push to it can send requests (they still hit the rule above).
+
+Honest limits: tested on Linux with mock servers and local git repositories; real GitHub, real provider keys, ChatGPT's GitHub
+connector, macOS and Windows are not tested yet. The repo being private is checked only with one unauthenticated request to GitHub's public API
+(a public repo is flagged). Providers can change their APIs and model names (override a model with `MG_FUSION_MODEL_<AI>`).
+
 ### Planned (not in v0.1.0 yet)
 
 - `/features` overview, `/retina` window, live token meter in the status line

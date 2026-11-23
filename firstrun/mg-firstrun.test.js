@@ -266,3 +266,91 @@ describe("mcp command", () => {
     expect(mg.mcpAddCommand("/v/bin/python", "/i/bridge/mcp_chatgpt.py")).toEqual(["claude", "mcp", "add", "--scope", "user", "machine-god-chatgpt", "--", "/v/bin/python", "/i/bridge/mcp_chatgpt.py"]);
   });
 });
+
+describe("steps after ChatGPT: GitHub and AIs", () => {
+  const mk = (answers) => {
+    const d = tmp();
+    const lines = [];
+    const w = { write: (s) => lines.push(s) };
+    const env = { MG_CONFIG_DIR: d, MG_DATA_DIR: d, MG_FIRSTRUN_ANSWERS: answers };
+    return { d, lines, w, env, ask: mg.makeAsker({ env, output: w }), stateFile: path.join(d, "firstrun.json") };
+  };
+  test("asker: text and secret use the same scripted queue; the secret is never echoed", async () => {
+    const h = mk("yes,my text,SECRET-VALUE-123,no");
+    expect(await h.ask("q1")).toBe(true);
+    expect(await h.ask.text("q2")).toBe("my text");
+    expect(await h.ask.secret("q3")).toBe("SECRET-VALUE-123");
+    expect(await h.ask("q4")).toBe(false);
+    expect(h.lines.join("")).not.toContain("SECRET-VALUE-123");
+    expect(h.lines.join("")).toContain("(hidden)");
+  });
+  test("secret without a terminal and without a script is refused (empty), nothing is read", async () => {
+    const ask = mg.makeAsker({ env: {}, input: { isTTY: false }, output: { write() {} } });
+    expect(await ask.secret("k")).toBe("");
+  });
+  test("order: ChatGPT, then GitHub, then AIs; each asked once; state final with version 2 and steps", async () => {
+    const h = mk("no");
+    const order = [];
+    const rec = await mg.runFirstRun({
+      env: h.env, ask: h.ask, out: h.w, installDir: h.d, detect: () => ({ found: false }),
+      github: async () => (order.push("github"), { account: "yes", ssh: "ok", grid: "ready" }),
+      ais: async () => (order.push("ais"), { ais: { gemini: "connected" }, mcp: "registered" }),
+    });
+    expect(order).toEqual(["github", "ais"]);
+    expect(rec.steps).toEqual({ chatgpt: true, github: true, ais: true });
+    const st = mg.readState(h.stateFile);
+    expect(st).toMatchObject({ version: 2, status: "declined", chatgpt: "user-says-no", github: { grid: "ready" }, ais: { mcp: "registered" } });
+    expect(mg.stateIsFinal(st)).toBe(true);
+  });
+  test("state is written after each step as partial; an interrupted run resumes without repeating", async () => {
+    const h = mk("no");
+    const seen = [];
+    const boom = async () => {
+      seen.push(mg.readState(h.stateFile));
+      throw new Error("Ctrl-C");
+    };
+    // the AI step dies hard (not caught by the step wrapper because we kill the whole run via a rejected writeState-free path)
+    await mg.runFirstRun({ env: h.env, ask: h.ask, out: h.w, installDir: h.d, detect: () => ({ found: false }), github: async () => ({ account: "no", ssh: "skipped", grid: "skipped" }), ais: boom });
+    expect(seen[0]).toMatchObject({ status: "partial", outcome: "declined", steps: { chatgpt: true, github: true } });
+    // simulate a crash after GitHub: partial state on disk -> next start runs only the AI step
+    mg.writeState(h.stateFile, { status: "partial", outcome: "declined", chatgpt: "user-says-no", steps: { chatgpt: true, github: true }, github: { account: "yes" } });
+    const calls = [];
+    const st = mg.readState(h.stateFile);
+    expect(mg.stateIsFinal(st)).toBe(false);
+    expect(mg.skipReason({ argv: [], env: {}, stdinTTY: true, stdoutTTY: true, state: st })).toBe(null);
+    const h2 = mk("");
+    const rec = await mg.runFirstRun({ env: h.env, ask: h2.ask, out: h2.w, installDir: h.d, prior: st, detect: () => (calls.push("detect"), { found: false }), github: async () => calls.push("github"), ais: async () => (calls.push("ais"), { ais: {}, mcp: "none" }) });
+    expect(calls).toEqual(["ais"]);
+    expect(rec.status).toBe("declined");
+    expect(mg.readState(h.stateFile).status).toBe("declined");
+    expect(mg.readState(h.stateFile).github).toEqual({ account: "yes" });
+  });
+  test("a version 1 state (done before these steps existed) is offered only the new steps, once", async () => {
+    const h = mk("");
+    const v1 = { version: 1, status: "done", chatgpt: "detected", model: "used", bridge: "installed" };
+    fs.writeFileSync(h.stateFile, JSON.stringify(v1));
+    const st = mg.readState(h.stateFile);
+    expect(mg.stateIsFinal(st)).toBe(false);
+    expect(mg.skipReason({ argv: [], env: {}, stdinTTY: true, stdoutTTY: true, state: st })).toBe(null);
+    const calls = [];
+    const rec = await mg.runFirstRun({ env: h.env, ask: h.ask, out: h.w, installDir: h.d, prior: st, detect: () => (calls.push("detect"), { found: true }), github: async () => (calls.push("github"), { account: "no" }), ais: async () => (calls.push("ais"), { ais: {}, mcp: "none" }) });
+    expect(calls).toEqual(["github", "ais"]);
+    expect(rec).toMatchObject({ status: "done", chatgpt: "detected", bridge: "installed" });
+    const after = mg.readState(h.stateFile);
+    expect(after.version).toBe(2);
+    expect(mg.skipReason({ argv: [], env: {}, stdinTTY: true, stdoutTTY: true, state: after })).toBe("done");
+  });
+  test("a step that throws is recorded and the next step still runs", async () => {
+    const h = mk("no");
+    const rec = await mg.runFirstRun({ env: h.env, ask: h.ask, out: h.w, installDir: h.d, detect: () => ({ found: false }), github: async () => { throw new Error("git exploded"); }, ais: async () => ({ ais: {}, mcp: "none" }) });
+    expect(rec.github).toMatchObject({ grid: "failed", detail: "git exploded" });
+    expect(rec.steps.ais).toBe(true);
+  });
+  test("with real default steps and only 'no' answers nothing is installed, created or contacted", async () => {
+    const h = mk("no");
+    const before = fs.readdirSync(h.d);
+    await mg.runFirstRun({ env: { ...h.env, HOME: h.d }, ask: h.ask, out: h.w, installDir: h.d, detect: () => ({ found: false }) });
+    const added = fs.readdirSync(h.d).filter((x) => !before.includes(x));
+    expect(added).toEqual(["firstrun.json"]);
+  });
+});

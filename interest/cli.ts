@@ -3,7 +3,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { C, mulberry32, score, normKey, type Rng } from "./model.ts";
-import { research, type Backend } from "./research.ts";
+import { research, BACKENDS, type Backend } from "./research.ts";
 import { Store, dataDir, open } from "./store.ts";
 
 const f = (x: number) => x.toFixed(2);
@@ -62,7 +62,7 @@ export async function main(argv: string[]): Promise<number> {
     case "pick": console.log(why(s, rng)); return 0;
     case "run": {
       const b = (flag("--backend") ?? "claude") as Backend;
-      if (!["claude", "chatgpt", "dry"].includes(b)) { console.log("backend must be claude|chatgpt|dry"); return 1; }
+      if (!BACKENDS.includes(b)) { console.log(`backend must be ${BACKENDS.join("|")}`); return 1; }
       const n = Number(flag("--rounds") ?? 1);
       if (!Number.isInteger(n) || n < 1) { console.log("--rounds must be a positive integer"); return 1; }
       return runRounds(s, b, n, rng, dataDir(), console.log);
@@ -79,7 +79,7 @@ export async function main(argv: string[]): Promise<number> {
     }
     case "reset": if (!a.includes("--yes")) { console.log("this deletes all interests and history. re-run with: reset --yes"); return 1; } s.reset(); console.log("reset done"); return 0;
     default:
-      console.log("usage: machine-god interests <seed|list|pick|run|like|dislike|history|reset> ...\n  run [--backend claude|chatgpt|dry] [--rounds N]   history [N]   reset --yes"); return cmd ? 1 : 0;
+      console.log("usage: machine-god interests <seed|list|pick|run|like|dislike|history|reset> ...\n  run [--backend claude|chatgpt|gemini|ollama|fusion|dry] [--rounds N]   history [N]   reset --yes"); return cmd ? 1 : 0;
   }
 }
 

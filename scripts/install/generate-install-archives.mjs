@@ -293,9 +293,9 @@ function copyAgentSdkRuntime(destinationDir) {
   });
 }
 
-// Machine God additions: first-run companion (runs on the bundled Bun) and the optional ChatGPT bridge (Python, set up on demand).
+// Machine God additions: first-run companion (runs on the bundled Bun), the optional ChatGPT bridge (Python, set up on demand), interest organ, GitHub mailbox, AI fusion.
 function copyMachineGodExtras(appRoot) {
-  for (const dir of ["firstrun", "bridge", "interest"]) {
+  for (const dir of ["firstrun", "bridge", "interest", "mailbox", "fusion"]) {
     const source = path.join(repoRoot, dir);
     if (!fs.existsSync(source)) {
       throw new Error(`Missing ${dir}/ in the repository root; the install archive needs it.`);

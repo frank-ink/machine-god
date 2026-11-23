@@ -15,11 +15,12 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import net from "node:net";
-import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
+import { runGithubStep } from "./mg-github.js";
+import { runAisStep } from "../fusion/ais.js";
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 export const RELEASE_BASE = "https://github.com/frank-ink/machine-god/releases/download/models-v1";
 export const MODEL = {
   file: "Qwen3.5-0.8B-omega-organ-r4.Q8_0.gguf",
@@ -52,21 +53,8 @@ export const SYSTEM_PROMPT =
   "Plain English text only. No markdown, no lists, no emoji.";
 
 // ---------- paths and state ----------
-export function resolvePaths({ platform = process.platform, env = process.env, home = os.homedir() } = {}) {
-  let configDir;
-  let dataDir;
-  if (platform === "win32") {
-    configDir = path.win32.join(env.APPDATA || path.win32.join(home, "AppData", "Roaming"), "machine-god");
-    dataDir = path.win32.join(env.LOCALAPPDATA || path.win32.join(home, "AppData", "Local"), "machine-god");
-  } else {
-    configDir = path.join(env.XDG_CONFIG_HOME || path.join(home, ".config"), "machine-god");
-    dataDir = path.join(env.XDG_DATA_HOME || path.join(home, ".local", "share"), "machine-god");
-  }
-  if (env.MG_CONFIG_DIR) configDir = env.MG_CONFIG_DIR;
-  if (env.MG_DATA_DIR) dataDir = env.MG_DATA_DIR;
-  const j = platform === "win32" && !env.MG_CONFIG_DIR ? path.win32.join : path.join;
-  return { configDir, dataDir, stateFile: j(configDir, "firstrun.json") };
-}
+export { resolvePaths, makeAsker, isYes, homeDir } from "./mg-common.js";
+import { resolvePaths, makeAsker, isYes, homeDir, whichSync, run } from "./mg-common.js";
 
 export function readState(file) {
   try {
@@ -80,12 +68,13 @@ export function readState(file) {
 export function writeState(file, state) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp.${process.pid}`;
-  fs.writeFileSync(tmp, JSON.stringify({ version: STATE_VERSION, ...state, at: new Date().toISOString() }, null, 2) + "\n");
+  fs.writeFileSync(tmp, JSON.stringify({ ...state, version: STATE_VERSION, at: new Date().toISOString() }, null, 2) + "\n");
   fs.renameSync(tmp, file);
 }
 
 export function stateIsFinal(state) {
-  return !!state && (state.status === "done" || state.status === "declined");
+  // a state written by version 1 (before the GitHub and AI steps existed) is not final: the new steps are still to be offered once
+  return !!state && (state.status === "done" || state.status === "declined") && state.version !== 1;
 }
 
 const SKIP_ARGS = new Set(["--help", "-h", "--version", "-V", "-v"]);
@@ -151,31 +140,6 @@ export function detectChatGPT({ platform = process.platform, env = process.env, 
 }
 
 // ---------- questions ----------
-export function isYes(s) {
-  return /^\s*(y|yes|j|ja|ok|sure)\s*$/i.test(s || "");
-}
-
-export function makeAsker({ env = process.env, input = process.stdin, output = process.stdout } = {}) {
-  const scripted = env.MG_FIRSTRUN_ANSWERS ? env.MG_FIRSTRUN_ANSWERS.split(",").map((s) => s.trim()) : null;
-  let rl = null;
-  const ask = async (question) => {
-    output.write(question + " ");
-    if (scripted) {
-      const a = scripted.length ? scripted.shift() : "no";
-      output.write(`${a}\n`);
-      return isYes(a);
-    }
-    rl ||= readline.createInterface({ input, output, terminal: false });
-    const answer = await new Promise((resolve) => {
-      rl.once("line", resolve);
-      rl.once("close", () => resolve(""));
-    });
-    return isYes(answer);
-  };
-  ask.close = () => rl && rl.close();
-  return ask;
-}
-
 // ---------- download + verify ----------
 export function sha256File(file) {
   return new Promise((resolve, reject) => {
@@ -389,31 +353,6 @@ export async function makeGreeting({ port, fetchFn = fetch }) {
 const isWin = process.platform === "win32";
 const venvPython = (venv) => (isWin ? path.join(venv, "Scripts", "python.exe") : path.join(venv, "bin", "python"));
 
-function run(cmd, args, opts = {}) {
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { stdio: opts.stdio || [opts.input ? "pipe" : "ignore", "pipe", "pipe"], env: { ...process.env, ...(opts.env || {}) }, windowsHide: true, cwd: opts.cwd });
-    let out = "";
-    child.stdout?.on("data", (d) => (out += d));
-    child.stderr?.on("data", (d) => (out += d));
-    if (opts.input) child.stdin.end(opts.input);
-    child.on("error", (e) => resolve({ code: -1, out: String(e) }));
-    child.on("close", (code) => resolve({ code, out }));
-  });
-}
-
-function whichSync(name) {
-  const exts = isWin ? (process.env.PATHEXT || ".EXE;.CMD").split(";") : [""];
-  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
-    for (const ext of exts) {
-      const p = path.join(dir, name + ext);
-      try {
-        if (fs.statSync(p).isFile()) return p;
-      } catch {}
-    }
-  }
-  return null;
-}
-
 async function ensureUv(dataDir, log) {
   const onPath = whichSync("uv");
   if (onPath) return onPath;
@@ -537,12 +476,8 @@ export async function setupBridge({ installDir, configDir, dataDir, log = consol
 }
 
 // ---------- main flow ----------
-export async function runFirstRun({ env = process.env, out = process.stdout, ask, installDir, detect = detectChatGPT, platform = process.platform } = {}) {
-  const log = (s = "") => out.write(s + "\n");
-  const { configDir, dataDir, stateFile } = resolvePaths({ env, platform });
-  const record = { status: "done", chatgpt: "unknown", model: "skipped", bridge: "skipped" };
-  log("");
-  log("== Machine God first start ==");
+/** Step 1: ChatGPT detection, optional local greeting model and bridge. Mutates and returns record. */
+async function chatgptStep({ env, log, out, ask, installDir, detect, platform, record, stateFile, configDir, dataDir }) {
   const det = detect({ env, platform });
   let usesChatGPT = det.found;
   if (det.found) {
@@ -553,9 +488,8 @@ export async function runFirstRun({ env = process.env, out = process.stdout, ask
     record.chatgpt = usesChatGPT ? "user-says-yes" : "user-says-no";
   }
   if (!usesChatGPT) {
-    log("Nothing to set up. Machine God starts now. (To see this again: delete " + stateFile + ")");
+    log("No ChatGPT bridge needed.");
     record.status = "declined";
-    writeState(stateFile, record);
     return record;
   }
 
@@ -600,7 +534,60 @@ export async function runFirstRun({ env = process.env, out = process.stdout, ask
     log("No bridge. You can run this again anytime: delete " + stateFile);
     record.status = "declined";
   }
-  writeState(stateFile, record);
+  return record;
+}
+
+/**
+ * Companion flow: 1. ChatGPT  2. GitHub (account, SSH, private GRID repo)  3. which AIs you use (fusion).
+ * Each step is asked once and every question can be answered no. State is written after each step (status "partial", the
+ * real outcome in `outcome`), so a Ctrl-C never repeats what was already answered; the last write sets the final status.
+ * `prior` = an earlier state: a version 1 state (written before the GitHub and AI steps existed) skips step 1, a partial one skips what it finished.
+ * Injectable: detect, github, ais.
+ */
+export async function runFirstRun({ env = process.env, out = process.stdout, ask, installDir, detect = detectChatGPT, platform = process.platform, github = runGithubStep, ais = runAisStep, prior = null } = {}) {
+  const log = (s = "") => out.write(s + "\n");
+  const { configDir, dataDir, stateFile } = resolvePaths({ env, platform });
+  const record = prior
+    ? { ...prior, steps: { ...(prior.steps || {}), ...(prior.version === 1 || prior.version === undefined ? { chatgpt: true } : {}) } }
+    : { status: "done", chatgpt: "unknown", model: "skipped", bridge: "skipped", steps: {} };
+  if (prior && prior.status === "partial") record.status = prior.outcome || "done";
+  delete record.outcome;
+  const save = (final) => writeState(stateFile, final ? record : { ...record, status: "partial", outcome: record.status });
+  log("");
+  log(prior ? "== Machine God: new in this version ==" : "== Machine God first start ==");
+  if (!record.steps.chatgpt) {
+    await chatgptStep({ env, log, out, ask, installDir, detect, platform, record, stateFile, configDir, dataDir });
+    record.steps.chatgpt = true;
+    save(false);
+  }
+  const text = ask.text || (async () => "");
+  const ctxBase = { ask, text, log, env, platform, paths: { configDir, dataDir, stateFile } };
+  if (!record.steps.github) {
+    try {
+      record.github = await github({ ...ctxBase });
+    } catch (e) {
+      record.github = { account: "unknown", grid: "failed", detail: String(e.message || e).slice(0, 160) };
+      log(`  GitHub step stopped: ${record.github.detail}`);
+    }
+    record.steps.github = true;
+    save(false);
+  }
+  if (!record.steps.ais) {
+    try {
+      record.ais = await ais({
+        ...ctxBase, secret: ask.secret || (async () => ""),
+        installDir,
+        setupBridge: () => setupBridge({ installDir, configDir, dataDir, log }),
+      });
+    } catch (e) {
+      record.ais = { ais: {}, mcp: "none", detail: String(e.message || e).slice(0, 160) };
+      log(`  AI step stopped: ${record.ais.detail}`);
+    }
+    record.steps.ais = true;
+  }
+  log("");
+  log("Done. Later: `machine-god ais`, `machine-god grid`, `machine-god mailbox`, `machine-god interests`. To see this walkthrough again: delete " + stateFile);
+  save(true);
   return record;
 }
 
@@ -612,7 +599,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   const ask = makeAsker({ env });
   try {
     const installDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-    await runFirstRun({ env, ask, installDir });
+    await runFirstRun({ env, ask, installDir, prior: stateIsFinal(state) ? null : state });
   } catch (e) {
     process.stderr.write(`machine-god first run skipped: ${String(e.message || e).slice(0, 200)}\n`);
   } finally {

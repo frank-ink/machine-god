@@ -30,7 +30,7 @@ table (`ts, kind, topic, delta`); `history` shows it.
 seed <topic...>      add seeds (one quoted string per topic)
 list                 table sorted by score
 pick                 choose a topic and print the top 5 probabilities (read-only)
-run [--backend claude|chatgpt|dry] [--rounds N]
+run [--backend claude|chatgpt|gemini|ollama|fusion|dry] [--rounds N]
 like <topic> | dislike <topic>
 history [N]
 reset --yes
@@ -42,6 +42,9 @@ With no seeds, `run` prints how to seed. No topics are invented.
 
 - `claude` (default): runs `claude -p --output-format json "<prompt>"` using your own login. Requires `claude` on PATH.
 - `chatgpt`: `POST $MG_CHATGPT_BRIDGE_URL/chatgpt/send {prompt, timeout_s}` with `Authorization: Bearer $MG_CHATGPT_BRIDGE_TOKEN` (see `backend_chatgpt.ts`).
+- `gemini`: asks Gemini with the key you stored via `machine-god ais connect gemini` (key stays in `keys.json`, owner-only).
+- `ollama`: asks a model on your local Ollama (`127.0.0.1:11434`); nothing leaves the computer.
+- `fusion`: asks every AI you connected (`machine-god ais`), parses each answer and merges: mean reward, labelled notes, up to 3 distinct subtopics.
 - `dry`: deterministic fake for tests.
 
 The prompt contains only the topic. The model must end with `{"reward":0..1,"subtopics":[max 3]}`.

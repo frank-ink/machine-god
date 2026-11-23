@@ -107,6 +107,12 @@ function verifyExtractedApp(platformPackage, appRoot, archivePath, archiveName, 
     "interest/cli.ts",
     "interest/model.ts",
     "interest/store.ts",
+    "firstrun/mg-common.js",
+    "firstrun/mg-github.js",
+    "mailbox/mailbox.js",
+    "fusion/fusion.js",
+    "fusion/ais.js",
+    "fusion/mcp_fusion.js",
     "node_modules/@anthropic-ai/claude-agent-sdk/package.json",
     `${packagePath(expectedAgentSdkNativePackage(platformPackage))}/package.json`
   ];
