@@ -1,0 +1,455 @@
+import { messageMetadata } from "./presentation_metadata.js";
+import { nativeNotification } from "./notifications.js";
+import { getSessionMessages, importSessionToStore } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  SDKSessionInfo,
+  SessionMessage,
+  SessionStore,
+  SessionStoreEntry,
+} from "@anthropic-ai/claude-agent-sdk";
+import type {
+  SessionListEntry,
+  SessionUpdate,
+  TaskItem,
+  ToolCall,
+} from "../types.js";
+import { asRecordOrNull } from "./shared.js";
+import { messageCandidates, transcriptPresentation } from "./transcript_presentation.js";
+import { applyFieldsToBase, normalizeToolCallUpdateFields, toolAcceptsTaskLifecycle, toolNameFromMeta } from "./tool_calls.js";
+import { interruptedTaskPatch, taskLifecyclePatch, upsertTask } from "./tasks.js";
+import { linkTaskToolUse } from "./task_links.js";
+import type { SessionState } from "./session_lifecycle.js";
+import { taskSystemToolFields } from "./message_handlers.js";
+import {
+  applyToolNonExecutionMetadata,
+  agentTaskLaunchFields,
+  TOOL_RESULT_TYPES,
+  buildToolResultFields,
+  backgroundToolLaunchTaskIdFromResult,
+  createToolCall,
+  isToolSearchToolName,
+  isToolSearchToolResultType,
+  isToolUseBlockType,
+  parseToolNonExecutionMetadata,
+} from "./tooling.js";
+
+/** Load display history across compactions without changing the model's saved context. */
+export async function getSessionTranscriptMessages(
+  sessionId: string,
+  options: { dir?: string } = {},
+): Promise<SessionMessage[]> {
+  const entries: SessionStoreEntry[] = [];
+  const store: SessionStore = {
+    append: async (_key, batch) => { entries.push(...batch); },
+    load: async () => {
+      const uuids = new Set(entries.map(entry => entry.uuid));
+      return entries.map(entry => {
+        if (
+          entry.type !== "system" || entry.subtype !== "compact_boundary" ||
+          typeof entry.logicalParentUuid !== "string" || !uuids.has(entry.logicalParentUuid)
+        ) {
+          return entry;
+        }
+        // Preserved messages already occur in the original transcript chain.
+        // Reparenting them after the summary would create a cycle across this link.
+        const compactMetadata = { ...asRecordOrNull(entry.compactMetadata) };
+        delete compactMetadata.preservedMessages;
+        delete compactMetadata.preservedSegment;
+        return { ...entry, parentUuid: entry.logicalParentUuid, compactMetadata };
+      });
+    },
+  };
+  // Import streams the complete file, including history before the SDK's large-file cutoff.
+  await importSessionToStore(sessionId, store, { ...options, includeSubagents: false });
+  const messages = await getSessionMessages(sessionId, { ...options, includeSystemMessages: true, sessionStore: store });
+  const records = new Map(entries.map(entry => [entry.uuid, entry]));
+  return messages.map(message => {
+    const record = records.get(message.uuid);
+    const rawResult = record?.toolUseResult ?? record?.tool_use_result;
+    return rawResult === undefined ? message : { ...message, tool_use_result: rawResult };
+  });
+}
+
+function nonEmptyTrimmed(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/** A saved SDK reminder. A subagent transcript shows it; the chat has no place for one. */
+interface SystemReminderEntry {
+  type: "system_reminder";
+  text: string;
+}
+
+type HistoryEntry = SessionUpdate | SystemReminderEntry;
+
+function pushResumeTaskSystemUpdate(
+  updates: HistoryEntry[],
+  tasksById: Map<string, TaskItem>,
+  taskToolUseIds: Map<string, string>,
+  toolCalls: Map<string, ToolCall>,
+  msg: Record<string, unknown>,
+): boolean {
+  const subtype = nonEmptyTrimmed(msg.subtype);
+  if (
+    subtype !== "task_started" &&
+    subtype !== "task_progress" &&
+    subtype !== "task_updated" &&
+    subtype !== "task_notification"
+  ) {
+    return false;
+  }
+
+  const taskId = nonEmptyTrimmed(msg.task_id);
+  if (!taskId) {
+    return true;
+  }
+  const explicitToolUseId = nonEmptyTrimmed(msg.tool_use_id);
+  const toolUseId = explicitToolUseId ?? taskToolUseIds.get(taskId);
+  const tool = toolUseId ? toolCalls.get(toolUseId) : undefined;
+  // The record's own fields win over what the launching call implies.
+  const patch = taskLifecyclePatch(tasksById.get(taskId), subtype, { ...agentTaskLaunchFields(tool), ...msg }, toolUseId);
+  if (!patch) return true;
+  if (patch.resetExecution) taskToolUseIds.delete(taskId);
+  if (explicitToolUseId) taskToolUseIds.set(taskId, explicitToolUseId);
+  const task = upsertTask({ tasksById, taskOrder: [] }, patch);
+  updates.push({ type: "task_state_update", source: "task_lifecycle", tasks: [task], removed_task_ids: [], is_complete_snapshot: false });
+  if ((!patch.resetExecution || explicitToolUseId) && tool && toolUseId && toolAcceptsTaskLifecycle(tool)) {
+    const fields = taskSystemToolFields(tool, subtype, msg);
+    if (!normalizeToolCallUpdateFields(tool, fields ?? {}, subtype as "task_started" | "task_progress" | "task_updated" | "task_notification")) return true;
+    if (fields) {
+      applyFieldsToBase(tool, fields);
+      updates.push({ type: "tool_call_update", tool_call_update: { tool_call_id: toolUseId, fields } });
+    }
+  }
+
+  return true;
+}
+
+function pushResumeTextChunk(
+  updates: HistoryEntry[],
+  role: "user" | "assistant",
+  text: string,
+  sourceMessageUuid?: string,
+): void {
+  if (!text.trim()) {
+    return;
+  }
+  if (role === "assistant") {
+    updates.push({
+      type: "agent_message_chunk",
+      content: { type: "text", text },
+      ...(sourceMessageUuid ? { source_message_uuid: sourceMessageUuid } : {}),
+    });
+    return;
+  }
+  updates.push({
+    type: "user_message_chunk",
+    content: { type: "text", text },
+    ...(sourceMessageUuid ? { source_message_uuid: sourceMessageUuid } : {}),
+  });
+}
+
+function pushResumeToolUse(
+  updates: HistoryEntry[],
+  toolCalls: Map<string, ToolCall>,
+  hiddenToolUseIds: Set<string>,
+  block: Record<string, unknown>,
+  parentToolUseId: string | null,
+  sourceMessageUuid?: string,
+): void {
+  const toolUseId = typeof block.id === "string" ? block.id : "";
+  if (!toolUseId) {
+    return;
+  }
+  const name = typeof block.name === "string" ? block.name : "Tool";
+  const input = asRecordOrNull(block.input) ?? {};
+
+  if (isToolSearchToolName(name)) {
+    hiddenToolUseIds.add(toolUseId);
+    return;
+  }
+
+  const toolCall = createToolCall(toolUseId, name, input, parentToolUseId);
+  toolCall.status = "in_progress";
+  if (sourceMessageUuid) {
+    toolCall.source_message_uuid = sourceMessageUuid;
+  }
+  toolCalls.set(toolUseId, toolCall);
+  updates.push({ type: "tool_call", tool_call: structuredClone(toolCall) });
+}
+
+function pushResumeToolResult(
+  updates: HistoryEntry[],
+  toolCalls: Map<string, ToolCall>,
+  hiddenToolUseIds: Set<string>,
+  block: Record<string, unknown>,
+  nonExecutionByToolUseId: Map<
+    string,
+    import("../types.js").ToolNonExecutionMetadata
+  >,
+  sourceMessageUuid: string | undefined,
+  rawResult: unknown,
+  taskToolUseIds: Map<string, string>,
+  tasksById: Map<string, TaskItem>,
+): void {
+  const toolUseId =
+    typeof block.tool_use_id === "string" ? block.tool_use_id : "";
+  if (!toolUseId) {
+    return;
+  }
+  const blockType = typeof block.type === "string" ? block.type : "";
+  if (
+    isToolSearchToolResultType(blockType) ||
+    hiddenToolUseIds.has(toolUseId)
+  ) {
+    hiddenToolUseIds.add(toolUseId);
+    return;
+  }
+  const isError = Boolean(block.is_error);
+  const base = toolCalls.get(toolUseId);
+  const fields = buildToolResultFields(isError, block.content, base, rawResult ?? block);
+  applyToolNonExecutionMetadata(fields, nonExecutionByToolUseId.get(toolUseId));
+  if (!normalizeToolCallUpdateFields(base, fields, "result")) return;
+  const taskId = !isError ? backgroundToolLaunchTaskIdFromResult(
+    toolNameFromMeta(base?.meta) ?? "", rawResult ?? block, block.content,
+  ) : undefined;
+  if (taskId) {
+    const patch = taskLifecyclePatch(tasksById.get(taskId), "task_started", {
+      ...agentTaskLaunchFields(base), task_id: taskId, tool_use_id: toolUseId, description: base?.title, is_backgrounded: true, synthesized_launch: true,
+    }, toolUseId);
+    if (!patch) return;
+    taskToolUseIds.set(taskId, toolUseId);
+    updates.push({ type: "task_state_update", source: "task_lifecycle", tasks: [upsertTask({ tasksById, taskOrder: [] }, patch)], removed_task_ids: [], is_complete_snapshot: false });
+  }
+  updates.push({
+    type: "tool_call_update",
+    tool_call_update: {
+      tool_call_id: toolUseId,
+      ...(sourceMessageUuid ? { source_message_uuid: sourceMessageUuid } : {}),
+      fields,
+    },
+  });
+
+  if (!base) {
+    return;
+  }
+  applyFieldsToBase(base, fields);
+}
+
+function summaryFromSession(info: SDKSessionInfo): string {
+  return (
+    nonEmptyTrimmed(info.summary) ??
+    nonEmptyTrimmed(info.customTitle) ??
+    nonEmptyTrimmed(info.firstPrompt) ??
+    info.sessionId
+  );
+}
+
+export function mapSdkSessionInfo(info: SDKSessionInfo): SessionListEntry {
+  return {
+    session_id: info.sessionId,
+    summary: summaryFromSession(info),
+    last_modified_ms: info.lastModified,
+    file_size_bytes: info.fileSize ?? 0,
+    ...(nonEmptyTrimmed(info.cwd) ? { cwd: info.cwd?.trim() } : {}),
+    ...(nonEmptyTrimmed(info.gitBranch)
+      ? { git_branch: info.gitBranch?.trim() }
+      : {}),
+    ...(nonEmptyTrimmed(info.customTitle)
+      ? { custom_title: info.customTitle?.trim() }
+      : {}),
+    ...(nonEmptyTrimmed(info.firstPrompt)
+      ? { first_prompt: info.firstPrompt?.trim() }
+      : {}),
+  };
+}
+
+export function mapSdkSessions(
+  infos: SDKSessionInfo[],
+  limit = 50,
+): SessionListEntry[] {
+  const sorted = [...infos].sort((a, b) => b.lastModified - a.lastModified);
+  const entries: SessionListEntry[] = [];
+  const seen = new Set<string>();
+  for (const info of sorted) {
+    if (!info.sessionId || seen.has(info.sessionId)) {
+      continue;
+    }
+    seen.add(info.sessionId);
+    entries.push(mapSdkSessionInfo(info));
+    if (entries.length >= limit) {
+      break;
+    }
+  }
+  return entries;
+}
+
+/** Saved history as the chat's session updates. */
+export function mapSessionMessagesToUpdates(
+  messages: SessionMessage[],
+): SessionUpdate[] {
+  return mapSessionMessagesToEntries(messages).filter((entry): entry is SessionUpdate => entry.type !== "system_reminder");
+}
+
+/** Saved history as session updates and the SDK reminders between them, in order. */
+export function mapSessionMessagesToEntries(
+  messages: SessionMessage[],
+  subagentTranscript = false,
+): HistoryEntry[] {
+  const updates: HistoryEntry[] = [];
+  const toolCalls = new Map<string, ToolCall>();
+  const hiddenToolUseIds = new Set<string>();
+  const tasksById = new Map<string, TaskItem>();
+  const taskToolUseIds = new Map<string, string>();
+
+  for (const entry of messages) {
+    const record = asRecordOrNull(entry);
+    const presentation = transcriptPresentation(entry);
+    if (presentation.kind === "hidden") continue;
+    if (presentation.kind === "system_reminder") {
+      updates.push({ type: "system_reminder", text: presentation.text });
+      continue;
+    }
+    if (presentation.kind === "task_notification") {
+      const notification = presentation.notification;
+      if (notification) pushResumeTaskSystemUpdate(updates, tasksById, taskToolUseIds, toolCalls, notification);
+      continue;
+    }
+    if (presentation.kind === "command_output") {
+      if (presentation.text.trim()) updates.push({ type: "system_notice_update", severity: presentation.severity, message: presentation.text });
+      continue;
+    }
+    const fallbackRole = entry.type === "assistant" ? "assistant" : "user";
+    const entrySourceMessageUuid =
+      typeof entry.uuid === "string" ? entry.uuid : undefined;
+    const candidates = presentation.kind === "command"
+      ? [{ role: "user", content: presentation.text }]
+      : messageCandidates(entry.message);
+    if (entry.type === "system") {
+      for (const message of candidates) {
+        if (message.subtype === "notification") {
+          const notification = nativeNotification({ ...entry, ...message });
+          if (notification) updates.push({ type: "notification_update", notification, replay: true });
+          break;
+        }
+        if (
+          pushResumeTaskSystemUpdate(
+            updates,
+            tasksById,
+            taskToolUseIds,
+            toolCalls,
+            { ...record, ...message },
+          )
+        ) {
+          break;
+        }
+      }
+      continue;
+    }
+    for (const message of candidates) {
+      const sourceMessageUuid =
+        typeof message.uuid === "string"
+          ? message.uuid
+          : entrySourceMessageUuid;
+      const roleCandidate = message.role;
+      const role =
+        roleCandidate === "assistant" || roleCandidate === "user"
+          ? roleCandidate
+          : fallbackRole;
+      const producer = nonEmptyTrimmed(record?.agent_id) ?? nonEmptyTrimmed(message.agent_id);
+      const parentToolUseId =
+        typeof entry.parent_tool_use_id === "string"
+          ? entry.parent_tool_use_id
+          : typeof message.parent_tool_use_id === "string"
+            ? message.parent_tool_use_id
+            : producer ? tasksById.get(producer)?.source_tool_call_id ?? null : null;
+      const child = !subagentTranscript && Boolean(record?.agent_id || message.agent_id || parentToolUseId);
+
+      const content = typeof message.content === "string"
+        ? [{ type: "text", text: message.content }]
+        : Array.isArray(message.content) ? message.content : [];
+      const nonExecutionByToolUseId = parseToolNonExecutionMetadata(
+        Object.hasOwn(entry, "tool_result_meta")
+          ? (entry as unknown as Record<string, unknown>).tool_result_meta
+          : message.tool_result_meta,
+      );
+      for (const item of content) {
+        const block = asRecordOrNull(item);
+        if (!block) {
+          continue;
+        }
+        const blockType = typeof block.type === "string" ? block.type : "";
+        if (blockType === "thinking") {
+          continue;
+        }
+        if (blockType === "text" && typeof block.text === "string") {
+          if (!child) pushResumeTextChunk(updates, role, block.text, sourceMessageUuid);
+          continue;
+        }
+        if (isToolUseBlockType(blockType) && role === "assistant") {
+          pushResumeToolUse(
+            updates,
+            toolCalls,
+            hiddenToolUseIds,
+            block,
+            parentToolUseId,
+            sourceMessageUuid,
+          );
+          continue;
+        }
+        if (TOOL_RESULT_TYPES.has(blockType)) {
+          pushResumeToolResult(
+            updates,
+            toolCalls,
+            hiddenToolUseIds,
+            block,
+            nonExecutionByToolUseId,
+            sourceMessageUuid,
+            record?.tool_use_result ?? record?.toolUseResult,
+            taskToolUseIds,
+            tasksById,
+          );
+          continue;
+        }
+        if (blockType === "image" && !child) {
+          pushResumeTextChunk(updates, role, "[image]", sourceMessageUuid);
+        }
+      }
+    }
+    const metadata = record?.agent_id || record?.parent_tool_use_id ? undefined : messageMetadata({ ...entry, ...asRecordOrNull(entry.message) }, fallbackRole);
+    if (metadata) updates.push(metadata);
+  }
+
+  // History records starts and outcomes, never a live process. A task still
+  // running here lost its process when the CLI exited, so it is not rebuilt as
+  // running; no outcome is claimed for it.
+  const interrupted = [...tasksById.values()]
+    .filter((task) => task.status === "in_progress")
+    .map((task) => upsertTask({ tasksById, taskOrder: [] }, interruptedTaskPatch(task)));
+  if (interrupted.length > 0) updates.push({ type: "task_state_update", source: "task_lifecycle", tasks: interrupted, removed_task_ids: [], is_complete_snapshot: false });
+
+  return updates;
+}
+
+/** Restore runtime correlations from the same chronological updates shown by the UI. */
+export function restoreResumedToolState(session: SessionState, updates: SessionUpdate[]): void {
+  for (const update of updates) {
+    if (update.type === "tool_call") session.toolCalls.set(update.tool_call.tool_call_id, structuredClone(update.tool_call));
+    if (update.type === "tool_call_update") {
+      const base = session.toolCalls.get(update.tool_call_update.tool_call_id);
+      if (base) applyFieldsToBase(base, structuredClone(update.tool_call_update.fields), true);
+    }
+    if (update.type === "task_state_update") {
+      for (const task of update.tasks) upsertTask(session, structuredClone(task));
+      for (const id of update.removed_task_ids) session.tasksById.delete(id);
+    }
+  }
+  for (const task of session.tasksById.values()) {
+    const tool = task.source_tool_call_id ? session.toolCalls.get(task.source_tool_call_id) : undefined;
+    if (tool && (!task.run_id || task.source_tool_call_run_id === task.run_id) && !["completed", "failed", "killed"].includes(tool.status)) linkTaskToolUse(session, task.task_id, tool.tool_call_id);
+  }
+}

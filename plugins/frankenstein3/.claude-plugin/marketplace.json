@@ -1,0 +1,12 @@
+{
+  "name": "frankenstein3",
+  "description": "Frankenstein 3.0 plugin marketplace",
+  "owner": { "name": "Frankenstein 3.0" },
+  "plugins": [
+    {
+      "name": "frankenstein3",
+      "source": "./",
+      "description": "Frankenstein 3.0 digest + status plugin"
+    }
+  ]
+}

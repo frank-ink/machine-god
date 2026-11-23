@@ -1,0 +1,19 @@
+{
+  "name": "frankenstein3",
+  "version": "3.0.0",
+  "description": "Bundled FranKenstein 3.0 declarations for Agent Zero host integration. Hook declarations are not runtime health evidence.",
+  "hooks": [
+    {
+      "id": "session-start",
+      "event": "session_start"
+    },
+    {
+      "id": "pre-tool-use",
+      "event": "pre_tool_use"
+    },
+    {
+      "id": "post-tool-use",
+      "event": "post_tool_use"
+    }
+  ]
+}

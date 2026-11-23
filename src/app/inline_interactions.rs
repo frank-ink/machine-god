@@ -1,0 +1,284 @@
+// SPDX-License-Identifier: Apache-2.0
+
+use super::{App, FocusTarget, InvalidationLevel, MessageBlock, ToolCallInfo};
+use crossterm::event::{KeyCode, KeyEvent};
+
+pub(super) fn focused_interaction_id(app: &App) -> Option<&str> {
+    app.pending_interaction_ids.first().map(String::as_str)
+}
+
+fn interaction_id_is_valid(app: &App, tool_id: &str) -> bool {
+    let Some((mi, bi)) = app.lookup_tool_call(tool_id) else {
+        return false;
+    };
+    match app.transcript.messages.get(mi).and_then(|msg| msg.blocks.get(bi)) {
+        Some(MessageBlock::ToolCall(tc)) => {
+            tc.pending_permission.is_some() || tc.pending_question.is_some()
+        }
+        Some(MessageBlock::UserDialog(dialog)) => dialog.outcome.is_none(),
+        _ => false,
+    }
+}
+
+pub(super) fn focused_interaction(app: &App) -> Option<&ToolCallInfo> {
+    app.tool_call(focused_interaction_id(app)?)
+}
+
+pub(super) fn get_focused_interaction_tc(app: &mut App) -> Option<&mut ToolCallInfo> {
+    let tool_id = focused_interaction_id(app)?;
+    let (mi, bi) = app.lookup_tool_call(tool_id)?;
+    app.tool_call_at_mut(mi, bi)
+        .filter(|tc| tc.pending_permission.is_some() || tc.pending_question.is_some())
+}
+
+pub(super) fn focused_interaction_dirty_idx(app: &App) -> Option<(usize, usize)> {
+    focused_interaction_id(app).and_then(|tool_id| app.lookup_tool_call(tool_id))
+}
+
+pub(super) fn invalidate_if_changed(
+    app: &mut App,
+    dirty_idx: Option<(usize, usize)>,
+    changed: bool,
+) {
+    if changed && let Some((mi, _)) = dirty_idx {
+        app.sync_after_message_blocks_changed(mi);
+    }
+}
+
+pub(super) fn set_interaction_focused(app: &mut App, queue_index: usize, focused: bool) {
+    let Some(tool_id) = app.pending_interaction_ids.get(queue_index).cloned() else {
+        return;
+    };
+    let Some((mi, bi)) = app.lookup_tool_call(&tool_id) else {
+        return;
+    };
+    let mut invalidated = false;
+    if let Some(msg) = app.transcript.messages.get_mut(mi) {
+        match msg.blocks.get_mut(bi) {
+            Some(MessageBlock::ToolCall(tc)) => {
+                let tc = tc.as_mut();
+                if let Some(ref mut perm) = tc.pending_permission
+                    && perm.focused != focused
+                {
+                    perm.focused = focused;
+                    tc.invalidate_render_cache();
+                    invalidated = true;
+                }
+                if let Some(ref mut question) = tc.pending_question
+                    && question.focused != focused
+                {
+                    question.focused = focused;
+                    if focused {
+                        question.last_activity = super::input_event_now();
+                    }
+                    tc.invalidate_render_cache();
+                    invalidated = true;
+                }
+            }
+            Some(MessageBlock::UserDialog(dialog)) => {
+                if dialog.focused != focused {
+                    dialog.focused = focused;
+                    dialog.cache.invalidate();
+                    invalidated = true;
+                }
+            }
+            _ => {}
+        }
+    }
+    if invalidated {
+        app.invalidate_layout(InvalidationLevel::MessageChanged(mi));
+        app.request_chat_mutable_rebuild();
+    }
+}
+
+pub(super) fn focused_interaction_is_active(app: &App) -> bool {
+    let Some(tool_id) = focused_interaction_id(app) else {
+        return false;
+    };
+    let Some((mi, bi)) = app.lookup_tool_call(tool_id) else {
+        return false;
+    };
+    match app.transcript.messages.get(mi).and_then(|msg| msg.blocks.get(bi)) {
+        Some(MessageBlock::ToolCall(tc)) => {
+            tc.pending_permission.as_ref().is_some_and(|permission| permission.focused)
+                || tc.pending_question.as_ref().is_some_and(|question| question.focused)
+        }
+        Some(MessageBlock::UserDialog(dialog)) => dialog.focused && dialog.outcome.is_none(),
+        _ => false,
+    }
+}
+
+pub(crate) fn cancel_pending_interaction(app: &mut App, id: &str) {
+    let Some((mi, bi)) = app.lookup_tool_call(id) else {
+        return;
+    };
+    let Some(block) =
+        app.transcript.messages.get_mut(mi).and_then(|message| message.blocks.get_mut(bi))
+    else {
+        return;
+    };
+    match block {
+        MessageBlock::ToolCall(tool) => {
+            tool.pending_permission.take();
+            tool.pending_question.take();
+            tool.invalidate_render_cache();
+        }
+        MessageBlock::UserDialog(dialog) => {
+            dialog.response_tx.take();
+            dialog.resolve(crate::agent::model::RequestUserDialogOutcome::Cancelled);
+        }
+        _ => return,
+    }
+    app.pending_interaction_ids.retain(|pending| pending != id);
+    app.sync_after_message_blocks_changed(mi);
+    app.request_chat_mutable_rebuild();
+    focus_next_inline_interaction(app);
+}
+
+/// Whether the head of the interaction queue is a focused, unanswered user
+/// dialog. Used by key dispatch to route navigation/confirm to the dialog.
+pub(super) fn has_focused_user_dialog(app: &App) -> bool {
+    let Some(tool_id) = focused_interaction_id(app) else {
+        return false;
+    };
+    let Some((mi, bi)) = app.lookup_tool_call(tool_id) else {
+        return false;
+    };
+    matches!(
+        app.transcript.messages.get(mi).and_then(|msg| msg.blocks.get(bi)),
+        Some(MessageBlock::UserDialog(dialog)) if dialog.focused && dialog.outcome.is_none()
+    )
+}
+
+pub(super) fn clear_inline_interaction_focus(app: &mut App) {
+    let mut changed = false;
+    for idx in 0..app.pending_interaction_ids.len() {
+        let Some(tool_id) = app.pending_interaction_ids.get(idx).cloned() else {
+            continue;
+        };
+        let Some((mi, bi)) = app.lookup_tool_call(&tool_id) else {
+            continue;
+        };
+        if let Some(msg) = app.transcript.messages.get_mut(mi) {
+            let mut interaction_changed = false;
+            match msg.blocks.get_mut(bi) {
+                Some(MessageBlock::ToolCall(tc)) => {
+                    let tc = tc.as_mut();
+                    if let Some(ref mut perm) = tc.pending_permission
+                        && perm.focused
+                    {
+                        perm.focused = false;
+                        interaction_changed = true;
+                    }
+                    if let Some(ref mut question) = tc.pending_question
+                        && question.focused
+                    {
+                        question.focused = false;
+                        interaction_changed = true;
+                    }
+                    if interaction_changed {
+                        tc.invalidate_render_cache();
+                    }
+                }
+                Some(MessageBlock::UserDialog(dialog)) => {
+                    if dialog.focused {
+                        dialog.focused = false;
+                        dialog.cache.invalidate();
+                        interaction_changed = true;
+                    }
+                }
+                _ => {}
+            }
+            if interaction_changed {
+                app.sync_after_message_blocks_changed(mi);
+                app.request_chat_mutable_rebuild();
+                changed = true;
+            }
+        }
+    }
+
+    if changed || matches!(app.focus_owner(), super::FocusOwner::Permission) {
+        app.release_focus_target(FocusTarget::Permission);
+        app.normalize_focus_stack();
+    }
+}
+
+pub(super) fn focus_next_inline_interaction(app: &mut App) {
+    normalize_pending_interaction_queue(app);
+    clear_inline_interaction_focus(app);
+    set_interaction_focused(app, 0, true);
+    if app.pending_interaction_ids.is_empty() {
+        app.release_focus_target(FocusTarget::Permission);
+    } else {
+        app.claim_focus_target(FocusTarget::Permission);
+    }
+}
+
+pub(super) fn normalize_pending_interaction_queue(app: &mut App) {
+    let previous = std::mem::take(&mut app.pending_interaction_ids);
+    let previous_order = previous.clone();
+    let mut queue = Vec::with_capacity(previous.len());
+    for id in previous {
+        if interaction_id_is_valid(app, &id) {
+            queue.push(id);
+        }
+    }
+    let changed = queue != previous_order;
+    app.pending_interaction_ids = queue;
+
+    if app.pending_interaction_ids.is_empty() {
+        clear_inline_interaction_focus(app);
+        return;
+    }
+
+    if changed {
+        let permission_has_focus = matches!(app.focus_owner(), super::FocusOwner::Permission);
+        for idx in 0..app.pending_interaction_ids.len() {
+            set_interaction_focused(app, idx, permission_has_focus && idx == 0);
+        }
+    }
+    if matches!(app.focus_owner(), super::FocusOwner::Permission) {
+        app.claim_focus_target(FocusTarget::Permission);
+        app.normalize_focus_stack();
+    }
+}
+
+pub(super) fn pop_next_valid_interaction_id(app: &mut App) -> Option<String> {
+    normalize_pending_interaction_queue(app);
+    (!app.pending_interaction_ids.is_empty()).then(|| app.pending_interaction_ids.remove(0))
+}
+
+pub(super) fn handle_interaction_focus_cycle(
+    app: &mut App,
+    key: KeyEvent,
+    interaction_has_focus: bool,
+    blocks_vertical_navigation: bool,
+) -> Option<bool> {
+    if !interaction_has_focus {
+        return None;
+    }
+    if !matches!(key.code, KeyCode::Up | KeyCode::Down) {
+        return None;
+    }
+    if app.pending_interaction_ids.len() <= 1 {
+        if blocks_vertical_navigation {
+            return None;
+        }
+        return Some(true);
+    }
+
+    set_interaction_focused(app, 0, false);
+
+    if key.code == KeyCode::Down {
+        let first = app.pending_interaction_ids.remove(0);
+        app.pending_interaction_ids.push(first);
+    } else {
+        let Some(last) = app.pending_interaction_ids.pop() else {
+            return Some(false);
+        };
+        app.pending_interaction_ids.insert(0, last);
+    }
+
+    set_interaction_focused(app, 0, true);
+    Some(true)
+}

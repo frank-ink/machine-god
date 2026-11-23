@@ -1,0 +1,427 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      package: ${{ steps.filter.outputs.package }}
+      agent_sdk: ${{ steps.filter.outputs.agent_sdk }}
+      cargo_deps: ${{ steps.filter.outputs.cargo_deps }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --prune --depth=1 origin "${{ github.base_ref }}"
+            git diff --name-only "origin/${{ github.base_ref }}"...HEAD > changed-files.txt
+          elif [[ "${{ github.event.before }}" =~ ^0+$ ]]; then
+            git ls-tree -r --name-only HEAD > changed-files.txt
+          else
+            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" > changed-files.txt
+          fi
+
+          package=false
+          agent_sdk=false
+          cargo_deps=false
+          while IFS= read -r path; do
+            case "$path" in
+              Cargo.toml|Cargo.lock|deny.toml|package.json|package-lock.json|bin/*|agent-sdk/*|scripts/npm/*|scripts/runtime/*|scripts/shared/*|scripts/install/*|scripts/release/*|scripts/README.md|.github/workflows/pr.yml|.github/workflows/_agent-sdk.yml|.github/workflows/_release-build.yml|.github/workflows/release.yml|.github/workflows/nightly.yml)
+                package=true
+                ;;
+            esac
+            case "$path" in
+              package.json|package-lock.json|agent-sdk/*|tests/fixtures/sdk-*|.github/workflows/_agent-sdk.yml)
+                agent_sdk=true
+                ;;
+            esac
+            case "$path" in
+              Cargo.toml|Cargo.lock|deny.toml)
+                cargo_deps=true
+                ;;
+            esac
+          done < changed-files.txt
+
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+          echo "agent_sdk=$agent_sdk" >> "$GITHUB_OUTPUT"
+          echo "cargo_deps=$cargo_deps" >> "$GITHUB_OUTPUT"
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  test-ubuntu:
+    name: Test Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Run tests
+        run: cargo test --all-features
+
+  lockfile:
+    name: Lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - name: Check lockfile
+        run: cargo fetch --locked
+
+  terminal-tests:
+    name: Terminal tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Check fixture syntax
+        run: node --check tests/fixtures/fake-bridge.js
+      - name: Run native macOS keymap and terminal mode regressions
+        if: runner.os == 'macOS'
+        run: |
+          cargo test --locked --all-features --lib app::keymap::tests:: -- --nocapture --test-threads=1
+          cargo test --locked --all-features --lib configured_undo_and_redo_restore_textarea_history -- --nocapture --test-threads=1
+          cargo test --locked --all-features --lib terminal_event_outcome_carries_runtime_command -- --nocapture --test-threads=1
+          cargo test --locked --all-features --lib app::terminal_runtime::lifecycle_audit_tests:: -- --nocapture --test-threads=1
+      - name: Run real PTY regressions
+        run: cargo test --locked --all-features --test terminal_resize -- --test-threads=1
+      - name: Run system clipboard paste regression
+        shell: bash
+        run: |
+          # The test is ignored by default because it overwrites the system clipboard.
+          # The Linux runner has no display server, so the clipboard needs Xvfb there.
+          display=()
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            command -v xvfb-run >/dev/null || { sudo apt-get update && sudo apt-get install -y xvfb; }
+            display=(xvfb-run -a)
+          fi
+          "${display[@]}" cargo test --locked --all-features --test terminal_resize -- --ignored system_clipboard --test-threads=1
+
+  cargo-deny-policy:
+    name: Cargo Deny Policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        with:
+          rust-version: "1.88.0"
+          command: check bans licenses sources
+          arguments: --all-features
+
+  # Advisories also run weekly and non-blocking in dependency-monitor.yml so that newly
+  # disclosed vulnerabilities never block unrelated PRs. Here they gate only the PRs that
+  # actually change the dependency graph, which must not introduce a known advisory.
+  cargo-deny-advisories:
+    name: Cargo Deny Advisories
+    needs: [changes]
+    if: needs.changes.outputs.cargo_deps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        with:
+          rust-version: "1.88.0"
+          command: check advisories
+          arguments: --all-features
+
+  agent-sdk-check:
+    name: Agent SDK
+    needs: [changes]
+    if: needs.changes.outputs.agent_sdk == 'true'
+    uses: ./.github/workflows/_agent-sdk.yml
+    permissions:
+      contents: read
+
+  npm-package-layout:
+    name: npm Package Layout
+    needs: [changes]
+    if: needs.changes.outputs.package == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build agent-sdk bridge
+        run: npm --prefix agent-sdk run build
+
+      - name: Run npm packaging script tests
+        run: |
+          node scripts/runtime/stage-bun-runtime.mjs --check
+          node scripts/shared/verify-third-party-notices.mjs
+          node --test scripts/npm/npm-resolver.test.cjs scripts/npm/smoke-npm-package-install.test.mjs scripts/runtime/verify-staged-bun-runtimes.test.mjs scripts/npm/dry-run-npm-publish.test.mjs scripts/npm/publish-npm-platform-packages.test.mjs scripts/shared/deny-targets.test.mjs scripts/install/release-advisories.test.mjs
+
+      - name: Check public installer syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          shellcheck -s sh scripts/install/install.sh
+          pwsh -NoLogo -NoProfile -Command '
+            $errors = $null
+            [System.Management.Automation.PSParser]::Tokenize((Get-Content -Raw "scripts/install/install.ps1"), [ref]$errors) | Out-Null
+            if ($errors) {
+              $errors | ForEach-Object { Write-Error $_ }
+              exit 1
+            }
+          '
+          pwsh -NoLogo -NoProfile -File scripts/install/install.ps1 -Help
+          pwsh -NoLogo -NoProfile -File scripts/install/test-install-progress.ps1
+          pwsh -NoLogo -NoProfile -File scripts/install/test-install-version-guard.ps1
+          pwsh -NoLogo -NoProfile -File scripts/install/test-install-path.ps1
+
+      - name: Stage bundled Bun runtimes
+        run: node scripts/runtime/stage-bun-runtime.mjs --download
+
+      - name: Generate npm packages with mock native binaries
+        run: node scripts/npm/generate-npm-packages.mjs --mock-native-binary
+
+      - name: Verify npm package layout
+        run: node scripts/npm/verify-npm-packages.mjs
+
+      - name: Smoke-test packed npm install
+        run: node scripts/npm/smoke-npm-package-install.mjs
+
+      - name: Generate install archives with mock binaries
+        run: node scripts/install/generate-install-archives.mjs --mock-binaries
+
+      - name: Verify install archives
+        run: node scripts/install/verify-install-archives.mjs
+
+      - name: Test Unix installer behavior
+        run: node --test scripts/install/install-progress.test.mjs scripts/install/install-version-guard.test.mjs scripts/install/install-path.test.mjs
+
+      - name: Smoke-test install archive
+        run: node scripts/install/smoke-install-archive.mjs --platform linux-x64-gnu
+
+      - name: Upload package layout artifacts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: npm-package-layout
+          path: |
+            dist-npm/manifests/*.json
+            dist-pack/*.tgz
+            dist-install/manifests/*.json
+            dist-install/*.tar.gz
+            dist-install/*.zip
+          if-no-files-found: warn
+
+  issue-triage-checks:
+    name: Issue triage checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+
+      - name: Check triage and duplicate commands
+        run: node --test .github/scripts/issue-triage.test.cjs
+
+  duplicate-code:
+    name: Duplicate Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      JSCPD_WARNING_THRESHOLD: "1.0"
+      JSCPD_FAILURE_THRESHOLD: "2.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run duplicate code scan
+        run: npm run quality:duplicates
+
+      - name: Publish duplicate code threshold summary
+        if: always()
+        run: npm run quality:duplicates:summary
+
+      - name: Upload duplicate code report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: jscpd-report
+          path: jscpd-report/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: rust
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  pr-gate:
+    name: pr-gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - rustfmt
+      - clippy
+      - test-ubuntu
+      - terminal-tests
+      - lockfile
+      - cargo-deny-policy
+      - cargo-deny-advisories
+      - agent-sdk-check
+      - npm-package-layout
+      - issue-triage-checks
+      - duplicate-code
+      - codeql
+    steps:
+      - name: Verify required jobs
+        shell: bash
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          RUSTFMT: ${{ needs.rustfmt.result }}
+          CLIPPY: ${{ needs.clippy.result }}
+          TEST_UBUNTU: ${{ needs.test-ubuntu.result }}
+          TERMINAL_TESTS: ${{ needs.terminal-tests.result }}
+          LOCKFILE: ${{ needs.lockfile.result }}
+          CARGO_DENY_POLICY: ${{ needs.cargo-deny-policy.result }}
+          CARGO_DENY_ADVISORIES: ${{ needs.cargo-deny-advisories.result }}
+          AGENT_SDK: ${{ needs.agent-sdk-check.result }}
+          NPM_PACKAGE_LAYOUT: ${{ needs.npm-package-layout.result }}
+          ISSUE_TRIAGE_CHECKS: ${{ needs.issue-triage-checks.result }}
+          DUPLICATE_CODE: ${{ needs.duplicate-code.result }}
+          CODEQL: ${{ needs.codeql.result }}
+        run: |
+          set -euo pipefail
+
+          require_success() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" != "success" ]]; then
+              echo "::error::${name} finished with result: ${result}"
+              exit 1
+            fi
+          }
+
+          allow_success_or_skipped() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::${name} finished with result: ${result}"
+              exit 1
+            fi
+          }
+
+          require_success "changes" "$CHANGES"
+          require_success "rustfmt" "$RUSTFMT"
+          require_success "clippy" "$CLIPPY"
+          require_success "test-ubuntu" "$TEST_UBUNTU"
+          require_success "terminal-tests" "$TERMINAL_TESTS"
+          require_success "lockfile" "$LOCKFILE"
+          require_success "cargo-deny-policy" "$CARGO_DENY_POLICY"
+          require_success "issue-triage-checks" "$ISSUE_TRIAGE_CHECKS"
+          require_success "duplicate-code" "$DUPLICATE_CODE"
+          require_success "codeql" "$CODEQL"
+
+          allow_success_or_skipped "cargo-deny-advisories" "$CARGO_DENY_ADVISORIES"
+          allow_success_or_skipped "agent-sdk-check" "$AGENT_SDK"
+          allow_success_or_skipped "npm-package-layout" "$NPM_PACKAGE_LAYOUT"

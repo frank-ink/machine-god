@@ -1,0 +1,322 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! App creation and bridge connection lifecycle.
+//!
+//! Submodules:
+//! - `bridge_lifecycle`: spawning the bridge process, init handshake, event loop
+//! - `event_dispatch`: routing `BridgeEvent` envelopes to `ClientEvent` messages
+//! - `type_converters`: bridge wire types -> app model types
+
+mod bridge_lifecycle;
+mod event_dispatch;
+mod session_start;
+mod type_converters;
+
+use super::config::ConfigState;
+use super::plugins::PluginsState;
+use super::settings;
+use super::state::{
+    CacheMetrics, HistoryRetentionPolicy, HistoryRetentionStats, SdkInventoryState,
+    SessionPickerState, SessionRuntimeState, StartupState, Transcript,
+};
+use super::trust;
+use super::view::SurfaceMode;
+use super::{App, AppStatus, FocusManager};
+use super::{SurfaceDirtyState, TerminalLifecycleState};
+use crate::Cli;
+use crate::agent::client::AgentConnection;
+use crate::agent::events::ClientEvent;
+use crate::agent::wire::SessionLaunchSettings;
+use crate::error::AppError;
+use std::rc::Rc;
+use tokio::sync::{mpsc, oneshot};
+
+fn extract_app_error(err: &anyhow::Error) -> Option<AppError> {
+    err.chain().find_map(|cause| cause.downcast_ref::<AppError>().cloned())
+}
+
+struct StartConnectionParams {
+    event_tx: mpsc::Sender<ClientEvent>,
+    cwd_raw: String,
+    bridge_script: Option<std::path::PathBuf>,
+    launch: crate::StartupLaunch,
+    session_launch_settings: SessionLaunchSettings,
+}
+
+pub(crate) use session_start::{
+    SessionStartReason, begin_resume_session, begin_resume_session_at, begin_rewind,
+    start_new_session,
+};
+
+/// Four full UI drain batches absorb short bridge bursts while keeping retained
+/// event count bounded.
+pub(crate) const CLIENT_EVENT_QUEUE_CAPACITY: usize = super::READY_EVENT_DRAIN_ROUNDS * 4;
+
+/// Create the `App` struct in `Connecting` state and load shared settings state.
+///
+/// `session_config` is the resolved [`Cli::resolve_session_config`], kept for every session.
+pub fn create_app(cli: &Cli, session_config: crate::agent::wire::SessionConfig) -> App {
+    let loaded_settings = match settings::load_global_settings() {
+        Ok(loaded) => loaded,
+        Err(err) => {
+            tracing::warn!(
+                target: crate::logging::targets::APP_UPDATE,
+                event_name = "global_settings_load_failed",
+                message = "failed to load app settings",
+                outcome = "failure",
+                error_message = %err,
+            );
+            settings::LoadedAppSettings {
+                path: settings::global_settings_path(),
+                settings: settings::AppSettings::default(),
+            }
+        }
+    };
+    let mut app = create_app_with_settings(cli, loaded_settings);
+    app.startup = app.startup.with_session_config(session_config);
+    app
+}
+
+pub(super) fn create_app_with_settings(
+    cli: &Cli,
+    loaded_settings: settings::LoadedAppSettings,
+) -> App {
+    create_app_with_settings_and_home(cli, loaded_settings, None)
+}
+
+#[allow(clippy::too_many_lines)]
+pub(in crate::app) fn create_app_with_settings_and_home(
+    cli: &Cli,
+    loaded_settings: settings::LoadedAppSettings,
+    home_override: Option<std::path::PathBuf>,
+) -> App {
+    let cwd = cli.startup_cwd();
+    let (event_tx, event_rx) = mpsc::channel(CLIENT_EVENT_QUEUE_CAPACITY);
+    let (file_index_event_tx, file_index_event_rx) = super::file_index::event_channel();
+    let (update_prompt, update_install_failure) =
+        if super::update_check::update_check_disabled(cli.no_update_check) {
+            (None, None)
+        } else {
+            (
+                settings::update_prompt_candidate(
+                    &loaded_settings.settings,
+                    env!("CARGO_PKG_VERSION"),
+                    super::update_check::unix_now_secs().unwrap_or(0),
+                )
+                .map(super::UpdatePromptState::from),
+                settings::automatic_install_failure(
+                    &loaded_settings.settings,
+                    env!("CARGO_PKG_VERSION"),
+                )
+                .map(str::to_owned),
+            )
+        };
+
+    let home = home_override.clone().or_else(dirs::home_dir);
+    let cwd_display = super::cwd::display(&cwd, home.as_deref());
+    let mut app = App {
+        surface_mode: SurfaceMode::Chat,
+        terminal_lifecycle: TerminalLifecycleState::Bootstrapping,
+        terminal_child_cancel: None,
+        surface_dirty: SurfaceDirtyState::initial_chat(),
+        config: ConfigState::default(),
+        global_settings: loaded_settings.settings,
+        global_settings_path: loaded_settings.path,
+        trust: trust::TrustState::default(),
+        settings_home_override: home_override,
+        transcript: Transcript::new(vec![super::ChatMessage::welcome(
+            env!("CARGO_PKG_VERSION"),
+            "-",
+            &cwd_display,
+            "-",
+        )]),
+        session_runtime: SessionRuntimeState::default(),
+        sdk_inventory: SdkInventoryState::default(),
+        input: super::InputState::new(),
+        status: AppStatus::Connecting,
+        pending_session_resume: None,
+        show_session_overview: matches!(
+            cli.startup_launch(),
+            crate::StartupLaunch::NewSession | crate::StartupLaunch::SessionPicker
+        ),
+        turn: super::state::TurnState::default(),
+        shutdown: super::ShutdownState::Running,
+        exit_error: None,
+        cwd_raw: cwd.to_string_lossy().to_string(),
+        cwd: cwd_display,
+        event_tx,
+        event_rx,
+        file_index_event_tx,
+        file_index_event_rx,
+        spinner_frame: 0,
+        spinner_last_advance_at: None,
+        pending_interaction_ids: Vec::new(),
+        focus: FocusManager::default(),
+        keymap: super::keymap::ResolvedKeymap::defaults(),
+        plugins: PluginsState::default(),
+        recent_sessions: Vec::new(),
+        session_picker: SessionPickerState::default(),
+        chat_render: super::ChatRenderState::default(),
+        copy_picker: None,
+        history_export: None,
+        diff_view: None,
+        agents: Box::default(),
+        mention: None,
+        committed_mentions: Vec::new(),
+        file_index: super::file_index::FileIndexState::default(),
+        slash: super::slash::SlashAutocomplete::default(),
+        subagent: None,
+        pending_submit: None,
+        paste: super::state::PasteState::default(),
+        input_yank: Vec::new(),
+        clipboard_paste: super::clipboard_image::ClipboardImagePaste::system(),
+        pending_user_messages: super::state::PendingUserMessages::default(),
+        btw: super::state::BtwRequests::default(),
+        git_context: super::git_context::GitContextState::default(),
+        update_prompt,
+        update_install_failure,
+        post_exit_action: None,
+        usage: super::UsageState::default(),
+        mcp: super::McpState::default(),
+        notifications: super::notify::NotificationManager::new(),
+        history_retention: HistoryRetentionPolicy::default(),
+        history_retention_stats: HistoryRetentionStats::default(),
+        cache_metrics: CacheMetrics::default(),
+        startup: StartupState::from_cli(cli),
+        bridge_task: None,
+    };
+
+    app.config.load_footer(app.global_settings_path.as_deref());
+    app.rebuild_history_retention_accounting();
+    trust::initialize(&mut app);
+    app.sync_git_context();
+    app
+}
+
+/// Spawn the background bridge task.
+pub fn start_connection(app: &mut App) {
+    if !app.startup.mark_connection_started() {
+        return;
+    }
+
+    let params = StartConnectionParams {
+        event_tx: app.event_tx.clone(),
+        cwd_raw: app.cwd_raw.clone(),
+        bridge_script: app.startup.bridge_script().cloned(),
+        launch: app.startup.launch().clone(),
+        session_launch_settings: session_start::session_launch_settings_for_reason(
+            app,
+            session_start::SessionStartReason::Startup,
+        ),
+    };
+    let conn_slot: Rc<std::cell::RefCell<Option<ConnectionSlot>>> =
+        Rc::new(std::cell::RefCell::new(None));
+    let conn_slot_writer = Rc::clone(&conn_slot);
+
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    let join_handle = tokio::task::spawn_local(async move {
+        bridge_lifecycle::run_connection_task(params, conn_slot_writer, shutdown_rx).await;
+    });
+    debug_assert!(app.bridge_task.is_none(), "bridge task already owned by app");
+    app.bridge_task = Some(BridgeTask { shutdown_tx, join_handle });
+
+    CONN_SLOT.with(|slot| {
+        debug_assert!(
+            slot.borrow().is_none(),
+            "CONN_SLOT already populated -- start_connection() called twice?"
+        );
+        *slot.borrow_mut() = Some(conn_slot);
+    });
+}
+
+/// Shared slot for passing `Rc<AgentConnection>` from the background task to the event loop.
+pub struct ConnectionSlot {
+    pub conn: Rc<AgentConnection>,
+}
+
+pub(crate) struct BridgeTask {
+    shutdown_tx: oneshot::Sender<()>,
+    join_handle: tokio::task::JoinHandle<()>,
+}
+
+pub(super) struct ConnectionShutdown {
+    join_handle: tokio::task::JoinHandle<()>,
+}
+
+impl ConnectionShutdown {
+    pub(super) async fn wait(&mut self) {
+        log_bridge_task_join_result((&mut self.join_handle).await);
+    }
+
+    pub(super) async fn force(self) {
+        self.join_handle.abort();
+        match self.join_handle.await {
+            Err(err) if err.is_cancelled() => {}
+            result => log_bridge_task_join_result(result),
+        }
+    }
+}
+
+thread_local! {
+    pub static CONN_SLOT: std::cell::RefCell<Option<Rc<std::cell::RefCell<Option<ConnectionSlot>>>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Take the connection data from the thread-local slot.
+pub(super) fn take_connection_slot() -> Option<ConnectionSlot> {
+    CONN_SLOT.with(|slot| slot.borrow().as_ref().and_then(|inner| inner.borrow_mut().take()))
+}
+
+pub(super) fn begin_shutdown_connection(app: &mut App) -> Option<ConnectionShutdown> {
+    app.session_runtime.conn = None;
+    let pending_slot = CONN_SLOT.with(|slot| slot.borrow_mut().take());
+    if let Some(slot) = pending_slot {
+        slot.borrow_mut().take();
+    }
+
+    let BridgeTask { shutdown_tx, join_handle } = app.bridge_task.take()?;
+    let _ = shutdown_tx.send(());
+    Some(ConnectionShutdown { join_handle })
+}
+
+pub(super) async fn shutdown_connection(app: &mut App) {
+    let Some(mut shutdown) = begin_shutdown_connection(app) else {
+        return;
+    };
+    shutdown.wait().await;
+}
+
+fn log_bridge_task_join_result(result: Result<(), tokio::task::JoinError>) {
+    if let Err(err) = result {
+        tracing::error!(
+            target: crate::logging::targets::BRIDGE_LIFECYCLE,
+            event_name = "bridge_task_join_failed",
+            message = "bridge connection task did not finish cleanly",
+            outcome = "failure",
+            error = %err,
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+#[path = "connection_audit_tests.rs"]
+mod audit_tests;
+
+#[cfg(test)]
+pub(crate) async fn dispatch_test_event(payload: serde_json::Value) -> ClientEvent {
+    let (connection, _commands) = AgentConnection::test_channel();
+    let (tx, mut rx) = mpsc::channel(1);
+    let mut connected = true;
+    event_dispatch::handle_bridge_event(
+        &tx,
+        &connection,
+        &mut connected,
+        false,
+        serde_json::from_value(payload).expect("wire event"),
+    )
+    .await;
+    rx.try_recv().expect("dispatched event")
+}

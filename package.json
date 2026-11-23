@@ -1,0 +1,55 @@
+{
+  "name": "claude-code-rust",
+  "version": "0.1.0",
+  "description": "Claude Code Rust - native Rust terminal interface for Claude Code",
+  "keywords": [
+    "cli",
+    "tui",
+    "claude",
+    "claude-code",
+    "anthropic",
+    "agent-sdk",
+    "ai",
+    "terminal",
+    "rust",
+    "ratatui"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frank-ink/machine-god.git"
+  },
+  "bugs": {
+    "url": "https://github.com/frank-ink/machine-god/issues"
+  },
+  "homepage": "https://github.com/frank-ink/machine-god#readme",
+  "bin": {
+    "claude-rs": "bin/claude-rs.js"
+  },
+  "files": [
+    "bin",
+    "agent-sdk/dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "workspaces": [
+    "agent-sdk"
+  ],
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.323"
+  },
+  "scripts": {
+    "prepack": "npm --prefix agent-sdk run build",
+    "quality:duplicates": "jscpd --config .jscpd.json src agent-sdk/src bin --no-tips --no-colors",
+    "quality:duplicates:summary": "node scripts/quality/jscpd-warning-summary.mjs jscpd-report/jscpd-report.json"
+  },
+  "devDependencies": {
+    "jscpd": "5.4.3"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

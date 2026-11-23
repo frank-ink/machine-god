@@ -1,0 +1,536 @@
+// SPDX-License-Identifier: Apache-2.0
+
+use super::super::{App, BlockCache, MessageBlock, ToolCallInfo, ToolCallScope};
+use super::tool_updates::raw_output_to_terminal_text;
+use crate::agent::model;
+use crate::app::TranscriptUpdateSource;
+
+pub(super) fn handle_tool_call(app: &mut App, tc: model::ToolCall, source: TranscriptUpdateSource) {
+    let sdk_tool_name = resolve_sdk_tool_name(tc.kind, tc.meta.as_ref());
+    let parent_tool_use_id = parent_tool_use_id_from_meta(tc.meta.as_ref());
+    let scope = ToolCallScope::for_tool(&sdk_tool_name, parent_tool_use_id);
+    log_tool_call_received(app, &tc, &scope, &sdk_tool_name);
+
+    let tool_info = build_tool_info_from_tool_call(app, tc, sdk_tool_name, &scope);
+    log_command_started(app, &tool_info);
+    log_terminal_spawned(app, &tool_info, "initial");
+    let (mi, bi, mut changed) = upsert_tool_call_into_assistant_message(app, tool_info, source);
+    changed |= app.sync_tool_call_history(mi, bi);
+    changed |= crate::app::tasks::refresh_task_tool_display_at(app, mi, bi);
+    if changed {
+        app.sync_after_message_blocks_changed(mi);
+    }
+}
+
+fn log_tool_call_received(
+    app: &App,
+    tc: &model::ToolCall,
+    scope: &ToolCallScope,
+    sdk_tool_name: &str,
+) {
+    let session_id = current_session_id(app);
+    tracing::info!(
+        target: crate::logging::targets::APP_TOOL,
+        event_name = "tool_call_received",
+        message = "tool call received",
+        outcome = "success",
+        session_id = %session_id,
+        tool_call_id = %tc.tool_call_id,
+        count = tc.content.len(),
+        size_bytes = json_value_size(tc.raw_input.as_ref()).unwrap_or_default(),
+        tool_name = sdk_tool_name,
+        tool_title = %tc.title,
+        tool_kind = %tool_kind_name(tc.kind),
+        tool_status = ?tc.status,
+        tool_scope = %tool_scope_name(scope),
+        content_block_count = tc.content.len(),
+        location_count = tc.locations.len(),
+        has_raw_output = tc.raw_output.is_some(),
+        has_output_metadata = tc.output_metadata.is_some(),
+    );
+}
+
+fn build_tool_info_from_tool_call(
+    app: &App,
+    tc: model::ToolCall,
+    sdk_tool_name: String,
+    scope: &ToolCallScope,
+) -> ToolCallInfo {
+    let terminal_id = tc.content.iter().find_map(|content| match content {
+        model::ToolCallContent::Terminal(term) => Some(term.terminal_id.clone()),
+        _ => None,
+    });
+    let is_execute_tool = tc.kind == model::ToolKind::Execute;
+    let initial_execute_output = if is_execute_tool {
+        tc.raw_output.as_ref().and_then(raw_output_to_terminal_text)
+    } else {
+        None
+    };
+
+    let mut tool_info = ToolCallInfo {
+        id: tc.tool_call_id,
+        source_message_uuids: tc
+            .source_message_uuid
+            .filter(|uuid| !uuid.trim().is_empty())
+            .into_iter()
+            .collect(),
+        title: shorten_tool_title(&tc.title, &app.cwd_raw),
+        sdk_tool_name,
+        kind: tc.kind,
+        raw_input: tc.raw_input,
+        raw_input_bytes: 0,
+        locations: tc.locations,
+        output_metadata: tc.output_metadata,
+        task_metadata: tc.task_metadata,
+        status: tc.status,
+        content: tc.content,
+        parent_tool_use_id: match scope {
+            ToolCallScope::SubagentChild { parent_tool_use_id } => Some(parent_tool_use_id.clone()),
+            _ => None,
+        },
+        terminal_id,
+        terminal_command: None,
+        terminal_output: None,
+        terminal_output_len: 0,
+        cache: BlockCache::default(),
+        pending_permission: None,
+        pending_question: None,
+        history: crate::app::ToolCallHistory::default(),
+    };
+    tool_info.raw_input_bytes =
+        tool_info.raw_input.as_ref().map_or(0, ToolCallInfo::estimate_json_value_bytes);
+    if let Some(output) = initial_execute_output {
+        tool_info.terminal_output_len = output.len();
+        tool_info.terminal_output = Some(output);
+    }
+    tool_info
+}
+
+/// Returns the block position and whether an existing block changed without
+/// being synced yet; a newly pushed block is synced with its message.
+fn upsert_tool_call_into_assistant_message(
+    app: &mut App,
+    tool_info: ToolCallInfo,
+    source: TranscriptUpdateSource,
+) -> (usize, usize, bool) {
+    if let Some((mi, bi)) = app.lookup_tool_call(&tool_info.id) {
+        return (mi, bi, update_existing_tool_call(app, mi, bi, &tool_info));
+    }
+
+    let msg_idx = app.ensure_assistant_output_owner(source);
+    let block_idx = app.transcript.messages[msg_idx].blocks.len();
+    let tc_id = tool_info.id.clone();
+    app.transcript.messages[msg_idx].blocks.push(MessageBlock::ToolCall(Box::new(tool_info)));
+    app.sync_after_message_blocks_changed(msg_idx);
+    app.index_tool_call(tc_id, msg_idx, block_idx);
+    (msg_idx, block_idx, false)
+}
+
+fn update_existing_tool_call(
+    app: &mut App,
+    mi: usize,
+    bi: usize,
+    tool_info: &ToolCallInfo,
+) -> bool {
+    let Some(existing) = app.tool_call_at_mut(mi, bi) else {
+        return false;
+    };
+    let mut changed = false;
+    changed |= sync_if_changed(&mut existing.title, &tool_info.title);
+    changed |= sync_if_changed(&mut existing.status, &tool_info.status);
+    changed |= sync_if_changed(&mut existing.content, &tool_info.content);
+    changed |= sync_if_changed(&mut existing.sdk_tool_name, &tool_info.sdk_tool_name);
+    changed |= sync_if_changed(&mut existing.kind, &tool_info.kind);
+    changed |= sync_if_changed(&mut existing.parent_tool_use_id, &tool_info.parent_tool_use_id);
+    for source_message_uuid in &tool_info.source_message_uuids {
+        changed |= existing.add_source_message_uuid(Some(source_message_uuid));
+    }
+    changed |= existing.set_raw_input(tool_info.raw_input.clone());
+    changed |= existing.set_locations(tool_info.locations.clone());
+    changed |= sync_if_changed(&mut existing.output_metadata, &tool_info.output_metadata);
+    changed |= sync_if_changed(&mut existing.task_metadata, &tool_info.task_metadata);
+    if tool_info.terminal_id.is_some() {
+        changed |= sync_if_changed(&mut existing.terminal_id, &tool_info.terminal_id);
+    }
+    if tool_info.terminal_command.is_some() {
+        changed |= sync_if_changed(&mut existing.terminal_command, &tool_info.terminal_command);
+    }
+    if tool_info.terminal_output.is_some() {
+        changed |= sync_if_changed(&mut existing.terminal_output, &tool_info.terminal_output);
+        changed |=
+            sync_if_changed(&mut existing.terminal_output_len, &tool_info.terminal_output_len);
+    }
+    if changed {
+        existing.invalidate_render_cache();
+    }
+    changed
+}
+
+pub(super) fn sync_if_changed<T: PartialEq + Clone>(dst: &mut T, src: &T) -> bool {
+    if dst == src {
+        return false;
+    }
+    dst.clone_from(src);
+    true
+}
+
+pub(super) fn sdk_tool_name_from_meta(meta: Option<&serde_json::Value>) -> Option<&str> {
+    meta.and_then(|m| m.get("claudeCode")).and_then(|v| v.get("toolName")).and_then(|v| v.as_str())
+}
+
+pub(super) fn parent_tool_use_id_from_meta(meta: Option<&serde_json::Value>) -> Option<&str> {
+    meta.and_then(|m| m.get("claudeCode"))
+        .and_then(|v| v.get("parentToolUseId"))
+        .and_then(|v| v.as_str())
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn fallback_sdk_tool_name(kind: model::ToolKind) -> &'static str {
+    match kind {
+        model::ToolKind::Read => "Read",
+        model::ToolKind::Edit => "Edit",
+        model::ToolKind::Delete => "Delete",
+        model::ToolKind::Move => "Move",
+        model::ToolKind::Search => "Search",
+        model::ToolKind::Execute => "Bash",
+        model::ToolKind::Think => "Think",
+        model::ToolKind::Fetch => "Fetch",
+        model::ToolKind::SwitchMode => "ExitPlanMode",
+        model::ToolKind::Other => "Tool",
+    }
+}
+
+pub(super) fn resolve_sdk_tool_name(
+    kind: model::ToolKind,
+    meta: Option<&serde_json::Value>,
+) -> String {
+    if let Some(name) = sdk_tool_name_from_meta(meta).filter(|name| !name.trim().is_empty()) {
+        name.to_owned()
+    } else {
+        let fallback = fallback_sdk_tool_name(kind);
+        if matches!(kind, model::ToolKind::Think) {
+            tracing::warn!(
+                target: crate::logging::targets::APP_TOOL,
+                event_name = "tool_name_fallback_used",
+                message = "tool name fallback used for tool call",
+                outcome = "degraded",
+                tool_kind = %tool_kind_name(kind),
+                fallback_tool_name = fallback,
+            );
+        }
+        fallback.to_owned()
+    }
+}
+
+/// Shorten absolute paths in tool titles to relative paths based on cwd.
+/// e.g. "Read C:\\Users\\me\\project\\src\\main.rs" -> "Read src/main.rs"
+/// Handles both `/` and `\\` separators on all platforms since the bridge adapter
+/// may use either regardless of the host OS.
+pub(super) fn shorten_tool_title(title: &str, cwd_raw: &str) -> String {
+    if cwd_raw.is_empty() {
+        return title.to_owned();
+    }
+
+    // Quick check: if title doesn't contain any part of cwd, skip normalization
+    // Use the first path component of cwd as a heuristic
+    let cwd_start = cwd_raw.split(['/', '\\']).find(|s| !s.is_empty()).unwrap_or(cwd_raw);
+    if !title.contains(cwd_start) {
+        return title.to_owned();
+    }
+
+    // Normalize both to forward slashes for matching
+    let cwd_norm = cwd_raw.replace('\\', "/");
+    let title_norm = title.replace('\\', "/");
+
+    // Ensure cwd ends with slash so we strip the separator too
+    let with_sep = if cwd_norm.ends_with('/') { cwd_norm } else { format!("{cwd_norm}/") };
+
+    // The bridge emits Read/Write/Edit followed by one whole file_path, without
+    // quoting. Spaces and quotes inside that payload are pathname data.
+    if with_sep == "/" {
+        let path_start = ["Read ", "Write ", "Edit "]
+            .into_iter()
+            .find(|prefix| title_norm.starts_with(prefix))
+            .map_or(0, str::len);
+        if title_norm[path_start..].starts_with('/') {
+            let mut shortened = title_norm;
+            shortened.remove(path_start);
+            return shortened;
+        }
+        return title_norm;
+    }
+
+    if title_norm.contains(&with_sep) {
+        return title_norm.replace(&with_sep, "");
+    }
+    title_norm
+}
+
+pub(super) fn log_command_started(app: &App, tc: &ToolCallInfo) {
+    if !tc.is_execute_tool() {
+        return;
+    }
+
+    match tc.status {
+        model::ToolCallStatus::Pending
+        | model::ToolCallStatus::InProgress
+        | model::ToolCallStatus::Detached => tracing::info!(
+            target: crate::logging::targets::APP_COMMAND,
+            event_name = "command_started",
+            message = "command execution started",
+            outcome = "start",
+            session_id = %current_session_id(app),
+            tool_call_id = %tc.id,
+            terminal_id = %tc.terminal_id.as_deref().unwrap_or(""),
+            size_bytes = u64::try_from(tc.raw_input_bytes).unwrap_or_default(),
+            tool_name = %tc.sdk_tool_name,
+            tool_status = ?tc.status,
+            has_terminal = tc.terminal_id.is_some(),
+            has_command = tc.terminal_command.is_some(),
+            terminal_output_bytes = u64::try_from(tc.terminal_output_len).unwrap_or_default(),
+            assistant_auto_backgrounded = tc.assistant_auto_backgrounded(),
+        ),
+        model::ToolCallStatus::Completed => tracing::info!(
+            target: crate::logging::targets::APP_COMMAND,
+            event_name = "command_completed",
+            message = "command execution completed",
+            outcome = "success",
+            session_id = %current_session_id(app),
+            tool_call_id = %tc.id,
+            terminal_id = %tc.terminal_id.as_deref().unwrap_or(""),
+            size_bytes = u64::try_from(tc.raw_input_bytes).unwrap_or_default(),
+            tool_name = %tc.sdk_tool_name,
+            tool_status = ?tc.status,
+            has_terminal = tc.terminal_id.is_some(),
+            has_command = tc.terminal_command.is_some(),
+            terminal_output_bytes = u64::try_from(tc.terminal_output_len).unwrap_or_default(),
+            assistant_auto_backgrounded = tc.assistant_auto_backgrounded(),
+        ),
+        model::ToolCallStatus::Failed | model::ToolCallStatus::Killed => tracing::warn!(
+            target: crate::logging::targets::APP_COMMAND,
+            event_name = if matches!(tc.status, model::ToolCallStatus::Killed) {
+                "command_killed"
+            } else {
+                "command_failed"
+            },
+            message = if matches!(tc.status, model::ToolCallStatus::Killed) {
+                "command execution killed"
+            } else {
+                "command execution failed"
+            },
+            outcome = "failure",
+            session_id = %current_session_id(app),
+            tool_call_id = %tc.id,
+            terminal_id = %tc.terminal_id.as_deref().unwrap_or(""),
+            size_bytes = u64::try_from(tc.raw_input_bytes).unwrap_or_default(),
+            tool_name = %tc.sdk_tool_name,
+            tool_status = ?tc.status,
+            error_kind = "command_error",
+            has_terminal = tc.terminal_id.is_some(),
+            has_command = tc.terminal_command.is_some(),
+            terminal_output_bytes = u64::try_from(tc.terminal_output_len).unwrap_or_default(),
+            assistant_auto_backgrounded = tc.assistant_auto_backgrounded(),
+        ),
+    }
+}
+
+pub(super) fn log_terminal_spawned(app: &App, tc: &ToolCallInfo, source: &str) {
+    if !tc.is_execute_tool() || tc.terminal_id.is_none() {
+        return;
+    }
+
+    tracing::info!(
+        target: crate::logging::targets::APP_COMMAND,
+        event_name = "terminal_spawned",
+        message = "terminal attached to command execution",
+        outcome = "success",
+        session_id = %current_session_id(app),
+        tool_call_id = %tc.id,
+        terminal_id = %tc.terminal_id.as_deref().unwrap_or(""),
+        tool_name = %tc.sdk_tool_name,
+        spawn_source = source,
+        has_command = tc.terminal_command.is_some(),
+        assistant_auto_backgrounded = tc.assistant_auto_backgrounded(),
+    );
+}
+
+pub(super) fn current_session_id(app: &App) -> String {
+    app.session_runtime.session_id.as_ref().map_or_else(String::new, ToString::to_string)
+}
+
+pub(super) fn json_value_size(value: Option<&serde_json::Value>) -> Option<u64> {
+    value
+        .and_then(|value| serde_json::to_vec(value).ok())
+        .and_then(|bytes| u64::try_from(bytes.len()).ok())
+}
+
+pub(super) fn tool_scope_name(scope: &ToolCallScope) -> &'static str {
+    match scope {
+        ToolCallScope::SubagentRoot => "subagent_root",
+        ToolCallScope::MainAgent => "main_agent",
+        ToolCallScope::SubagentChild { .. } => "subagent_child",
+    }
+}
+
+pub(super) fn tool_kind_name(kind: model::ToolKind) -> &'static str {
+    match kind {
+        model::ToolKind::Read => "read",
+        model::ToolKind::Edit => "edit",
+        model::ToolKind::Delete => "delete",
+        model::ToolKind::Move => "move",
+        model::ToolKind::Search => "search",
+        model::ToolKind::Execute => "execute",
+        model::ToolKind::Think => "think",
+        model::ToolKind::Fetch => "fetch",
+        model::ToolKind::SwitchMode => "switch_mode",
+        model::ToolKind::Other => "other",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shorten_tool_title;
+
+    #[test]
+    fn root_title_preserves_separator_after_pathname_apostrophe() {
+        assert_eq!(
+            shorten_tool_title("Read /customers'/src/lib.rs", "/"),
+            "Read customers'/src/lib.rs",
+        );
+    }
+
+    #[test]
+    fn root_title_preserves_separator_after_pathname_space() {
+        assert_eq!(
+            shorten_tool_title("Read /customers /src/lib.rs", "/"),
+            "Read customers /src/lib.rs",
+        );
+    }
+
+    #[test]
+    fn root_title_preserves_separator_after_pathname_double_quote() {
+        assert_eq!(
+            shorten_tool_title("Write /customers\"/src/lib.rs", "/"),
+            "Write customers\"/src/lib.rs",
+        );
+    }
+
+    #[test]
+    fn root_title_preserves_separator_after_pathname_tab() {
+        assert_eq!(
+            shorten_tool_title("Edit /customers\t/src/lib.rs", "/"),
+            "Edit customers\t/src/lib.rs",
+        );
+    }
+
+    const TITLE_CASES: &[(&str, &str, &str, &str)] = &[
+        (
+            "unix path",
+            "Read /home/user/project/src/main.rs",
+            "/home/user/project",
+            "Read src/main.rs",
+        ),
+        (
+            "windows path",
+            r"Read C:\Users\me\project\src\main.rs",
+            r"C:\Users\me\project",
+            "Read src/main.rs",
+        ),
+        (
+            "unrelated path",
+            "Read /other/path/file.rs",
+            "/home/user/project",
+            "Read /other/path/file.rs",
+        ),
+        ("empty cwd", "Read /some/path/file.rs", "", "Read /some/path/file.rs"),
+        (
+            "trailing separator",
+            "Read /home/user/project/file.rs",
+            "/home/user/project/",
+            "Read file.rs",
+        ),
+        ("path-only title", "/home/user/project/file.rs", "/home/user/project", "file.rs"),
+        (
+            "mixed separators",
+            "Read C:/Users/me/project/src/lib.rs",
+            r"C:\Users\me\project",
+            "Read src/lib.rs",
+        ),
+        ("empty title", "", "/some/cwd", ""),
+        ("tool without a path", "Read", "/home/user", "Read"),
+        ("prose without a path", "Write something", "/proj", "Write something"),
+        (
+            "cwd without a following separator",
+            "/home/user/project",
+            "/home/user/project",
+            "/home/user/project",
+        ),
+        (
+            "similar directory component",
+            "Read /home/username/file.rs",
+            "/home/user",
+            "Read /home/username/file.rs",
+        ),
+        (
+            "nested relative suffix",
+            "Read /a/b/c/d/e/f/g/h/i/j.rs",
+            "/a/b/c/d/e/f/g",
+            "Read h/i/j.rs",
+        ),
+        ("multiple paths", "Diff /proj/a.rs /proj/b.rs", "/proj", "Diff a.rs b.rs"),
+        (
+            "spaces in cwd",
+            r"Read C:\Users\Simon Peter Rothgang\Desktop\project\src\main.rs",
+            r"C:\Users\Simon Peter Rothgang\Desktop\project",
+            "Read src/main.rs",
+        ),
+        (
+            "unicode in cwd",
+            "Read /home/\u{00fc}ser/\u{30d7}\u{30ed}\u{30b8}\u{30a7}\u{30af}\u{30c8}/src/lib.rs",
+            "/home/\u{00fc}ser/\u{30d7}\u{30ed}\u{30b8}\u{30a7}\u{30af}\u{30c8}",
+            "Read src/lib.rs",
+        ),
+        ("unix root", "Read /foo/bar.rs", "/", "Read foo/bar.rs"),
+        ("windows drive root", r"Read C:\src\main.rs", r"C:\", "Read src/main.rs"),
+        (
+            "case-sensitive cwd",
+            "Read /Home/User/Project/file.rs",
+            "/home/user/project",
+            "Read /Home/User/Project/file.rs",
+        ),
+        ("cwd prefix is not a component", "Read /project/file.rs", "/pro", "Read /project/file.rs"),
+        ("root with a path-only title", "/foo/bar.rs", "/", "foo/bar.rs"),
+        (
+            "root leaves unsupported multi-path display text unchanged",
+            "Diff /foo/a.rs /bar/b.rs",
+            "/",
+            "Diff /foo/a.rs /bar/b.rs",
+        ),
+        ("root preserves relative separators", "Read foo/bar.rs", "/", "Read foo/bar.rs"),
+        (
+            "root preserves literal quotes in a relative payload",
+            "Read \"/foo/bar.rs\"",
+            "/",
+            "Read \"/foo/bar.rs\"",
+        ),
+        (
+            "root preserves separators after spaces in a path-only title",
+            "/customers /src/lib.rs",
+            "/",
+            "customers /src/lib.rs",
+        ),
+        (
+            "root preserves separators in a relative payload after spaces",
+            "Read customers /src/lib.rs",
+            "/",
+            "Read customers /src/lib.rs",
+        ),
+    ];
+
+    #[test]
+    fn tool_titles_shorten_cwd_without_losing_path_components() {
+        for &(case, title, cwd, expected) in TITLE_CASES {
+            assert_eq!(shorten_tool_title(title, cwd), expected, "{case}");
+        }
+    }
+}

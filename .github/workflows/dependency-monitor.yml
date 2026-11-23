@@ -1,0 +1,244 @@
+name: Dependency Monitor
+
+on:
+  # disabled in frank-ink/machine-god (needs infrastructure this repo does not have); manual only
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-deny-advisories:
+    name: Cargo Deny Advisories
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      # The PR gate in pr.yml uses EmbarkStudios/cargo-deny-action, but that action
+      # runs in a container and only writes findings to the job log. This job needs
+      # the report as text so it can put it in the tracking issue, so it installs
+      # cargo-deny directly. Bump this pin by hand when cargo-deny releases.
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --version 0.20.2 --locked
+
+      - name: Check advisories
+        id: advisories
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          report="${RUNNER_TEMP}/cargo-deny-advisories.txt"
+          if cargo deny --all-features check advisories > "${report}" 2>&1; then
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "report=${report}" >> "$GITHUB_OUTPUT"
+          cat "${report}"
+
+      - name: Sync advisory tracking issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CLEAN: ${{ steps.advisories.outputs.clean }}
+          REPORT: ${{ steps.advisories.outputs.report }}
+        run: |
+          set -euo pipefail
+
+          # One tracking issue that gets refreshed, rather than one issue per
+          # advisory. The actions-rust-lang/audit setup this replaces opened a
+          # fresh issue per run and produced duplicates such as #41/#56.
+          issue_title="Security advisories in the dependency graph"
+
+          existing_issue="$(
+            gh issue list \
+              --repo "${REPO}" \
+              --state open \
+              --search "\"${issue_title}\" in:title" \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ "${CLEAN}" == "true" ]]; then
+            if [[ -n "${existing_issue}" ]]; then
+              gh issue edit "${existing_issue}" --repo "${REPO}" --remove-label "status: triage"
+              gh issue close "${existing_issue}" \
+                --repo "${REPO}" \
+                --reason completed \
+                --comment "\`cargo deny check advisories\` is clean again as of \`${GITHUB_WORKFLOW}\` run ${GITHUB_RUN_ID}."
+              echo "Closed issue #${existing_issue}."
+            else
+              echo "No advisories reported."
+            fi
+            exit 0
+          fi
+
+          issue_file="${RUNNER_TEMP}/advisory-issue.md"
+          cat > "${issue_file}" <<EOF
+          \`cargo deny check advisories\` reported findings against the policy in \`deny.toml\`.
+
+          Suggested next steps:
+
+          - Bump or replace the affected crates, or record a scoped exception in \`deny.toml\`.
+          - Yanked crates and unmaintained advisories are in scope because \`deny.toml\` sets \`yanked = "deny"\` and \`unmaintained = "workspace"\`.
+          - This issue closes itself once a later run reports no findings.
+
+          <details><summary>cargo-deny report</summary>
+
+          \`\`\`
+          EOF
+
+          # Issue bodies cap at 65536 characters and inclusion graphs get long.
+          head -c 50000 "${REPORT}" >> "${issue_file}"
+          if [[ "$(wc -c < "${REPORT}")" -gt 50000 ]]; then
+            echo "" >> "${issue_file}"
+            echo "... report truncated, see the workflow run for the full output." >> "${issue_file}"
+          fi
+
+          cat >> "${issue_file}" <<EOF
+          \`\`\`
+
+          </details>
+
+          This issue was opened or refreshed by \`${GITHUB_WORKFLOW}\`.
+          EOF
+
+          if [[ -n "${existing_issue}" ]]; then
+            gh issue edit "${existing_issue}" \
+              --repo "${REPO}" \
+              --add-label "type: security" \
+              --body-file "${issue_file}"
+            echo "Updated issue #${existing_issue}."
+          else
+            gh issue create \
+              --repo "${REPO}" \
+              --title "${issue_title}" \
+              --label "type: security" \
+              --label "status: triage" \
+              --body-file "${issue_file}"
+          fi
+
+  agent-sdk-update-monitor:
+    name: Check latest Agent SDK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+
+      - name: Check npm and open issue when newer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          package='@anthropic-ai/claude-agent-sdk'
+          # Only @anthropic-ai/claude-agent-sdk is a declared direct pin now.
+          # @anthropic-ai/sdk, @modelcontextprotocol/sdk, and zod are pulled in
+          # transitively by the Agent SDK and move with it, so tracking them
+          # here just reported bumps for deps the project no longer pins.
+          bridge_stack=(
+            '@anthropic-ai/claude-agent-sdk'
+          )
+
+          package_version() {
+            local package_name="$1"
+            local package_json="$2"
+            PACKAGE_NAME="${package_name}" PACKAGE_JSON="${package_json}" node -e '
+              const pkg = require(process.env.PACKAGE_JSON);
+              const version = pkg.dependencies?.[process.env.PACKAGE_NAME];
+              process.stdout.write(version ?? "<missing>");
+            '
+          }
+
+          root_version="$(package_version "${package}" "./package.json")"
+          bridge_version="$(package_version "${package}" "./agent-sdk/package.json")"
+          latest_version="$(npm view "${package}" version)"
+
+          echo "Root package version: ${root_version}"
+          echo "Bridge package version: ${bridge_version}"
+          echo "Latest npm version: ${latest_version}"
+
+          if [[ "${root_version}" == "${latest_version}" && "${bridge_version}" == "${latest_version}" ]]; then
+            echo "Agent SDK is current."
+            exit 0
+          fi
+
+          issue_title="Agent SDK update available: ${root_version}/${bridge_version} -> ${latest_version}"
+          issue_file="${RUNNER_TEMP}/agent-sdk-update.md"
+          cat > "${issue_file}" <<EOF
+          A newer \`${package}\` version is available.
+
+          | Package | Root package | Bridge package | Latest npm |
+          | --- | --- | --- | --- |
+          EOF
+
+          for stack_package in "${bridge_stack[@]}"; do
+            stack_root_version="$(package_version "${stack_package}" "./package.json")"
+            stack_bridge_version="$(package_version "${stack_package}" "./agent-sdk/package.json")"
+            stack_latest_version="$(npm view "${stack_package}" version)"
+            {
+              printf '| `%s` | `%s` | `%s` | `%s` |\n' \
+                "${stack_package}" \
+                "${stack_root_version}" \
+                "${stack_bridge_version}" \
+                "${stack_latest_version}"
+            } >> "${issue_file}"
+          done
+
+          cat >> "${issue_file}" <<EOF
+
+          Suggested next steps:
+
+          - Review the upstream release notes between \`${root_version}\`/\`${bridge_version}\` and \`${latest_version}\`.
+          - Review the bridge dependency stack together before changing package pins.
+          - Compare release notes and tarball diffs before accepting the migration.
+          - Update accepted dependency pins in both \`package.json\` and \`agent-sdk/package.json\`, then rebuild the bridge.
+          - Run the bridge build, test, lint, knip, audit, and Rust compatibility checks before merging.
+          - Do not auto-publish from SDK migration work.
+
+          This issue was opened or refreshed by \`${GITHUB_WORKFLOW}\`.
+          EOF
+
+          existing_issue="$(
+            gh issue list \
+              --repo "${REPO}" \
+              --state open \
+              --search '"Agent SDK update available" in:title' \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ -n "${existing_issue}" ]]; then
+            gh issue edit "${existing_issue}" \
+              --repo "${REPO}" \
+              --title "${issue_title}" \
+              --add-label "type: dependencies" \
+              --add-label "area: agent-sdk" \
+              --body-file "${issue_file}"
+            echo "Updated issue #${existing_issue}."
+          else
+            gh issue create \
+              --repo "${REPO}" \
+              --title "${issue_title}" \
+              --label "type: dependencies" \
+              --label "area: agent-sdk" \
+              --label "status: triage" \
+              --body-file "${issue_file}"
+          fi

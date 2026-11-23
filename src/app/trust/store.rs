@@ -1,0 +1,276 @@
+// SPDX-License-Identifier: Apache-2.0
+use serde_json::{Map, Value};
+use std::path::{Path, PathBuf};
+
+const TRUST_FIELD: &str = "hasTrustDialogAccepted";
+const PROJECTS_FIELD: &str = "projects";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrustLookup {
+    pub project_key: String,
+    pub trusted: bool,
+}
+
+/// Trust persistence is independent of the Claude settings cascade.
+pub(super) fn read_document(path: &Path) -> Result<Value, String> {
+    match std::fs::read_to_string(path) {
+        Ok(raw) => match serde_json::from_str::<Value>(&raw) {
+            Ok(document @ Value::Object(_)) => Ok(document),
+            _ => Err(format!("Invalid trust preferences: {}", path.display())),
+        },
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(serde_json::json!({})),
+        Err(error) => Err(format!("Cannot read trust preferences: {error}")),
+    }
+}
+
+pub(super) fn accept_at(path: &Path, project_root: &Path) -> Result<String, String> {
+    // Reread at the operation boundary: a UI snapshot must never overwrite another owner's data.
+    let mut document = read_document(path)?;
+    let project_key = set_trusted(&mut document, project_root)?;
+    crate::json_file::replace(path, &document)
+        .map_err(|error| format!("Cannot save trust preferences: {error}"))?;
+    Ok(project_key)
+}
+
+pub fn read_status(document: &Value, project_root: &Path) -> TrustLookup {
+    let project_key = normalize_project_key(project_root);
+    let projects = document.get(PROJECTS_FIELD).and_then(Value::as_object);
+    let trusted = projects.is_some_and(|projects| {
+        projects.iter().any(|(key, value)| {
+            project_keys_match(key, &project_key) && trust_value(value).unwrap_or(false)
+        })
+    });
+
+    TrustLookup { project_key, trusted }
+}
+
+pub fn set_trusted(document: &mut Value, project_root: &Path) -> Result<String, String> {
+    let project_key = normalize_project_key(project_root);
+    let root =
+        document.as_object_mut().ok_or_else(|| "Trust preferences must be an object".to_owned())?;
+    if root.get(PROJECTS_FIELD).is_some_and(|value| !value.is_object()) {
+        return Err("Trust projects must be a JSON object".to_owned());
+    }
+    let matching_keys =
+        root.get(PROJECTS_FIELD).and_then(Value::as_object).map_or_else(Vec::new, |projects| {
+            projects
+                .keys()
+                .filter(|key| project_keys_match(key, &project_key))
+                .cloned()
+                .collect::<Vec<_>>()
+        });
+    if root
+        .get(PROJECTS_FIELD)
+        .and_then(Value::as_object)
+        .is_some_and(|projects| matching_keys.iter().any(|key| !projects[key].is_object()))
+    {
+        return Err("Trust project entry must be a JSON object".to_owned());
+    }
+    let projects =
+        root.entry(PROJECTS_FIELD.to_owned()).or_insert_with(|| Value::Object(Map::new()));
+    if let Value::Object(projects) = projects {
+        let keys = if matching_keys.is_empty() { vec![project_key.clone()] } else { matching_keys };
+        for key in keys {
+            let entry = projects.entry(key).or_insert_with(|| Value::Object(Map::new()));
+            if let Value::Object(project) = entry {
+                project.insert(TRUST_FIELD.to_owned(), Value::Bool(true));
+            }
+        }
+    }
+    Ok(project_key)
+}
+
+pub fn normalize_project_key(project_root: &Path) -> String {
+    let absolute = absolutize(project_root);
+    normalize_project_key_string(&absolute.to_string_lossy())
+}
+
+fn project_keys_match(stored_key: &str, project_key: &str) -> bool {
+    // Existing paths are identified by the filesystem before lexical aliases.
+    if let Some(canonical) = canonical_project_key(Path::new(stored_key)) {
+        return same_os_path_key(&canonical, project_key);
+    }
+    same_os_path_key(&normalize_project_key_string(stored_key), project_key)
+}
+
+fn absolutize(project_root: &Path) -> PathBuf {
+    if let Ok(canonical) = project_root.canonicalize() {
+        return canonical;
+    }
+    if project_root.is_absolute() {
+        return project_root.to_path_buf();
+    }
+    std::env::current_dir()
+        .map_or_else(|_| project_root.to_path_buf(), |cwd| cwd.join(project_root))
+}
+
+fn normalize_project_key_string(raw: &str) -> String {
+    // Backslashes and trailing spaces are valid, distinct Unix filename bytes.
+    let mut normalized = if cfg!(windows) { raw.trim().replace('\\', "/") } else { raw.to_owned() };
+    if cfg!(windows) {
+        if let Some(stripped) = normalized.strip_prefix("//?/UNC/") {
+            normalized = format!("//{stripped}");
+        } else if normalized.starts_with("//?/") {
+            normalized.replace_range(..4, "");
+        }
+    }
+
+    let (prefix, root_segments, rest) = split_root_prefix(&normalized);
+    let mut normalized_segments = Vec::new();
+    for segment in rest.split('/') {
+        if segment.is_empty() || segment == "." {
+            continue;
+        }
+        if segment == ".." {
+            if !normalized_segments.is_empty() {
+                normalized_segments.pop();
+            }
+            continue;
+        }
+        normalized_segments.push(segment);
+    }
+
+    let mut result = String::new();
+    result.push_str(&prefix);
+    for segment in root_segments {
+        if !result.ends_with('/') {
+            result.push('/');
+        }
+        result.push_str(segment);
+    }
+    for segment in normalized_segments {
+        if !result.ends_with('/') && !result.is_empty() {
+            result.push('/');
+        }
+        result.push_str(segment);
+    }
+
+    if result.is_empty() { normalized } else { trim_trailing_separators(result) }
+}
+
+fn split_root_prefix(normalized: &str) -> (String, Vec<&str>, &str) {
+    if cfg!(windows)
+        && let Some(rest) = normalized.strip_prefix("//")
+    {
+        let mut parts = rest.split('/').filter(|segment| !segment.is_empty());
+        let server = parts.next();
+        let share = parts.next();
+        if let (Some(server), Some(share)) = (server, share) {
+            let consumed = format!("//{server}/{share}");
+            let tail = normalized.strip_prefix(&consumed).unwrap_or_default();
+            let rest = tail.trim_start_matches('/');
+            return ("//".to_owned(), vec![server, share], rest);
+        }
+        return ("//".to_owned(), Vec::new(), rest);
+    }
+
+    if cfg!(windows) && normalized.len() >= 2 && normalized.as_bytes()[1] == b':' {
+        let mut chars = normalized.chars();
+        let first = chars.next().unwrap_or_default().to_ascii_uppercase();
+        let drive = if normalized[2..].starts_with('/') {
+            format!("{first}:/")
+        } else {
+            format!("{first}:")
+        };
+        let rest = normalized[2..].trim_start_matches('/');
+        return (drive, Vec::new(), rest);
+    }
+
+    if let Some(rest) = normalized.strip_prefix('/') {
+        return ("/".to_owned(), Vec::new(), rest);
+    }
+
+    (String::new(), Vec::new(), normalized)
+}
+
+fn trim_trailing_separators(mut normalized: String) -> String {
+    let minimum_len = if normalized == "//" {
+        2
+    } else if normalized.len() >= 3
+        && normalized.as_bytes()[1] == b':'
+        && normalized.as_bytes()[2] == b'/'
+    {
+        3
+    } else {
+        usize::from(normalized.starts_with('/'))
+    };
+    while normalized.len() > minimum_len && normalized.ends_with('/') {
+        normalized.pop();
+    }
+    normalized
+}
+
+fn same_os_path_key(left: &str, right: &str) -> bool {
+    if cfg!(windows) { left.eq_ignore_ascii_case(right) } else { left == right }
+}
+
+fn canonical_project_key(project_root: &Path) -> Option<String> {
+    let canonical = project_root.canonicalize().ok()?;
+    Some(normalize_project_key_string(&canonical.to_string_lossy()))
+}
+
+fn trust_value(value: &Value) -> Option<bool> {
+    value.as_object()?.get(TRUST_FIELD)?.as_bool()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn set_trusted_preserves_unknown_project_fields() {
+        let project_path =
+            if cfg!(windows) { "C:/work/project" } else { "/home/user/work/project" };
+
+        let mut document = serde_json::json!({
+            "projects": {},
+            "theme": "dark"
+        });
+        document["projects"][project_path] = json!({
+            "allowedTools": [],
+            "hasTrustDialogAccepted": false
+        });
+
+        let project_key = set_trusted(&mut document, Path::new(project_path)).expect("set trust");
+
+        let mut expected = json!({
+            "projects": {},
+            "theme": "dark"
+        });
+        expected["projects"][project_path] = json!({
+            "allowedTools": [],
+            "hasTrustDialogAccepted": true
+        });
+        assert_eq!(document, expected);
+        assert_eq!(project_key, project_path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn read_status_accepts_symlink_alias_for_existing_unix_paths() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let project_root = dir.path().join("project");
+        let alias_root = dir.path().join("project-link");
+        std::fs::create_dir_all(&project_root).expect("create project");
+        symlink(&project_root, &alias_root).expect("create symlink");
+
+        let document = json!({
+            "projects": {
+                alias_root.to_string_lossy().to_string(): {
+                    "hasTrustDialogAccepted": true
+                }
+            }
+        });
+
+        let lookup = read_status(&document, &project_root);
+
+        assert!(lookup.trusted);
+    }
+}
+
+#[cfg(test)]
+#[path = "store_audit_tests.rs"]
+mod audit_tests;

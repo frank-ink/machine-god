@@ -1,0 +1,31 @@
+export {
+  PLUGIN_MANIFEST_FILENAME,
+  PluginDiscoveryError,
+  PluginManifestError,
+  discoverPlugins,
+  discoverPluginsWithErrors,
+  findPlugin,
+  isPluginManifest,
+  loadPluginManifest,
+  loadPluginManifestFromDirectory,
+  parsePluginManifest,
+  type DiscoveredPlugin,
+  type PluginDiscoveryFailure,
+  type PluginDiscoveryResult,
+  type PluginManifest,
+  type PluginManifestErrorCode,
+} from "./plugin_discovery.js";
+
+export {
+  checkManifestHealth,
+  checkPluginHealth,
+  reportHealth,
+  reportPluginHealth,
+  summarizeHealth,
+  type HealthCheck,
+  type HealthCheckName,
+  type HealthCheckStatus,
+  type HealthStatus,
+  type HealthSummary,
+  type PluginHealthReport,
+} from "./health.js";

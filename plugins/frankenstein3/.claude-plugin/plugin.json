@@ -1,0 +1,7 @@
+{
+  "name": "frankenstein3",
+  "version": "3.0.0",
+  "description": "Frankenstein 3.0: self-contained plugin - SessionStart digest + reentry, room pulse, architect mode, caveman skill, local unified.db created on first start. No LLM calls, no network, no secrets.",
+  "author": { "name": "Frankenstein 3.0" },
+  "license": "UNLICENSED"
+}

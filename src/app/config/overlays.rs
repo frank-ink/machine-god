@@ -1,0 +1,183 @@
+// SPDX-License-Identifier: Apache-2.0
+
+use super::mcp::{
+    McpAuthRedirectOverlayState, McpCallbackUrlOverlayState, McpDetailsOverlayState,
+    McpElicitationOverlayState,
+};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SettingOverlayState {
+    // Captured metadata keeps the draft inspectable after its session snapshot is invalidated.
+    pub setting: Box<crate::agent::settings::SettingDescriptor>,
+    pub scope: crate::agent::settings::SettingsScope,
+    pub context: String,
+    pub revision: String,
+    pub draft: String,
+    pub cursor: usize,
+    pub structured: Option<Box<super::StructuredEditor>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionRenameOverlayState {
+    pub draft: String,
+    pub cursor: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlayMessageKind {
+    Info,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OverlayMessage {
+    pub kind: OverlayMessageKind,
+    pub text: String,
+}
+
+impl OverlayMessage {
+    #[must_use]
+    pub fn info(text: impl Into<String>) -> Self {
+        Self { kind: OverlayMessageKind::Info, text: text.into() }
+    }
+
+    #[must_use]
+    pub fn error(text: impl Into<String>) -> Self {
+        Self { kind: OverlayMessageKind::Error, text: text.into() }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MarketplaceActionKind {
+    Update,
+    Remove,
+}
+
+impl MarketplaceActionKind {
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Update => "Update",
+            Self::Remove => "Remove",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstalledPluginActionKind {
+    Enable,
+    Disable,
+    Update,
+    Uninstall,
+}
+
+impl InstalledPluginActionKind {
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Enable => "Enable",
+            Self::Disable => "Disable",
+            Self::Update => "Update",
+            Self::Uninstall => "Uninstall",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PluginInstallActionKind {
+    User,
+    Project,
+    Local,
+}
+
+impl PluginInstallActionKind {
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::User => "Install for user",
+            Self::Project => "Install for project",
+            Self::Local => "Install locally",
+        }
+    }
+
+    #[must_use]
+    pub const fn scope(self) -> &'static str {
+        match self {
+            Self::User => "user",
+            Self::Project => "project",
+            Self::Local => "local",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstalledPluginActionOverlayState {
+    pub plugin_id: String,
+    pub title: String,
+    pub description: String,
+    pub scope: String,
+    pub project_path: Option<String>,
+    pub selected_index: usize,
+    pub actions: Vec<InstalledPluginActionKind>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PluginInstallOverlayState {
+    pub plugin_id: String,
+    pub title: String,
+    pub description: String,
+    pub selected_index: usize,
+    pub actions: Vec<PluginInstallActionKind>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MarketplaceActionsOverlayState {
+    pub name: String,
+    pub title: String,
+    pub description: String,
+    pub selected_index: usize,
+    pub actions: Vec<MarketplaceActionKind>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PluginSourceInputOverlayState {
+    pub draft: String,
+    pub cursor: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConfirmationAction {
+    InstalledPluginUninstall,
+    MarketplaceRemove,
+    McpClearAuth,
+    McpRemoveConfig,
+    ForceRuntimePluginReload,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConfirmationOverlayState {
+    pub title: String,
+    pub body: String,
+    pub confirm_label: String,
+    pub cancel_label: String,
+    pub selected_index: usize,
+    pub action: ConfirmationAction,
+    pub previous: Option<Box<ConfigOverlayState>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfigOverlayState {
+    Setting(SettingOverlayState),
+    Footer(super::FooterOverlayState),
+    SessionRename(SessionRenameOverlayState),
+    InstalledPluginActions(InstalledPluginActionOverlayState),
+    PluginInstallActions(PluginInstallOverlayState),
+    MarketplaceActions(MarketplaceActionsOverlayState),
+    AddMarketplace(PluginSourceInputOverlayState),
+    LocalPluginFolder(PluginSourceInputOverlayState),
+    McpDetails(McpDetailsOverlayState),
+    McpCallbackUrl(McpCallbackUrlOverlayState),
+    McpElicitation(McpElicitationOverlayState),
+    McpAuthRedirect(McpAuthRedirectOverlayState),
+    Confirmation(ConfirmationOverlayState),
+}

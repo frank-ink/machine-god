@@ -1,0 +1,321 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify release inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      should_release: ${{ steps.gate.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Require main branch
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Release publishing is only allowed from refs/heads/main. Current ref: $GITHUB_REF"
+            exit 1
+          fi
+
+      - name: Read crate version
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid Cargo.toml package version: $VERSION"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Determine whether a release is needed
+        id: gate
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Crate version matches existing tag $TAG; nothing to release. Skipping."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release tag $TAG is new; proceeding with release."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate Bun runtime manifest
+        if: steps.gate.outputs.should_release == 'true'
+        run: node scripts/runtime/stage-bun-runtime.mjs --check --verify-upstream
+
+  agent-sdk-preflight:
+    needs: [verify]
+    if: needs.verify.outputs.should_release == 'true'
+    uses: ./.github/workflows/_agent-sdk.yml
+    permissions:
+      contents: read
+
+  build-binaries:
+    needs: [verify, agent-sdk-preflight]
+    name: Build ${{ matrix.target }}
+    uses: ./.github/workflows/_release-build.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            package_dir: linux-x64-gnu
+            exe: claude-rs
+            asset: claude-code-rust-x86_64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            package_dir: linux-arm64-gnu
+            exe: claude-rs
+            asset: claude-code-rust-aarch64-unknown-linux-gnu
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            package_dir: win32-x64-msvc
+            exe: claude-rs.exe
+            asset: claude-code-rust-x86_64-pc-windows-msvc.exe
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            package_dir: win32-arm64-msvc
+            exe: claude-rs.exe
+            asset: claude-code-rust-aarch64-pc-windows-msvc.exe
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            package_dir: darwin-x64
+            exe: claude-rs
+            asset: claude-code-rust-x86_64-apple-darwin
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            package_dir: darwin-arm64
+            exe: claude-rs
+            asset: claude-code-rust-aarch64-apple-darwin
+    with:
+      runner: ${{ matrix.runner }}
+      target: ${{ matrix.target }}
+      package_dir: ${{ matrix.package_dir }}
+      exe: ${{ matrix.exe }}
+      asset: ${{ matrix.asset }}
+      version: ${{ needs.verify.outputs.version }}
+      artifact_prefix: release-binary
+      attest: true
+
+  stage-bun-runtimes:
+    needs: [verify]
+    if: needs.verify.outputs.should_release == 'true'
+    name: Stage bundled Bun runtimes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Download, verify, and stage Bun runtimes
+        run: node scripts/runtime/stage-bun-runtime.mjs --download
+
+      - name: Upload staged Bun runtimes
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bundled-bun-runtimes
+          path: dist-platform/*/bin/claude-rs-bridge-bun*
+          if-no-files-found: error
+
+  assemble-npm-packages:
+    needs: [verify, agent-sdk-preflight, build-binaries, stage-bun-runtimes]
+    name: Assemble release package set
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Download staged binaries
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: release-binary-*
+          merge-multiple: true
+          path: .
+
+      - name: Download staged Bun runtimes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: bundled-bun-runtimes
+          path: dist-platform
+
+      - name: Restore executable bits for downloaded Unix artifacts
+        run: |
+          set -euo pipefail
+          find dist-platform -type f \( -name 'claude-rs' -o -name 'claude-rs-bridge-bun' \) -exec chmod 755 {} +
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build agent-sdk bridge
+        run: npm --prefix agent-sdk run build
+
+      - name: Verify staged Bun runtimes
+        run: |
+          node scripts/runtime/stage-bun-runtime.mjs --check
+          node scripts/runtime/verify-staged-bun-runtimes.mjs
+
+      - name: Assemble npm package directories
+        run: node scripts/npm/generate-npm-packages.mjs --version "${{ needs.verify.outputs.version }}"
+
+      - name: Verify npm package layout
+        run: node scripts/npm/verify-npm-packages.mjs --version "${{ needs.verify.outputs.version }}"
+
+      - name: Generate install archives
+        run: node scripts/install/generate-install-archives.mjs --version "${{ needs.verify.outputs.version }}"
+
+      - name: Verify install archives
+        run: node scripts/install/verify-install-archives.mjs --version "${{ needs.verify.outputs.version }}"
+
+      - name: Pack npm tarballs
+        run: |
+          set -euo pipefail
+          mkdir -p dist-pack
+          npm pack ./dist-npm/darwin-arm64 --pack-destination ./dist-pack --json
+          npm pack ./dist-npm/darwin-x64 --pack-destination ./dist-pack --json
+          npm pack ./dist-npm/linux-arm64-gnu --pack-destination ./dist-pack --json
+          npm pack ./dist-npm/linux-x64-gnu --pack-destination ./dist-pack --json
+          npm pack ./dist-npm/win32-arm64-msvc --pack-destination ./dist-pack --json
+          npm pack ./dist-npm/win32-x64-msvc --pack-destination ./dist-pack --json
+          npm pack ./dist-npm/root --pack-destination ./dist-pack --json
+
+      - name: Generate release bundle
+        run: node scripts/release/generate-release-bundle.mjs --version "${{ needs.verify.outputs.version }}"
+
+      - name: Verify release bundle
+        run: node scripts/release/verify-release-bundle.mjs --version "${{ needs.verify.outputs.version }}"
+
+      - name: Generate SHA256SUMS
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.verify.outputs.version }}"
+          mapfile -t public_assets < <(find dist-install -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | sort)
+          public_assets+=("claude-code-rust-${VERSION}-release-bundle.tar.gz")
+          sha256sum "${public_assets[@]}" > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Attest public release assets
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            dist-install/*.tar.gz
+            dist-install/*.zip
+            claude-code-rust-${{ needs.verify.outputs.version }}-release-bundle.tar.gz
+            SHA256SUMS
+
+      - name: Upload release package set
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-package-set-${{ needs.verify.outputs.version }}
+          path: |
+            dist-assets/
+            dist-npm/manifests/
+            dist-pack/
+            dist-install/
+            claude-code-rust-${{ needs.verify.outputs.version }}-release-bundle.tar.gz
+            release-manifest.json
+            SHA256SUMS
+            SHA256SUMS.internal
+          if-no-files-found: error
+
+  create-github-release:
+    needs: [verify, assemble-npm-packages]
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Download release package set
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-package-set-${{ needs.verify.outputs.version }}
+          path: .
+
+      - name: Create release notes
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.verify.outputs.version }}"
+          awk '/^## \['"$VERSION"'\]/{found=1; next} found && /^## \[/{exit} found{print}' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            {
+              echo "Release ${{ needs.verify.outputs.tag }}"
+              echo
+              echo "Machine God $VERSION: install archives for Linux, macOS and Windows. Install: see README."
+            } > release-notes.md
+          fi
+
+      - name: Create annotated tag
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.verify.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.verify.outputs.tag }}"
+          VERSION="${{ needs.verify.outputs.version }}"
+          mapfile -t release_assets < <(find dist-install -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | sort)
+          release_assets+=("claude-code-rust-${VERSION}-release-bundle.tar.gz")
+          release_assets+=(SHA256SUMS)
+          gh release create "$TAG" "${release_assets[@]}" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file release-notes.md
+
