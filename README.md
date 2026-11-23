@@ -56,9 +56,27 @@ All releases: [github.com/frank-ink/machine-god/releases](https://github.com/fra
    `/usage` shows your usage, `/status` shows the session state.
 4. **Update later** by running the same install command again.
 
+### First-start companion and ChatGPT bridge (optional)
+
+The very first time you start `machine-god` in a terminal, a short companion runs before the UI. It looks only for
+the **ChatGPT desktop app** or an **open window titled ChatGPT** (it never reads browser cookies, history or
+profiles); if it finds nothing it asks once whether you use ChatGPT. If you do, it offers to download a small local
+model (Qwen 0.8B, 812 MB, only after you say yes; it runs on your machine through llama.cpp's `llama-server` on
+127.0.0.1) that greets you and offers the bridge. Say no at any point and nothing is installed; your answer is
+remembered in `~/.config/machine-god/firstrun.json` (Windows: `%APPDATA%\machine-god`), delete it to be asked again.
+
+The bridge lets Machine God ask ChatGPT through **your own** ChatGPT account. **Automating the ChatGPT web
+interface may violate OpenAI's terms of use and can get your account suspended; only set it up if you accept that
+risk.** After an explicit yes it installs [uv](https://docs.astral.sh/uv/) if missing, creates a Python environment with
+pinned `aiohttp` and `patchright`, downloads its own Chromium, starts a local service (127.0.0.1 only, random port,
+random token in a mode-600 file) with its own browser profile, opens a window where **you** log in to ChatGPT, and
+registers one MCP tool for you: `claude mcp add --scope user machine-god-chatgpt -- <python> <script>` (if the
+`claude` CLI is missing it prints that exact command). Data lives in `~/.local/share/machine-god`
+(Windows: `%LOCALAPPDATA%\machine-god`). Honest limits: it drives a web page, so a ChatGPT UI change can break it, and
+it was written on Linux; the macOS and Windows paths are untested.
+
 ### Planned (not in v0.1.0 yet)
 
-- Ground mode greeting on first start
 - `/features` overview, `/retina` window, live token meter in the status line
 - FranKenstein 3.0 / Agent Zero plugin as a one-click option (the plugin source is in `plugins/frankenstein3`)
 

@@ -17,8 +17,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$RepoOwner = "srothgan"
-$RepoName = "claude-code-rust"
+$RepoOwner = "frank-ink"
+$RepoName = "machine-god"
 $RepoSlug = "$RepoOwner/$RepoName"
 $RootPackage = "claude-code-rust"
 $DownloadRetryCount = 3
@@ -1640,8 +1640,13 @@ try {
 
     Start-InstallerProgress "Verifying installed command"
     Assert-InstalledCommand
-    # Machine God launcher next to claude-rs.exe (same directory, already on PATH)
-    Set-Content -LiteralPath (Join-Path $InstallDir "machine-god.cmd") -Value "@`"%~dp0claude-rs.exe`" %*" -Encoding Ascii
+    # Machine God launcher next to claude-rs.exe (same directory, already on PATH): first-run companion once, then claude-rs
+    $mgLines = @(
+        '@echo off',
+        'if exist "%~dp0claude-rs-bridge-bun.exe" if exist "%~dp0firstrun\mg-firstrun.js" "%~dp0claude-rs-bridge-bun.exe" "%~dp0firstrun\mg-firstrun.js" %*',
+        '"%~dp0claude-rs.exe" %*'
+    )
+    Set-Content -LiteralPath (Join-Path $InstallDir "machine-god.cmd") -Value $mgLines -Encoding Ascii
     if ($Verify) {
         Start-InstallerProgress "Running runtime diagnostics"
         Invoke-InstallDoctor

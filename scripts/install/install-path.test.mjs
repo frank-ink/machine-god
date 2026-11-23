@@ -7,7 +7,7 @@ import { runTerminalSession } from "./terminal-session.mjs";
 const installerSource = fs.readFileSync(new URL("./install.sh", import.meta.url), "utf8").replace(/\r\n/gu, "\n");
 const helpers = [
   "canonical_path", "path_entries", "commands_on_path", "path_has_bin_dir", "path_starts_with_bin_dir",
-  "launcher_contents", "write_launcher", "is_script_install_dir", "warn_other_claude_rs_commands",
+  "launcher_contents", "machine_god_launcher_contents", "write_machine_god_launcher", "write_launcher", "is_script_install_dir", "warn_other_claude_rs_commands",
   "script_install_directory_for_command", "install_directory_overlaps", "uninstall_script_install",
   "acquire_lock", "man_source_dir", "man_link_dir", "remove_man_pages_if_owned", "resolve_npm_install_choice",
   "remove_managed_path_block", "remove_managed_path_blocks", "zsh_profile_file", "zsh_rc_file",

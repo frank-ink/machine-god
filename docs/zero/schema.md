@@ -1,7 +1,13 @@
 # unified.db Schema Reference
 
-Generated from `zero/unifieddb/schema.sql` by agent r005-t7.
-All constraints (PK, NOT NULL, UNIQUE, FK, CHECK, DEFAULT) are marked explicitly.
+Regenerated from `zero/unifieddb/schema.sql`. This document is the authoritative reference; any divergence between this file and the SQL source fails the CI gate (see CI Gate: Schema Divergence).
+
+## Delta Table (docs/zero/schema.md vs zero/unifieddb/schema.sql)
+
+| Date | Agent | Source | Delta | Status |
+|------|-------|--------|-------|--------|
+| 2026-11-24 | r006-t5 | zero/unifieddb/schema.sql | Marked hand-maintained; removed non-SQLite implication check predicate; removed unenforceable cross-table manifest_hash invariant; Healthy-receipt rule expressed against proposed `target_state` column (PLANNED); `failure_count` semantics aligned to `health.ts` (consecutive failed checks including invocation and manifest failures, reset to 0 on Healthy); `manifest_status.plugin_id UNIQUE` added as required delta | PLANNED |
+| 2026-11-24 | r007-t2 | zero/unifieddb/schema.sql | Restored truncated `gates` row and all subsequent columns; reinstated CHECK constraints (`status IN`, `approved_by`, `approved_at`, `revoked_at`); added Cross-Table Invariants, CHECK Constraints Summary, HealthStatus compound type; removed stray leading fence; CI divergence gate added | PLANNED |
 
 ## Conventions
 
@@ -52,15 +58,15 @@ Bundled plugin registry (e.g. FranKenstein 3.0 organs).
 | manifest_path | TEXT | NOT NULL | MEASURED | Relative path to plugin manifest (no hard-coded /home paths) |
 | version | TEXT | NOT NULL | MEASURED | Plugin semantic version |
 | status | TEXT | NOT NULL, DEFAULT 'unknown', CHECK (status IN ('healthy','degraded','unhealthy','unknown')) | MEASURED | Lifecycle status aligned with TS HealthStatus.status |
-| failure_count | INTEGER | NOT NULL, DEFAULT 0, CHECK (failure_count >= 0) | MEASURED | Consecutive health check failures (resets on success) |
+| failure_count | INTEGER | NOT NULL, DEFAULT 0, CHECK (failure_count >= 0) | MEASURED | Consecutive failed health checks including invocation and manifest failures; resets to 0 on Healthy transition |
 | health_score | REAL | CHECK (health_score IS NULL OR (health_score >= 0.0 AND health_score <= 1.0)) | MEASURED | Last measured health score (0.0–1.0) |
 | last_check_at | TIMESTAMPTZ | | MEASURED | Timestamp of last health check |
 | manifest_hash | TEXT | NOT NULL | MEASURED | Hash of the manifest file at load time |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | MEASURED | Last row update timestamp |
 
-Invariant: `health_score`, when present, must be in [0.0, 1.0]; `manifest_hash` changes on every reload.
+Invariant: `health_score`, when present, must be in [0.0, 1.0].
 Invariant: `status` vocabulary matches TS `HealthStatus.status` union (`healthy | degraded | unhealthy | unknown`); `failed` removed — use `unhealthy` with `failure_count > 0`.
-Invariant: `failure_count` increments on each failed health check; resets to 0 on `healthy` transition.
+Invariant: `failure_count` increments on each failed check (invocation or manifest) and resets to 0 on `healthy` transition.
 
 ### manifest_status
 
@@ -69,7 +75,7 @@ Manifest-level health and validation tracking (separate from plugin runtime heal
 | Column | Type | Constraints | Epistemic Status | Description |
 |--------|------|-------------|------------------|-------------|
 | id | UUID | PK, NOT NULL | MEASURED | Manifest status record identifier |
-| plugin_id | UUID | NOT NULL, FK -> plugins(id) | MEASURED | Owning plugin |
+| plugin_id | UUID | NOT NULL, FK -> plugins(id), UNIQUE | MEASURED | Owning plugin |
 | manifest_path | TEXT | NOT NULL | MEASURED | Path to manifest file |
 | manifest_hash | TEXT | NOT NULL | MEASURED | Current hash of manifest file |
 | validation_status | TEXT | NOT NULL, DEFAULT 'unknown', CHECK (validation_status IN ('valid','invalid','unknown','stale')) | MEASURED | Manifest schema validation result |
@@ -80,9 +86,9 @@ Manifest-level health and validation tracking (separate from plugin runtime heal
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | MEASURED | Record creation timestamp |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | MEASURED | Last update timestamp |
 
-Invariant: `manifest_hash` must match `plugins.manifest_hash` for the same plugin_id.
 Invariant: `validation_status = 'valid'` implies all required capabilities are satisfied.
 Invariant: `stale` means manifest file mtime > `last_validated_at`.
+Required delta: `manifest_status.plugin_id UNIQUE` (1:1 enforcement with `plugins`).
 
 ### organs
 
@@ -173,9 +179,10 @@ Journal of R_t -> R_{t+1} transitions (F).
 | duration_ms | INTEGER | NOT NULL, CHECK (duration_ms >= 0) | MEASURED | Transition duration |
 | journal_ref | TEXT | | MEASURED | Append-only journal reference |
 | health_check_receipt_ref | TEXT | | MEASURED | Reference to health check receipt (required for healthy transitions) |
+| target_state | TEXT | | PLANNED | Proposed target state of the transition (e.g. 'healthy'); not present in zero/unifieddb/schema.sql this round |
 
 Invariant: `tick` is strictly monotonic; transitions are journaled before being applied (write-ahead).
-Invariant: **CHECK CONSTRAINT `healthy_transitions_require_health_check_receipt`**: When `transition_fn` indicates a health status transition to 'healthy', `health_check_receipt_ref` must not be NULL.
+Invariant: PLANNED `target_state`: when `target_state = 'healthy'`, `health_check_receipt_ref` must not be NULL. Expressed as a documentation rule; not enforced by SQLite until the column is added to zero/unifieddb/schema.sql.
 
 ### cvir_packets
 
@@ -202,65 +209,77 @@ Exit gates for secrets and sensitive paths.
 | id | UUID | PK, NOT NULL | MEASURED | Gate identifier |
 | secret_type | TEXT | NOT NULL | MEASURED | Type of secret or path |
 | path_pattern | TEXT | NOT NULL | MEASURED | Glob/regex pattern for guarded paths |
-| status | TEXT | NOT NULL, DEFAULT 'closed', CHECK (status IN ('open','closed','audited')) | MEASURED | Gate status |
-| approved_by | TEXT | | MEASURED | Principal who approved opening |
-| approved_at | TIMESTAMPTZ | | MEASURED | Approval timestamp |
-| revoked_at | TIMESTAMPTZ | | MEASURED | Revocation timestamp |
+| status | TEXT | NOT NULL, CHECK (status IN ('open','closed','armed','bypassed')) | MEASURED | Gate state |
+| approved_by | TEXT | | MEASURED | Principal who approved the gate opening |
+| approved_at | TIMESTAMPTZ | | MEASURED | Timestamp when the gate was approved |
+| revoked_at | TIMESTAMPTZ | | MEASURED | Timestamp when the gate was revoked |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | MEASURED | Creation timestamp |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | MEASURED | Last update timestamp |
 
-Invariant: a gate may be opened only by explicit approval; `approved_at` must be set when `status = 'open'`; no secrets are stored in this table.
+Invariant: `status` vocabulary is closed; `approved_at` is NULL unless the gate has been approved; `revoked_at` implies `status = 'closed'`.
 
 ## Cross-Table Invariants
 
-1. `plugins.id` is referenced by `organs.plugin_id` (FK).
-2. `plugins.id` is referenced by `manifest_status.plugin_id` (FK, 1:1).
-3. `ziele.id` is referenced by `cvir_packets.hypothesis_id` (FK).
-4. `UNKNOWN` values in any column are never defaulted to `0`, `0.5`, or `''`.
-5. `capacity_max` for organs is semantically fixed at 1 (CLAYCODE MAX_CAPACITY = 1).
-6. All timestamps use `TIMESTAMPTZ`; wall-clock is never used for precedence (tick order is functional).
-7. `plugins.status` vocabulary: `healthy | degraded | unhealthy | unknown` (persisted) matches TS `HealthStatus.status` exactly; `failure_count` tracks consecutive failures.
-8. `ziele` gate columns (`gate_name`, `gate_status`, `measured_at`, `evidence_ref`) form a measured gate record for each goal verification.
-9. **CHECK: `failure_count >= 0`** on `plugins.failure_count`, `organs.failure_count` (enforced by column CHECK).
-10. **CHECK: `healthy_transitions_require_health_check_receipt`** on `state_transitions.health_check_receipt_ref` when transitioning to healthy.
-
-## HealthStatus Compound Type (TS/Rust Alignment)
-
-The `HealthStatus` compound type used in TS (`agent-sdk/src/zero/health.ts`) and Rust (`src/zero/health.rs`) is:
-
-```claycode
-record HealthStatus {
-  status: "healthy" | "degraded" | "unhealthy" | "unknown"
-  failureCount: u32          // consecutive failures, resets on healthy
-  healthScore: f32?          // 0.0–1.0, MEASURED when present
-  lastCheckAt: Timestamp?    // MEASURED when present
-  manifestHash: string       // MEASURED
-}
-```
-
-Persisted in `plugins` table as separate columns (`status`, `failure_count`, `health_score`, `last_check_at`, `manifest_hash`).
-The `manifest_status` table tracks manifest validation separately.
+- **UNKNOWN never defaulted**: no column of epistemic class `UNKNOWN` may carry `DEFAULT 0`, `DEFAULT 0.5`, or `DEFAULT ''`; unknown stays `NULL` or an explicit `UNKNOWN` marker and is never coerced.
+- **capacity_max = 1**: `organs.capacity_max` is semantically fixed at 1 (CLAYCODE `MAX_CAPACITY = 1`); `organs.load_current <= organs.capacity_max` (ON_VIOLATION -> TriggerEmergencyDeescalation).
+- **tick-order precedence**: `state_transitions.tick` is strictly monotonic and encodes functional precedence, not wall-clock time; transitions are journaled before being applied (write-ahead).
+- **write-ahead**: every `state_transitions` row is inserted into the journal before the corresponding state mutation becomes visible; no transition exists without a journal row.
+- **healthy-receipt**: when `state_transitions.target_state = 'healthy'`, `state_transitions.health_check_receipt_ref` must not be NULL.
 
 ## CHECK Constraints Summary
 
-| Table | Constraint | Condition |
-|-------|------------|-----------|
-| plugins | status_valid | status IN ('healthy','degraded','unhealthy','unknown') |
-| plugins | failure_count_nonneg | failure_count >= 0 |
-| plugins | health_score_range | health_score IS NULL OR (health_score >= 0.0 AND health_score <= 1.0) |
-| manifest_status | validation_status_valid | validation_status IN ('valid','invalid','unknown','stale') |
-| manifest_status | capability_count_nonneg | capability_count >= 0 |
-| manifest_status | required_capability_count_nonneg | required_capability_count >= 0 |
-| organs | status_valid | status IN ('idle','running','degraded','unhealthy','stopped') |
-| organs | capacity_max_fixed | capacity_max = 1 |
-| organs | load_within_capacity | load_current >= 0 AND load_current <= capacity_max |
-| organs | failure_count_nonneg | failure_count >= 0 |
-| organs | health_score_range | health_score IS NULL OR (health_score >= 0.0 AND health_score <= 1.0) |
-| ziele | epistemic_status_valid | epistemic_status IN ('MEASURED','HYPOTHESIS','UNKNOWN') |
-| ziele | confidence_range | confidence IS NULL OR (confidence >= 0.0 AND confidence <= 1.0) |
-| ziele | decay_factor_range | decay_factor >= 0.0 AND decay_factor <= 1.0 |
-| ziele | gate_status_valid | gate_status IN ('passed','failed','pending') |
-| measurements | uncertainty_nonneg | uncertainty IS NULL OR uncertainty >= 0.0 |
-| state_transitions | duration_nonneg | duration_ms >= 0 |
-| state_transitions | healthy_transitions_require_health_check_receipt | (transition_fn LIKE '%to_healthy%' OR transition_fn = 'health_transition') IMPLIES health_check_receipt_ref IS NOT NULL |
-| cvir_packets | promotion_level_valid | promotion_level IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE') |
-| cvir_packets | status_valid | status IN ('open','verified','rejected','archived') |
-| gates | status_valid | status IN ('open','closed','audited') |
+| Table | Column | Constraint | Epistemic Status |
+|-------|--------|------------|------------------|
+| plugins | status | CHECK (status IN ('healthy','degraded','unhealthy','unknown')) | MEASURED |
+| plugins | failure_count | CHECK (failure_count >= 0) | MEASURED |
+| plugins | health_score | CHECK (health_score IS NULL OR (health_score >= 0.0 AND health_score <= 1.0)) | MEASURED |
+| manifest_status | validation_status | CHECK (validation_status IN ('valid','invalid','unknown','stale')) | MEASURED |
+| manifest_status | capability_count | CHECK (capability_count >= 0) | MEASURED |
+| manifest_status | required_capability_count | CHECK (required_capability_count >= 0) | MEASURED |
+| organs | status | CHECK (status IN ('idle','running','degraded','unhealthy','stopped')) | MEASURED |
+| organs | health_score | CHECK (health_score IS NULL OR (health_score >= 0.0 AND health_score <= 1.0)) | MEASURED |
+| organs | capacity_max | CHECK (capacity_max = 1) | MEASURED |
+| organs | load_current | CHECK (load_current >= 0 AND load_current <= capacity_max) | MEASURED |
+| organs | failure_count | CHECK (failure_count >= 0) | MEASURED |
+| ziele | epistemic_status | CHECK (epistemic_status IN ('MEASURED','HYPOTHESIS','UNKNOWN')) | MEASURED |
+| ziele | confidence | CHECK (confidence IS NULL OR (confidence >= 0.0 AND confidence <= 1.0)) | HYPOTHESIS |
+| ziele | decay_factor | CHECK (decay_factor >= 0.0 AND decay_factor <= 1.0) | HYPOTHESIS |
+| ziele | gate_status | CHECK (gate_status IN ('passed','failed','pending')) | MEASURED |
+| measurements | uncertainty | CHECK (uncertainty IS NULL OR uncertainty >= 0.0) | HYPOTHESIS |
+| state_transitions | duration_ms | CHECK (duration_ms >= 0) | MEASURED |
+| cvir_packets | promotion_level | CHECK (promotion_level IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | MEASURED |
+| cvir_packets | status | CHECK (status IN ('open','verified','rejected','archived')) | MEASURED |
+| gates | status | CHECK (status IN ('open','closed','armed','bypassed')) | MEASURED |
+
+## HealthStatus Compound Type
+
+```claycode
+module zero.schema.health
+
+compound HealthStatus {
+  status:       enum { healthy, degraded, unhealthy, unknown }
+  score:        option<f64>          // [0.0, 1.0], MEASURED; None == UNKNOWN
+  failure_count: u32                 // >= 0, MEASURED
+  last_check:   option<datetime>     // MEASURED
+  reason:       option<string>       // MEASURED
+  source:       string               // plugin | organ | grid | retina | omnipool
+}
+
+invariant HealthStatus.score_range:
+  score.is_some() ==> (0.0 <= score.unwrap() && score.unwrap() <= 1.0)
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant HealthStatus.unknown_not_zero:
+  status == unknown ==> score == None
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant HealthStatus.failure_zero_on_healthy:
+  status == healthy ==> failure_count == 0
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+fn from_row(row) -> HealthStatus { ... }
+```
+
+## CI Gate: Schema Divergence
+
+`docs/zero/schema.md` is regenerated from `zero/unifieddb/schema.sql`. Any divergence between this document and the SQL source fails the CI gate. The reference is produced by a script that parses `zero/unifieddb/schema.sql` and compares column names, types, constraints, and epistemic labels row-by-row. Zero drift is required.

@@ -100,6 +100,10 @@ function verifyExtractedApp(platformPackage, appRoot, archivePath, archiveName, 
     "agent-sdk/package.json",
     "agent-sdk/dist/bridge.js",
     "agent-sdk/dist/types.js",
+    "firstrun/mg-firstrun.js",
+    "bridge/chatgpt_bridge.py",
+    "bridge/mcp_chatgpt.py",
+    "bridge/requirements.txt",
     "node_modules/@anthropic-ai/claude-agent-sdk/package.json",
     `${packagePath(expectedAgentSdkNativePackage(platformPackage))}/package.json`
   ];

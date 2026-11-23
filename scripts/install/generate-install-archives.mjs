@@ -117,6 +117,7 @@ function generateInstallArchive(platformPackage) {
       generateManPages(appRoot);
     }
     copyAgentSdkRuntime(path.join(appRoot, "agent-sdk"));
+    copyMachineGodExtras(appRoot);
     copyFileFromRepo("LICENSE", path.join(appRoot, "LICENSE"));
     fs.writeFileSync(
       path.join(appRoot, "THIRD-PARTY-NOTICES.md"),
@@ -290,6 +291,20 @@ function copyAgentSdkRuntime(destinationDir) {
     const relativePath = path.relative(sourceDist, sourcePath).replaceAll(path.sep, "/");
     return !relativePath.endsWith(".test.js") && !relativePath.endsWith(".map");
   });
+}
+
+// Machine God additions: first-run companion (runs on the bundled Bun) and the optional ChatGPT bridge (Python, set up on demand).
+function copyMachineGodExtras(appRoot) {
+  for (const dir of ["firstrun", "bridge"]) {
+    const source = path.join(repoRoot, dir);
+    if (!fs.existsSync(source)) {
+      throw new Error(`Missing ${dir}/ in the repository root; the install archive needs it.`);
+    }
+    copyDirectoryFiltered(source, path.join(appRoot, dir), (sourcePath) => {
+      const name = path.basename(sourcePath);
+      return !name.endsWith(".test.js") && !name.endsWith(".pyc") && name !== "__pycache__" && name !== "node_modules";
+    });
+  }
 }
 
 function copyDirectoryFiltered(sourceDir, destinationDir, includePath) {

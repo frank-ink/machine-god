@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-repo_owner="srothgan"
-repo_name="claude-code-rust"
+repo_owner="frank-ink"
+repo_name="machine-god"
 repo_slug="$repo_owner/$repo_name"
 root_package="claude-code-rust"
 download_retry_count=3
@@ -1000,6 +1000,29 @@ launcher_contents() {
   printf "exec '%s' \"\$@\"\n" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
 }
 
+machine_god_launcher_contents() {
+  quoted_app="$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+  printf '%s\n' '#!/bin/sh' '# Machine God launcher: first-run companion (runs once per user), then claude-rs.'
+  printf "app='%s'\n" "$quoted_app"
+  cat <<'MG_LAUNCHER_EOF'
+d="${app%/*}"
+st="${MG_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/machine-god}/firstrun.json"
+if [ -t 0 ] && [ -t 1 ] && [ -x "$d/claude-rs-bridge-bun" ] && [ -f "$d/firstrun/mg-firstrun.js" ]; then
+  if [ "${MG_FIRSTRUN_FORCE:-}" = 1 ] || ! { [ -f "$st" ] && grep -Eq '"status": "(done|declined)"' "$st" 2>/dev/null; }; then
+    "$d/claude-rs-bridge-bun" "$d/firstrun/mg-firstrun.js" "$@" || true
+  fi
+fi
+exec "$app" "$@"
+MG_LAUNCHER_EOF
+}
+
+write_machine_god_launcher() {
+  mkdir -p "$bin_dir"
+  machine_god_launcher_contents "$install_dir/$binary_name" > "$bin_dir/machine-god.tmp.$$"
+  chmod 755 "$bin_dir/machine-god.tmp.$$"
+  mv "$bin_dir/machine-god.tmp.$$" "$bin_dir/machine-god"
+}
+
 write_launcher() {
   mkdir -p "$bin_dir"
   launcher="$bin_dir/claude-rs"
@@ -1008,9 +1031,7 @@ write_launcher() {
   launcher_contents "$app_binary" > "$tmp_launcher"
   chmod 755 "$tmp_launcher"
   mv "$tmp_launcher" "$launcher"
-  launcher_contents "$app_binary" > "$bin_dir/machine-god.tmp.$$"
-  chmod 755 "$bin_dir/machine-god.tmp.$$"
-  mv "$bin_dir/machine-god.tmp.$$" "$bin_dir/machine-god"
+  write_machine_god_launcher
 }
 
 man_link_dir() {
@@ -1719,6 +1740,7 @@ if [ "$update" -eq 0 ]; then
   maybe_update_path
 else
   path_updated=1
+  write_machine_god_launcher
   ok "Preserved existing launcher and PATH configuration"
 fi
 PATH="$bin_dir:$PATH"
