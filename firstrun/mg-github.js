@@ -1,4 +1,4 @@
-// Machine God GitHub onboarding (a step of the first-run companion; also `machine-god grid`).
+// Machine God GitHub onboarding (a step of the first-run companion; also `machine-god grid repo`).
 //   1. Do you have a GitHub account? (no -> signup link)
 //   2. SSH key: use ~/.ssh/id_ed25519 or create one with ssh-keygen (YOU type the passphrase), add it at github.com/settings/ssh/new, test ssh -T
 //   3. GRID repo "machine-god-grid" (private): mailbox (control/, results/) and shared memory (memory/), cloned to the data dir over SSH.
@@ -36,7 +36,7 @@ This private repository is the shared mailbox and memory of your Machine God ins
 - \`control/\`  requests from your AIs (for example ChatGPT through its GitHub connector): \`<id>.json\` with either
   \`{"cmd": "ls", "from": "chatgpt"}\` or \`{"question": "...", "from": "chatgpt"}\`
 - \`results/\`  answers written by \`machine-god mailbox\` on your computer: \`<id>.json\`
-- \`memory/\`   shared notes (the interest organ can export here later)
+- \`memory/\`   shared memory notes: \`mg-<instance>.jsonl\`, one file per Machine God install, written only when you run \`machine-god grid sync on\`
 
 ## The rule
 
@@ -119,7 +119,7 @@ export async function runGithubStep(ctx) {
     log(`  Create one (free): ${URLS.signup}`);
     if (!(await ask("  Continue once your account exists? [y/N]"))) {
       rec.account = "no";
-      log("  Skipping GitHub. Run `machine-god grid` any time later.");
+      log("  Skipping GitHub. Run `machine-god grid repo` any time later.");
       return rec;
     }
     rec.account = "created";
@@ -131,8 +131,8 @@ export async function runGithubStep(ctx) {
   let sshUser = null;
   if (!which("ssh") || !which("ssh-keygen")) {
     log(win
-      ? "  OpenSSH is missing. Windows 10/11: Settings -> Apps -> Optional features -> add \"OpenSSH Client\", then run `machine-god grid` again."
-      : "  `ssh` / `ssh-keygen` not found. Install the OpenSSH client with your package manager, then run `machine-god grid` again.");
+      ? "  OpenSSH is missing. Windows 10/11: Settings -> Apps -> Optional features -> add \"OpenSSH Client\", then run `machine-god grid repo` again."
+      : "  `ssh` / `ssh-keygen` not found. Install the OpenSSH client with your package manager, then run `machine-god grid repo` again.");
     rec.ssh = "tools-missing";
   } else if (await ask("Set up the SSH key for GitHub now? [y/N]")) {
     if (!fs.existsSync(keys.pub)) {
@@ -170,7 +170,7 @@ export async function runGithubStep(ctx) {
   // 3. GRID repo
   const override = env.MG_GRID_REMOTE;
   if (rec.ssh !== "ok" && !override) {
-    log("  The GRID repo needs a working SSH connection to GitHub. Skipping it; run `machine-god grid` when SSH works.");
+    log("  The GRID repo needs a working SSH connection to GitHub. Skipping it; run `machine-god grid repo` when SSH works.");
     return rec;
   }
   if (!(await ask(`Set up your private GRID repo "${GRID_NAME}" (mailbox + shared memory) now? [y/N]`))) {
@@ -228,7 +228,7 @@ export async function runGithubStep(ctx) {
 
 export async function main(argv = process.argv.slice(2), env = process.env) {
   if (argv.includes("--help") || argv.includes("-h")) {
-    console.log("machine-god grid: set up GitHub SSH and your private machine-god-grid repo (every step asks first)");
+    console.log("machine-god grid repo: set up GitHub SSH and your private machine-god-grid repo (every step asks first)");
     return 0;
   }
   const ask = makeAsker({ env });

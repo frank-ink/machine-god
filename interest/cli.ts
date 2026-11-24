@@ -79,7 +79,7 @@ export async function main(argv: string[]): Promise<number> {
     }
     case "reset": if (!a.includes("--yes")) { console.log("this deletes all interests and history. re-run with: reset --yes"); return 1; } s.reset(); console.log("reset done"); return 0;
     default:
-      console.log("usage: machine-god interests <seed|list|pick|run|like|dislike|history|reset> ...\n  run [--backend claude|chatgpt|gemini|ollama|fusion|dry] [--rounds N]   history [N]   reset --yes"); return cmd ? 1 : 0;
+      console.log("usage: machine-god interests <seed|list|pick|run|like|dislike|history|reset> ...\n  run [--backend claude|chatgpt|gemini|ollama|fusion|grid|dry] [--rounds N]   history [N]   reset --yes"); return cmd ? 1 : 0;
   }
 }
 

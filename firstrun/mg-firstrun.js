@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import { runGithubStep } from "./mg-github.js";
 import { runAisStep } from "../fusion/ais.js";
+import { runGridStep } from "../grid/setup.js";
 
 export const STATE_VERSION = 2;
 export const RELEASE_BASE = "https://github.com/frank-ink/machine-god/releases/download/models-v1";
@@ -72,9 +73,14 @@ export function writeState(file, state) {
   fs.renameSync(tmp, file);
 }
 
+const aiConnected = (rec) => !!rec && Object.values(rec.ais || {}).includes("connected");
+
 export function stateIsFinal(state) {
   // a state written by version 1 (before the GitHub and AI steps existed) is not final: the new steps are still to be offered once
-  return !!state && (state.status === "done" || state.status === "declined") && state.version !== 1;
+  if (!state || !(state.status === "done" || state.status === "declined") || state.version === 1) return false;
+  // a state from before the "fuse the AIs" question existed: offered once, and only to people who connected an AI
+  if (state.steps && state.steps.grid !== true && aiConnected(state.ais)) return false;
+  return true;
 }
 
 const SKIP_ARGS = new Set(["--help", "-h", "--version", "-V", "-v"]);
@@ -538,13 +544,25 @@ async function chatgptStep({ env, log, out, ask, installDir, detect, platform, r
 }
 
 /**
- * Companion flow: 1. ChatGPT  2. GitHub (account, SSH, private GRID repo)  3. which AIs you use (fusion).
+ * Companion flow: 1. ChatGPT  2. GitHub (account, SSH, private GRID repo)  3. which AIs you use (fusion)  4. fuse them into one Machine God (shared memory, only if an AI is connected).
  * Each step is asked once and every question can be answered no. State is written after each step (status "partial", the
  * real outcome in `outcome`), so a Ctrl-C never repeats what was already answered; the last write sets the final status.
  * `prior` = an earlier state: a version 1 state (written before the GitHub and AI steps existed) skips step 1, a partial one skips what it finished.
  * Injectable: detect, github, ais.
  */
-export async function runFirstRun({ env = process.env, out = process.stdout, ask, installDir, detect = detectChatGPT, platform = process.platform, github = runGithubStep, ais = runAisStep, prior = null } = {}) {
+/** Self-improvement (reflect/): only on yes. `improve enable` registers the reflection hooks in the user's Claude Code settings (backup first). */
+export async function runImproveStep({ ask, log, env, installDir }) {
+  log("");
+  log("Machine God can reflect after each task and learn lessons from what went wrong. Task summaries (secrets redacted, size capped)");
+  log("go to the AI you use; lessons change only behaviour. Code changes are only proposed and applied after your yes (`machine-god improve proposals`).");
+  if (!(await ask("Turn on self-improvement? [y/N]"))) { log("  Skipped. Later: `machine-god improve enable`."); return { improve: "declined" }; }
+  const root = installDir || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const r = spawnSync(process.execPath, [path.join(root, "reflect", "cli.ts"), "enable"], { env: { ...process.env, ...env }, encoding: "utf8", timeout: 30000 });
+  for (const l of `${r.stdout || ""}${r.stderr || ""}`.trim().split("\n").filter(Boolean)) log("  " + l);
+  return { improve: r.status === 0 ? "on" : "failed" };
+}
+
+export async function runFirstRun({ env = process.env, out = process.stdout, ask, installDir, detect = detectChatGPT, platform = process.platform, github = runGithubStep, ais = runAisStep, grid = runGridStep, improve = runImproveStep, prior = null } = {}) {
   const log = (s = "") => out.write(s + "\n");
   const { configDir, dataDir, stateFile } = resolvePaths({ env, platform });
   const record = prior
@@ -584,9 +602,25 @@ export async function runFirstRun({ env = process.env, out = process.stdout, ask
       log(`  AI step stopped: ${record.ais.detail}`);
     }
     record.steps.ais = true;
+    save(false);
+  }
+  if (!record.steps.grid) {
+    try {
+      record.grid = await grid({ ...ctxBase, bun: process.execPath, script: path.join(installDir || path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), "grid", "mcp_grid.js") });
+    } catch (e) {
+      record.grid = { fused: "failed", detail: String(e.message || e).slice(0, 160) };
+      log(`  GRID step stopped: ${record.grid.detail}`);
+    }
+    record.steps.grid = true;
+    save(false);
+  }
+  if (!record.steps.improve) {
+    try { record.improve = (await improve({ ask, log, env, installDir })).improve; }
+    catch (e) { record.improve = "failed"; log(`  Self-improvement step stopped: ${String(e.message || e).slice(0, 160)}`); }
+    record.steps.improve = true;
   }
   log("");
-  log("Done. Later: `machine-god ais`, `machine-god grid`, `machine-god mailbox`, `machine-god interests`. To see this walkthrough again: delete " + stateFile);
+  log("Done. Later: `machine-god ais`, `machine-god grid` (shared memory; `grid repo` for GitHub), `machine-god mailbox`, `machine-god interests`, `machine-god improve`. To see this walkthrough again: delete " + stateFile);
   save(true);
   return record;
 }

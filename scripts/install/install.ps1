@@ -1646,7 +1646,8 @@ try {
         'if /i "%~1"=="interests" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0interest\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
         'if /i "%~1"=="mailbox" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0mailbox\mailbox.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
         'if /i "%~1"=="ais" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0fusion\ais.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
-        'if /i "%~1"=="grid" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0firstrun\mg-github.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if /i "%~1"=="grid" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0grid\cli.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if /i "%~1"=="improve" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0reflect\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
         'if exist "%~dp0claude-rs-bridge-bun.exe" if exist "%~dp0firstrun\mg-firstrun.js" "%~dp0claude-rs-bridge-bun.exe" "%~dp0firstrun\mg-firstrun.js" %*',
         '"%~dp0claude-rs.exe" %*'
     )

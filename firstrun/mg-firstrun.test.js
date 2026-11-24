@@ -297,7 +297,7 @@ describe("steps after ChatGPT: GitHub and AIs", () => {
       ais: async () => (order.push("ais"), { ais: { gemini: "connected" }, mcp: "registered" }),
     });
     expect(order).toEqual(["github", "ais"]);
-    expect(rec.steps).toEqual({ chatgpt: true, github: true, ais: true });
+    expect(rec.steps).toEqual({ chatgpt: true, github: true, ais: true, grid: true, improve: true });
     const st = mg.readState(h.stateFile);
     expect(st).toMatchObject({ version: 2, status: "declined", chatgpt: "user-says-no", github: { grid: "ready" }, ais: { mcp: "registered" } });
     expect(mg.stateIsFinal(st)).toBe(true);
@@ -318,7 +318,7 @@ describe("steps after ChatGPT: GitHub and AIs", () => {
     const st = mg.readState(h.stateFile);
     expect(mg.stateIsFinal(st)).toBe(false);
     expect(mg.skipReason({ argv: [], env: {}, stdinTTY: true, stdoutTTY: true, state: st })).toBe(null);
-    const h2 = mk("");
+    const h2 = mk("no"); // the self-improvement question is the only one left
     const rec = await mg.runFirstRun({ env: h.env, ask: h2.ask, out: h2.w, installDir: h.d, prior: st, detect: () => (calls.push("detect"), { found: false }), github: async () => calls.push("github"), ais: async () => (calls.push("ais"), { ais: {}, mcp: "none" }) });
     expect(calls).toEqual(["ais"]);
     expect(rec.status).toBe("declined");
@@ -326,7 +326,7 @@ describe("steps after ChatGPT: GitHub and AIs", () => {
     expect(mg.readState(h.stateFile).github).toEqual({ account: "yes" });
   });
   test("a version 1 state (done before these steps existed) is offered only the new steps, once", async () => {
-    const h = mk("");
+    const h = mk("no"); // only the self-improvement question asks here
     const v1 = { version: 1, status: "done", chatgpt: "detected", model: "used", bridge: "installed" };
     fs.writeFileSync(h.stateFile, JSON.stringify(v1));
     const st = mg.readState(h.stateFile);
@@ -352,5 +352,24 @@ describe("steps after ChatGPT: GitHub and AIs", () => {
     await mg.runFirstRun({ env: { ...h.env, HOME: h.d }, ask: h.ask, out: h.w, installDir: h.d, detect: () => ({ found: false }) });
     const added = fs.readdirSync(h.d).filter((x) => !before.includes(x));
     expect(added).toEqual(["firstrun.json"]);
+  });
+});
+
+describe("self-improvement step", () => {
+  const root = path.resolve(import.meta.dir, "..");
+  test("no: nothing written, state declined", async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "mgi-")), lines = [];
+    const r = await mg.runImproveStep({ ask: async () => false, log: (s) => lines.push(s), env: { HOME: home, MG_DATA_DIR: home }, installDir: root });
+    expect(r.improve).toBe("declined");
+    expect(fs.readdirSync(home)).toEqual([]);
+  });
+  test.skipIf(!fs.existsSync(path.join(root, "reflect", "cli.ts")))("yes: reflection on, hooks in the user's Claude Code settings", async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "mgi-")), lines = [];
+    const env = { HOME: home, MG_DATA_DIR: path.join(home, "data"), CLAUDE_CONFIG_DIR: path.join(home, ".claude") };
+    const r = await mg.runImproveStep({ ask: async () => true, log: (s) => lines.push(s), env, installDir: root });
+    expect(r.improve).toBe("on");
+    expect(fs.readFileSync(path.join(home, "data", "reflect.state"), "utf8").trim()).toBe("on");
+    const hooks = JSON.parse(fs.readFileSync(path.join(home, ".claude", "settings.json"), "utf8")).hooks;
+    expect(hooks.Stop[0].hooks[0].command).toContain(path.join(root, "reflect", "hook.ts"));
   });
 });

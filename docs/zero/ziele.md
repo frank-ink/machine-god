@@ -13,6 +13,24 @@ Source: `zero/ZIELE.md` (measured goals definition) and `zero/unifieddb/schema.s
 | MEASURED | Value obtained by instrumented observation or gate result. |
 | HYPOTHESIS | Uncalibrated estimate, model confidence, salience, or derived assumption. Not truth. |
 | UNKNOWN | No measurement available. Stays UNKNOWN; never defaulted to `0`, `0.5`, or `''`. |
+| PLANNED | Goal is planned; test reference exists but the measurement gate has not passed. Not a measurement. |
+
+## Measured Goals Registry
+
+| Goal | Domain | Target | Measured | Unit | Epistemic Status | Test Reference |
+|------|--------|--------|----------|------|------------------|----------------|
+| loader | plugin | 1 | 1 | count | MEASURED | `src/zero/loader.test.rs` |
+| omega | ground_mode | 1 | 1 | count | MEASURED | `src/zero/omega.test.rs` |
+| plugin_portability | plugin | 1 | 1 | count | MEASURED | `plugins/frankenstein3/README.md` |
+| freewiki | wiki | 1 | NULL | count | PLANNED | `src/zero/freewiki.test.rs` |
+| retina | perception | 1 | NULL | count | PLANNED | `src/zero/retina.test.rs` |
+| grid | grid | 1 | NULL | count | PLANNED | `src/zero/grid.test.rs` |
+| entity | identity | 1 | NULL | count | PLANNED | `src/zero/entity.test.rs` |
+| scrape | web | 1 | NULL | count | PLANNED | `src/zero/scrape.test.rs` |
+
+Notes:
+- `loader`, `omega`, and `plugin_portability` are MEASURED: the bundled plugin manifest loads, the omega ground mode answers through the local 0.8B model, and the FranKenstein 3.0 plugin runs without hard-coded `/home` paths or machine names.
+- `freewiki`, `retina`, `grid`, `entity`, `scrape` are PLANNED: test files exist as references but the gates have not yet passed. `measured_value` is NULL (UNKNOWN measurement), not `0`.
 
 ## Column Reference
 
@@ -39,7 +57,7 @@ Source: `zero/ZIELE.md` (measured goals definition) and `zero/unifieddb/schema.s
 
 ## Invariants
 
-1. `epistemic_status` must be exactly one of `MEASURED`, `HYPOTHESIS`, `UNKNOWN`.
+1. `epistemic_status` must be exactly one of `MEASURED`, `HYPOTHESIS`, `UNKNOWN`, `PLANNED`.
 2. `measured_value IS NULL` does **not** mean `0`; it means the measurement has not been performed (UNKNOWN).
 3. `confidence` is HYPOTHESIS; it is never interpreted as truth probability unless separately calibrated and admitted.
 4. `delta` and `score_effective` are derived columns; they are computed, never directly written.

@@ -160,7 +160,7 @@ describe("fusion backends (mock HTTP servers, no real keys)", () => {
     return d;
   };
   const env = (d: string, extra: Record<string, string>) => { for (const k of Object.keys(extra)) process.env[k] = extra[k]; process.env.MG_CONFIG_DIR = d; process.env.MG_DATA_DIR = d; };
-  test("backends list", () => expect(BACKENDS).toEqual(["claude", "chatgpt", "gemini", "ollama", "fusion", "dry"]));
+  test("backends list", () => expect(BACKENDS).toEqual(["claude", "chatgpt", "gemini", "ollama", "fusion", "grid", "dry"]));
   test("gemini backend uses the stored key in a header, not the URL", async () => {
     let seen: any = null;
     const gem = mock((req) => { seen = { url: req.url, key: req.headers.get("x-goog-api-key") }; return Response.json({ candidates: [{ content: { parts: [{ text: answer(0.9, "g-sub") }] } }] }); });

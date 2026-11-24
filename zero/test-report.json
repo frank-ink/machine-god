@@ -1,0 +1,10 @@
+{
+  "schema": "zero.test-report.v1",
+  "commit": "WORKTREE",
+  "passed_tests": [
+    "zero::features::tests::registry_roundtrip",
+    "zero::features::tests::render_table_has_required_columns",
+    "zero::features::tests::ci_gate_rejects_measured_without_passing_test",
+    "zero::features_ground::tests::explain_capability_in_german"
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "schema": "zero.capabilities.v1",
+  "generated_by": "zero40 build/test pipeline (seed artifact; pipeline rewrites evidence_ref with the real commit)",
+  "commit": "WORKTREE",
+  "capabilities": [
+    {
+      "capability": "capability_registry",
+      "status": "MEASURED",
+      "evidence_ref": "test:zero::features::tests::registry_roundtrip@WORKTREE",
+      "gate": "cargo test -p claude_rs zero::features",
+      "tracking_issue": null,
+      "description": {
+        "de": "Kanonisches JSON-Register aller Faehigkeiten; einzige Quelle der Wahrheit fuer /features.",
+        "en": "Canonical JSON registry of all capabilities; single source of truth for /features."
+      }
+    },
+    {
+      "capability": "features_command_table",
+      "status": "MEASURED",
+      "evidence_ref": "test:zero::features::tests::render_table_has_required_columns@WORKTREE",
+      "gate": "cargo test -p claude_rs zero::features",
+      "tracking_issue": null,
+      "description": {
+        "de": "/features liefert die Tabelle capability | status | evidence_ref | gate.",
+        "en": "/features renders the table capability | status | evidence_ref | gate."
+      }
+    },
+    {
+      "capability": "capability_ci_gate",
+      "status": "MEASURED",
+      "evidence_ref": "test:zero::features::tests::ci_gate_rejects_measured_without_passing_test@WORKTREE",
+      "gate": "cargo test -p claude_rs zero::features",
+      "tracking_issue": null,
+      "description": {
+        "de": "CI-Gate schlaegt fehl, wenn eine MEASURED-Faehigkeit keinen bestandenen Testbeleg hat.",
+        "en": "The CI gate fails when a MEASURED capability lacks a passing test reference."
+      }
+    },
+    {
+      "capability": "ground_mode_capability_explanation",
+      "status": "MEASURED",
+      "evidence_ref": "test:zero::features_ground::tests::explain_capability_in_german@WORKTREE",
+      "gate": "cargo test -p claude_rs zero::features",
+      "tracking_issue": null,
+      "description": {
+        "de": "Der Grundmodus erklaert jede Faehigkeit auf Deutsch oder Englisch und markiert Unbekanntes als UNKNOWN.",
+        "en": "The ground mode explains any capability in German or English and marks unknown items as UNKNOWN."
+      }
+    },
+    {
+      "capability": "omega_ground_mode",
+      "status": "UNKNOWN",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs zero::omega",
+      "tracking_issue": null,
+      "description": {
+        "de": "Lokaler Grundmodus ueber das 0.8B-Modell; in dieser Registry liegt noch keine verifizierende Messung vor.",
+        "en": "Local ground mode via the 0.8B model; this registry holds no verifying measurement yet."
+      }
+    },
+    {
+      "capability": "freewiki_provider_tips",
+      "status": "UNKNOWN",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs zero::freewiki",
+      "tracking_issue": null,
+      "description": {
+        "de": "Wiki-Tipp fuer einen noch nicht eingerichteten Anbieter; unbestätigt in dieser Registry.",
+        "en": "Wiki tip for a provider that is not set up yet; unverified in this registry."
+      }
+    },
+    {
+      "capability": "retina_local_perception",
+      "status": "UNKNOWN",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs zero::retina",
+      "tracking_issue": null,
+      "description": {
+        "de": "Lokale Retina-Zustandszeile; unbestätigt in dieser Registry.",
+        "en": "Local Retina one-line state; unverified in this registry."
+      }
+    },
+    {
+      "capability": "entity_identity_root_state",
+      "status": "UNKNOWN",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs zero::entity",
+      "tracking_issue": null,
+      "description": {
+        "de": "Identitaet und Root-State aus dem gebuendelten Plugin; unbestätigt in dieser Registry.",
+        "en": "Identity and root state from the bundled plugin; unverified in this registry."
+      }
+    },
+    {
+      "capability": "grid_health_and_events",
+      "status": "UNKNOWN",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs zero::grid",
+      "tracking_issue": null,
+      "description": {
+        "de": "GRID-Health und Ereignis-Push ueber Loopback; unbestätigt in dieser Registry.",
+        "en": "GRID health and event push over loopback; unverified in this registry."
+      }
+    },
+    {
+      "capability": "token_tacho_panel",
+      "status": "UNKNOWN",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs ui::tacho",
+      "tracking_issue": null,
+      "description": {
+        "de": "Token-Tacho-Panel des Design-Teams; in dieser Registry nicht verifiziert.",
+        "en": "Token tacho panel from the design team; not verified in this registry."
+      }
+    },
+    {
+      "capability": "claude_code_mode_switch",
+      "status": "PLANNED",
+      "evidence_ref": "",
+      "gate": "cargo test -p claude_rs zero::claude_code_mode",
+      "tracking_issue": "zero40-track3-item13",
+      "description": {
+        "de": "Umschaltung zwischen Free Pool (Omnipool) und echtem Claude Code mit eigenem Login.",
+        "en": "Mode switch between the free pool (Omnipool) and real Claude Code with the user's own login."
+      }
+    },
+    {
+      "capability": "smartphone_link",
+      "status": "PLANNED",
+      "evidence_ref": "",
+      "gate": "docs/zero/smartphone.md",
+      "tracking_issue": "zero40-track3-item14",
+      "description": {
+        "de": "Smartphone-Verbindung: erst dokumentierter Plan, dann kleinstes funktionierendes Stueck.",
+        "en": "Smartphone link: first a documented plan, then the smallest working piece."
+      }
+    }
+  ]
+}

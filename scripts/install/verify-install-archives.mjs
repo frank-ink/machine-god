@@ -113,6 +113,23 @@ function verifyExtractedApp(platformPackage, appRoot, archivePath, archiveName, 
     "fusion/fusion.js",
     "fusion/ais.js",
     "fusion/mcp_fusion.js",
+    "grid/cli.js",
+    "grid/core.js",
+    "grid/udb.js",
+    "grid/engine.js",
+    "grid/capabilities.js",
+    "grid/capabilities.json",
+    "grid/sync.js",
+    "grid/setup.js",
+    "grid/mcp_grid.js",
+    "grid/schema_leer.sql",
+    "reflect/cli.ts",
+    "reflect/core.ts",
+    "reflect/hook.ts",
+    "reflect/learn.ts",
+    "reflect/reflect.ts",
+    "reflect/proposals.ts",
+    "reflect/settings.ts",
     "node_modules/@anthropic-ai/claude-agent-sdk/package.json",
     `${packagePath(expectedAgentSdkNativePackage(platformPackage))}/package.json`
   ];
@@ -165,6 +182,9 @@ function expectNoForbiddenFiles(files, appRoot, context) {
 function isForbiddenFile(file) {
   const segments = file.split("/");
   const basename = segments.at(-1) ?? "";
+  if (segments.length === 2 && (segments[0] === "interest" || segments[0] === "reflect") && basename.endsWith(".ts") && !basename.endsWith(".test.ts")) {
+    return false;
+  }
 
   return (
     basename === ".env" ||

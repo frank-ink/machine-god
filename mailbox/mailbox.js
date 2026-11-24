@@ -10,6 +10,9 @@
 //   machine-god mailbox            run the loop (polls git every 30 s)
 //   machine-god mailbox once       one round, then exit
 //   machine-god mailbox approve <dir> | revoke <dir> | status
+//   machine-god mailbox questions confirm|auto|off   how {"question"} requests are answered once your AIs are fused (machine-god grid fuse):
+//       confirm (default) = the GRID drafts an answer from the shared memory and an AI, you see it and type yes (or your own answer); auto = it is sent without asking
+//       (text only, it can never run anything; the answer may contain things from your memory, so only enable it for a repo only you can write to); off = old behaviour, you type the answer.
 // Test switches: MG_GRID_DIR (clone to use), MG_MAILBOX_POLL_S, MG_CONFIG_DIR / MG_DATA_DIR.
 import fs from "node:fs";
 import os from "node:os";
@@ -80,16 +83,19 @@ export const configFile = (configDir) => path.join(configDir, "mailbox.json");
 export function loadConfig(configDir) {
   try {
     const c = JSON.parse(fs.readFileSync(configFile(configDir), "utf8"));
-    return { workspaces: Array.isArray(c.workspaces) ? c.workspaces.filter((x) => typeof x === "string") : [] };
+    return {
+      workspaces: Array.isArray(c.workspaces) ? c.workspaces.filter((x) => typeof x === "string") : [],
+      gridQuestions: ["confirm", "auto", "off"].includes(c.gridQuestions) ? c.gridQuestions : "confirm",
+    };
   } catch {
-    return { workspaces: [] };
+    return { workspaces: [], gridQuestions: "confirm" };
   }
 }
 export function saveConfig(configDir, cfg) {
   fs.mkdirSync(configDir, { recursive: true });
   const f = configFile(configDir);
   const tmp = `${f}.tmp.${process.pid}`;
-  fs.writeFileSync(tmp, JSON.stringify({ workspaces: cfg.workspaces }, null, 2) + "\n", { mode: 0o600 });
+  fs.writeFileSync(tmp, JSON.stringify({ workspaces: cfg.workspaces, gridQuestions: cfg.gridQuestions || "confirm" }, null, 2) + "\n", { mode: 0o600 });
   fs.renameSync(tmp, f);
 }
 export function approveWorkspace(configDir, dir, home = os.homedir()) {
@@ -284,7 +290,7 @@ export function parseRequest(raw, fileId) {
  * -> result object (written to results/<id>.json). interactive + askUser(kind, text, meta) -> string|null are the only way anything
  * outside the allowlist can run. runShellFn is injectable for tests.
  */
-export async function handleRequest(req, { cfg, protectedDirs = [], interactive, askUser, runShellFn = runShell, log = () => {}, now = () => new Date().toISOString() }) {
+export async function handleRequest(req, { cfg, protectedDirs = [], interactive, askUser, runShellFn = runShell, log = () => {}, now = () => new Date().toISOString(), gridAnswer = null }) {
   const base = { id: req.id, from: req.from, kind: req.kind };
   const done = (r, decision, reason) => {
     const res = { ...base, status: r.status, decision, ...(reason ? { reason } : {}), ...(r.exit_code !== undefined ? { exit_code: r.exit_code, stdout: r.stdout, stderr: r.stderr, truncated: r.truncated } : {}), ...(r.answer !== undefined ? { answer: r.answer } : {}), finished_at: now() };
@@ -292,6 +298,26 @@ export async function handleRequest(req, { cfg, protectedDirs = [], interactive,
     return res;
   };
   if (req.kind === "question") {
+    // fused AIs: the GRID drafts the answer (shared memory + the best-fitting AI). Text only; confirm = you decide, auto = you opted in, off = old behaviour
+    const mode = cfg.gridQuestions || "confirm";
+    if (gridAnswer && mode !== "off") {
+      let draft = "";
+      let failed = "";
+      try {
+        draft = String((await gridAnswer(clean(req.question), req.from)) || "").trim();
+      } catch (e) {
+        failed = String(e.message || e).slice(0, 160);
+      }
+      if (draft) {
+        if (mode === "auto") return done({ status: "answered", answer: clean(draft, 4000) }, "grid-auto");
+        if (!interactive) return done({ status: "rejected" }, "no-tty", "questions need a person at the terminal (or: machine-god mailbox questions auto)");
+        const ans = await askUser("draft", clean(req.question), { from: req.from, id: req.id, draft: clean(draft, 4000) });
+        if (ans && ans.trim().toLowerCase() === "yes") return done({ status: "answered", answer: clean(draft, 4000) }, "grid-confirmed");
+        if (ans && ans.trim()) return done({ status: "answered", answer: clean(ans, 4000) }, "user-answered");
+        return done({ status: "declined" }, "user-declined");
+      }
+      log({ id: req.id, decision: "grid-failed", reason: failed || "empty draft" });
+    }
     if (!interactive) return done({ status: "rejected" }, "no-tty", "questions need a person at the terminal");
     const ans = await askUser("question", clean(req.question), { from: req.from, id: req.id });
     if (ans && ans.trim()) return done({ status: "answered", answer: clean(ans, 4000) }, "user-answered");
@@ -351,7 +377,7 @@ export function pushResults(dir, message) {
 }
 
 /** One round: pull, answer every control/<id>.json without results/<id>.json, push. -> { handled, results, error? } */
-export async function pollOnce({ dir, cfg, protectedDirs = [], interactive, askUser, runShellFn, log = () => {}, push = true, now }) {
+export async function pollOnce({ dir, cfg, protectedDirs = [], interactive, askUser, runShellFn, log = () => {}, push = true, now, gridAnswer = null }) {
   const sync = syncDown(dir);
   if (!sync.ok) return { handled: 0, results: [], error: `git pull failed: ${sync.detail}` };
   const cdir = path.join(dir, "control");
@@ -376,7 +402,7 @@ export async function pollOnce({ dir, cfg, protectedDirs = [], interactive, askU
     const req = parseRequest(raw, id);
     const result = req.error
       ? (log({ id, decision: "bad-request", reason: req.error }), { id, status: "rejected", decision: "bad-request", reason: req.error, finished_at: (now || (() => new Date().toISOString()))() })
-      : await handleRequest(req, { cfg, protectedDirs, interactive, askUser, runShellFn, log, now });
+      : await handleRequest(req, { cfg, protectedDirs, interactive, askUser, runShellFn, log, now, gridAnswer });
     fs.writeFileSync(out, JSON.stringify(result, null, 2) + "\n");
     results.push(result);
   }
@@ -400,6 +426,11 @@ export function makeUserPrompt({ input = process.stdin, output = process.stdout 
       w(`  in: ${meta.cwd}`);
       w(`  why you are asked: ${meta.reason}`);
       output.write("  Type yes to run it (anything else rejects): ");
+    } else if (kind === "draft") {
+      w(`  asks you: ${text}`);
+      w(`  the GRID drafted this answer (shared memory + ${"the best-fitting connected AI"}):`);
+      for (const l of String(meta.draft).split("\n")) w(`    | ${l}`);
+      output.write("  Type yes to send it, type your own answer instead, or press Enter to decline: ");
     } else {
       w(`  asks you: ${text}`);
       output.write("  Your answer (empty = decline): ");
@@ -430,6 +461,26 @@ export function makeLogger(dataDir) {
   };
 }
 
+/** After `machine-god grid fuse`: a function (question, from) -> answer text that asks the GRID (memory + routing). Null when not fused. */
+export async function makeGridAnswer(env = process.env, openOpts = {}) {
+  try {
+    const { gridEnabled, openGrid } = await import("../grid/core.js");
+    if (!gridEnabled(env)) return null;
+    return async (question, from) => {
+      const g = openGrid({ env, ...openOpts });
+      try {
+        // learn:false = the requester cannot make Machine God save anything; the question and answer are still recorded as a turn
+        const r = await g.ask(question, { asker: `mailbox:${String(from).slice(0, 30)}`, learn: false });
+        return `${r.answer}\n\n(Machine God, answered by ${r.ai})`;
+      } finally {
+        g.close();
+      }
+    };
+  } catch {
+    return null;
+  }
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function main(argv = process.argv.slice(2), env = process.env, out = process.stdout) {
@@ -451,22 +502,33 @@ export async function main(argv = process.argv.slice(2), env = process.env, out 
       return 0;
     case "status": {
       const dir = gridDirFor(env, paths);
-      w(`GRID clone: ${dir} ${fs.existsSync(path.join(dir, ".git")) ? "(present)" : "(missing; run: machine-god grid)"}`);
+      w(`GRID clone: ${dir} ${fs.existsSync(path.join(dir, ".git")) ? "(present)" : "(missing; run: machine-god grid repo)"}`);
       const cfg = loadConfig(paths.configDir);
       w(`approved workspaces: ${cfg.workspaces.length ? cfg.workspaces.join(", ") : "none (file and git commands will ask you; approve with: machine-god mailbox approve <dir>)"}`);
+      w(`questions: ${cfg.gridQuestions} (GRID answers questions only after: machine-god grid fuse; change: machine-god mailbox questions confirm|auto|off)`);
       w(`log: ${path.join(paths.dataDir, "mailbox.log")}`);
+      return 0;
+    }
+    case "questions": {
+      const mode = rest[0];
+      if (!["confirm", "auto", "off"].includes(mode)) {
+        w(`question answers via the GRID: ${loadConfig(paths.configDir).gridQuestions} (change: machine-god mailbox questions confirm|auto|off)`);
+        return rest.length ? 1 : 0;
+      }
+      saveConfig(paths.configDir, { ...loadConfig(paths.configDir), gridQuestions: mode });
+      w(`question answers via the GRID: ${mode}`);
       return 0;
     }
     case "run":
     case "once":
       break;
     default:
-      w("usage: machine-god mailbox [run|once|approve <dir>|revoke <dir>|status]");
+      w("usage: machine-god mailbox [run|once|approve <dir>|revoke <dir>|questions confirm|auto|off|status]");
       return cmd === "help" || cmd === "--help" ? 0 : 1;
   }
   const dir = gridDirFor(env, paths);
   if (!fs.existsSync(path.join(dir, ".git"))) {
-    w(`No GRID repo clone at ${dir}. Set it up first: machine-god grid`);
+    w(`No GRID repo clone at ${dir}. Set it up first: machine-god grid repo`);
     return 1;
   }
   const interactive = !!(process.stdin.isTTY && process.stdout.isTTY);
@@ -474,6 +536,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, out 
   const protectedDirs = [paths.configDir, paths.dataDir].map((d) => realOrNull(d) || d);
   const askUser = interactive ? makeUserPrompt() : null;
   const poll = Math.max(1, Number(env.MG_MAILBOX_POLL_S) || 30);
+  const gridAnswer = await makeGridAnswer(env);
   w("Machine God mailbox (foreground). Policy: other AIs may only READ; everything else needs your yes here.");
   w(`GRID clone: ${dir}`);
   const cfg0 = loadConfig(paths.configDir);
@@ -483,7 +546,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, out 
   process.once("SIGINT", () => (stop = true));
   for (;;) {
     const cfg = loadConfig(paths.configDir); // re-read: approve/revoke apply without restart
-    const r = await pollOnce({ dir, cfg, protectedDirs, interactive, askUser, log });
+    const r = await pollOnce({ dir, cfg, protectedDirs, interactive, askUser, log, gridAnswer });
     if (r.error) w(`[mailbox] ${r.error}`);
     for (const x of r.results) w(`[mailbox] ${x.id}: ${x.status} (${x.decision})`);
     if (cmd === "once" || stop) break;

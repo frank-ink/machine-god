@@ -1,8 +1,8 @@
-// Research backends: claude (local CLI), chatgpt (bridge), gemini / ollama (one connected AI via the fusion client), fusion (all connected AIs), dry (deterministic fake).
+// Research backends: claude (local CLI), chatgpt (bridge), gemini / ollama (one connected AI via the fusion client), fusion (all connected AIs), grid (through the Machine God GRID: shared memory + persona + routing, results stored in unified.db), dry (deterministic fake).
 import { tmpdir } from "node:os";
 export interface Round { note: string; reward: number; subtopics: string[] }
-export type Backend = "claude" | "chatgpt" | "gemini" | "ollama" | "fusion" | "dry";
-export const BACKENDS: Backend[] = ["claude", "chatgpt", "gemini", "ollama", "fusion", "dry"];
+export type Backend = "claude" | "chatgpt" | "gemini" | "ollama" | "fusion" | "grid" | "dry";
+export const BACKENDS: Backend[] = ["claude", "chatgpt", "gemini", "ollama", "fusion", "grid", "dry"];
 
 export const buildPrompt = (topic: string) =>
   `Write a short research note (max 250 words) on this topic: ${JSON.stringify(topic)}.\n` +
@@ -72,6 +72,7 @@ export async function research(topic: string, backend: Backend): Promise<Round> 
     return parseResult(await F.askProvider(backend === "gemini" ? "gemini" : "local", prompt, backend === "ollama" ? { kind: "ollama" } : {}));
   }
   if (backend === "fusion") return fuse(prompt);
+  if (backend === "grid") return viaGrid(topic, prompt);
   return parseResult(await (await import("./backend_chatgpt.ts")).send(prompt));
 }
 
@@ -89,4 +90,21 @@ export async function fuse(prompt: string): Promise<Round> {
     reward: good.reduce((a, g) => a + g.round.reward, 0) / good.length,
     subtopics,
   };
+}
+
+/**
+ * GRID backend: the request goes through the shared memory and persona, is routed to the best connected AI, the turn lands in unified.db,
+ * and the finished research note is stored as a memory of kind "research" (subject = topic) so every AI can recall it later.
+ */
+export async function viaGrid(topic: string, prompt: string): Promise<Round> {
+  const G = await import("../grid/core.js");
+  const g = G.openGrid({});
+  try {
+    const r = await g.ask(prompt, { asker: "interest", learn: false });
+    const round = parseResult(r.answer);
+    g.remember(round.note.slice(0, 1400), { kind: "research", subject: topic, by: "interest", ai: r.ai, source: "interest" });
+    return round;
+  } finally {
+    g.close();
+  }
 }

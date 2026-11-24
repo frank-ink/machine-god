@@ -1,0 +1,72 @@
+module zero.schema_check
+
+architecture SchemaChecker {
+  stateAuthority: SchemaCheckState
+  path: ParseSQL -> ParseDoc -> Compare -> ValidateLabels -> ScanForbidden -> Report
+}
+
+compound SchemaCheckState {
+  sql_tables: map<string, TableSpec>
+  doc_tables: map<string, TableSpec>
+  status_rows: list<StatusRow>
+  errors: list<CheckError>
+  strict: bool
+}
+
+compound TableSpec {
+  name: string
+  columns: map<string, ColumnSpec>
+}
+
+compound ColumnSpec {
+  name: string
+  type: string
+  constraints: list<string>
+  epistemic_label: option<string>
+}
+
+compound StatusRow {
+  capability: string
+  class: string
+  test_path: string
+  measured_value: string
+  ci_run: string
+  line_number: int
+}
+
+compound CheckError {
+  code: enum { MISSING_TABLE, MISSING_COLUMN, TYPE_MISMATCH, CONSTRAINT_MISMATCH, EPISTEMIC_MISMATCH, INVALID_LABEL, FORBIDDEN_CLAIM, MISSING_INPUT, UNKNOWN_ARGV, UNPROJECTED_DDL }
+  message: string
+  location: string
+  severity: enum { ERROR, WARNING }
+}
+
+invariant NoUnknownDefault:
+  // UNKNOWN epistemic class never coerced to 0/0.5/''
+  forall c in ColumnSpec: c.epistemic_label == "UNKNOWN" ==> not c.constraints.contains("DEFAULT")
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant LabelExclusive:
+  // Exactly one of MEASURED/PLANNED/UNKNOWN per status row
+  forall r in StatusRow: r.class in {"MEASURED", "PLANNED", "UNKNOWN"} && count_labels(r.class) == 1
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant ForbiddenClaimsAbsent:
+  // No anthropomorphic capability claims in scanned files
+  forall file in ScannedFiles: not contains_forbidden_pattern(file.content)
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+fn parse_sql_ddl(sql: string) -> map<string, TableSpec> { ... }
+fn parse_schema_doc(doc: string) -> map<string, TableSpec> { ... }
+fn parse_status_doc(doc: string) -> list<StatusRow> { ... }
+fn compare_schemas(sql: map, doc: map, strict: bool) -> list<CheckError> { ... }
+fn validate_labels(rows: list<StatusRow>) -> list<CheckError> { ... }
+fn scan_forbidden_claims(paths: list<Path>) -> list<CheckError> { ... }
+fn read_gate_counts() -> (int, int) { ... }  // from cargo test / npm test output
+fn run_checker(args: list<string>) -> int { ... }
+
+hypothesis H_SCHEMA_PROJECTION: "Doc projection matches DDL exactly when --strict"
+hypothesis H_LABEL_DISCIPLINE: "Every capability row carries exactly one valid label"
+hypothesis H_NO_ANTHROPOMORPHISM: "No forbidden claim patterns in any scanned source"
+
+promotion MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE

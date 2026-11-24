@@ -131,7 +131,7 @@ export async function connectAI(id, ctx) {
     }
     log("To let ChatGPT use the mailbox: connect GitHub in ChatGPT (Settings -> Connectors), choose your machine-god-grid repo only:");
     log(`  ${CONNECTORS_URL}`);
-    log(fs.existsSync(path.join(paths.configDir, "grid.json")) ? "  then run `machine-god mailbox` in a terminal and keep it open while ChatGPT works." : "  first create your GRID repo: machine-god grid");
+    log(fs.existsSync(path.join(paths.configDir, "grid.json")) ? "  then run `machine-god mailbox` in a terminal and keep it open while ChatGPT works." : "  first create your GRID repo: machine-god grid repo");
     if (bridge) {
       connect(paths.configDir, id, { bridge: true });
       return { status: "connected", detail: "bridge" };

@@ -295,16 +295,22 @@ function copyAgentSdkRuntime(destinationDir) {
 
 // Machine God additions: first-run companion (runs on the bundled Bun), the optional ChatGPT bridge (Python, set up on demand), interest organ, GitHub mailbox, AI fusion.
 function copyMachineGodExtras(appRoot) {
-  for (const dir of ["firstrun", "bridge", "interest", "mailbox", "fusion"]) {
+  for (const dir of ["firstrun", "bridge", "interest", "mailbox", "fusion", "grid", "reflect"]) {
     const source = path.join(repoRoot, dir);
     if (!fs.existsSync(source)) {
       throw new Error(`Missing ${dir}/ in the repository root; the install archive needs it.`);
     }
     copyDirectoryFiltered(source, path.join(appRoot, dir), (sourcePath) => {
       const name = path.basename(sourcePath);
-      return !name.endsWith(".test.js") && !name.endsWith(".test.ts") && !name.endsWith(".pyc") && name !== "__pycache__" && name !== "node_modules";
+      return !name.endsWith(".test.js") && !name.endsWith(".test.ts") && !name.endsWith(".pyc") && name !== "INTEGRATION.md" && name !== "__pycache__" && name !== "node_modules";
     });
   }
+  // the GRID creates its unified.db from the frankenstein3 schema; the archive carries no plugins/, so the schema travels next to grid/
+  const schema = path.join(repoRoot, "plugins", "frankenstein3", "scripts", "star", "daten", "schema_leer.sql");
+  if (!fs.existsSync(schema)) {
+    throw new Error("Missing plugins/frankenstein3/scripts/star/daten/schema_leer.sql; the GRID memory needs it.");
+  }
+  fs.copyFileSync(schema, path.join(appRoot, "grid", "schema_leer.sql"));
 }
 
 function copyDirectoryFiltered(sourceDir, destinationDir, includePath) {

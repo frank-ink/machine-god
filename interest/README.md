@@ -30,7 +30,7 @@ table (`ts, kind, topic, delta`); `history` shows it.
 seed <topic...>      add seeds (one quoted string per topic)
 list                 table sorted by score
 pick                 choose a topic and print the top 5 probabilities (read-only)
-run [--backend claude|chatgpt|gemini|ollama|fusion|dry] [--rounds N]
+run [--backend claude|chatgpt|gemini|ollama|fusion|grid|dry] [--rounds N]
 like <topic> | dislike <topic>
 history [N]
 reset --yes
@@ -45,6 +45,7 @@ With no seeds, `run` prints how to seed. No topics are invented.
 - `gemini`: asks Gemini with the key you stored via `machine-god ais connect gemini` (key stays in `keys.json`, owner-only).
 - `ollama`: asks a model on your local Ollama (`127.0.0.1:11434`); nothing leaves the computer.
 - `fusion`: asks every AI you connected (`machine-god ais`), parses each answer and merges: mean reward, labelled notes, up to 3 distinct subtopics.
+- `grid`: goes through the Machine God GRID (`machine-god grid`): shared memory and persona are added, the request is routed to the connected AI that fits, the turn is recorded in `unified.db` and the finished note is saved as a `research` memory any AI can recall.
 - `dry`: deterministic fake for tests.
 
 The prompt contains only the topic. The model must end with `{"reward":0..1,"subtopics":[max 3]}`.

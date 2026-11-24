@@ -1008,7 +1008,7 @@ machine_god_launcher_contents() {
 d="${app%/*}"
 if [ -x "$d/claude-rs-bridge-bun" ]; then
   case "${1:-}" in
-    interests) t=interest/cli.ts ;; mailbox) t=mailbox/mailbox.js ;; ais) t=fusion/ais.js ;; grid) t=firstrun/mg-github.js ;; *) t= ;;
+    interests) t=interest/cli.ts ;; mailbox) t=mailbox/mailbox.js ;; ais) t=fusion/ais.js ;; grid) t=grid/cli.js ;; improve) t=reflect/cli.ts ;; *) t= ;;
   esac
   if [ -n "$t" ] && [ -f "$d/$t" ]; then shift; exec "$d/claude-rs-bridge-bun" "$d/$t" "$@"; fi
 fi
