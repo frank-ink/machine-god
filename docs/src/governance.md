@@ -11,7 +11,7 @@ Repository rules, workflow permissions, release publication, and code of conduct
 
 ## Community Conduct and Reporting
 
-The [Code of Conduct](https://github.com/frank-ink/machine-god/blob/main/CODE_OF_CONDUCT.md) is the policy and the source of truth for what is expected, what is restricted, and how violations are addressed. This section only describes how to reach the maintainer privately.
+The [Code of Conduct](https://github.com/gschaidergabriel/machine-god/blob/main/CODE_OF_CONDUCT.md) is the policy and the source of truth for what is expected, what is restricted, and how violations are addressed. This section only describes how to reach the maintainer privately.
 
 Conduct concerns must **not** be reported through public GitHub issues, GitHub Discussions, or GitHub Security Advisories. Those channels are public or reserved for security vulnerabilities, and none of them are an appropriate place for a report involving a person.
 

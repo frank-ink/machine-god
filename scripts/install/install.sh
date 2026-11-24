@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-repo_owner="frank-ink"
+repo_owner="gschaidergabriel"
 repo_name="machine-god"
 repo_slug="$repo_owner/$repo_name"
 root_package="claude-code-rust"

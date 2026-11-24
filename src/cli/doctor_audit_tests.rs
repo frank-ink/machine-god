@@ -260,12 +260,12 @@ fn runtime_candidates_show_the_selected_path_and_actual_file_states() {
 #[test]
 fn platform_selection_matches_published_packages_and_refuses_unsupported_hosts() {
     for (os, arch, libc, expected) in [
-        ("macos", "x86_64", None, "@frank-ink/machine-god-darwin-x64"),
-        ("macos", "aarch64", None, "@frank-ink/machine-god-darwin-arm64"),
-        ("windows", "x86_64", None, "@frank-ink/machine-god-win32-x64-msvc"),
-        ("windows", "aarch64", None, "@frank-ink/machine-god-win32-arm64-msvc"),
-        ("linux", "x86_64", Some("glibc"), "@frank-ink/machine-god-linux-x64-gnu"),
-        ("linux", "aarch64", Some("glibc"), "@frank-ink/machine-god-linux-arm64-gnu"),
+        ("macos", "x86_64", None, "@gschaidergabriel/machine-god-darwin-x64"),
+        ("macos", "aarch64", None, "@gschaidergabriel/machine-god-darwin-arm64"),
+        ("windows", "x86_64", None, "@gschaidergabriel/machine-god-win32-x64-msvc"),
+        ("windows", "aarch64", None, "@gschaidergabriel/machine-god-win32-arm64-msvc"),
+        ("linux", "x86_64", Some("glibc"), "@gschaidergabriel/machine-god-linux-x64-gnu"),
+        ("linux", "aarch64", Some("glibc"), "@gschaidergabriel/machine-god-linux-arm64-gnu"),
     ] {
         assert_eq!(
             platform_package_selection_for(os, arch, libc),

@@ -785,26 +785,26 @@ fn platform_package_selection_for(
 ) -> PlatformPackageSelection {
     match (os, arch) {
         ("macos", "aarch64") => {
-            PlatformPackageSelection::Supported("@frank-ink/machine-god-darwin-arm64")
+            PlatformPackageSelection::Supported("@gschaidergabriel/machine-god-darwin-arm64")
         }
         ("macos", "x86_64") => {
-            PlatformPackageSelection::Supported("@frank-ink/machine-god-darwin-x64")
+            PlatformPackageSelection::Supported("@gschaidergabriel/machine-god-darwin-x64")
         }
         ("linux", "x86_64") if linux_libc == Some("glibc") => {
-            PlatformPackageSelection::Supported("@frank-ink/machine-god-linux-x64-gnu")
+            PlatformPackageSelection::Supported("@gschaidergabriel/machine-god-linux-x64-gnu")
         }
         ("linux", "aarch64") if linux_libc == Some("glibc") => {
-            PlatformPackageSelection::Supported("@frank-ink/machine-god-linux-arm64-gnu")
+            PlatformPackageSelection::Supported("@gschaidergabriel/machine-god-linux-arm64-gnu")
         }
         ("linux", "x86_64" | "aarch64") => PlatformPackageSelection::UnsupportedLinuxLibc {
             arch,
             libc: linux_libc.unwrap_or("unknown"),
         },
         ("windows", "x86_64") => {
-            PlatformPackageSelection::Supported("@frank-ink/machine-god-win32-x64-msvc")
+            PlatformPackageSelection::Supported("@gschaidergabriel/machine-god-win32-x64-msvc")
         }
         ("windows", "aarch64") => {
-            PlatformPackageSelection::Supported("@frank-ink/machine-god-win32-arm64-msvc")
+            PlatformPackageSelection::Supported("@gschaidergabriel/machine-god-win32-arm64-msvc")
         }
         _ => PlatformPackageSelection::UnsupportedPlatform,
     }

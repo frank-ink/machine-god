@@ -40,7 +40,7 @@ pub(super) fn resolver_fixture() -> ResolverFixture {
         installed_exe: write_file(root, "package/vendor/x86_64/claude-rs"),
         npm_platform_exe: write_file(
             root,
-            "npm-prefix/node_modules/@frank-ink/machine-god-win32-x64-msvc/bin/claude-rs",
+            "npm-prefix/node_modules/@gschaidergabriel/machine-god-win32-x64-msvc/bin/claude-rs",
         ),
         unbundled_exe: write_file(root, "other/vendor/x86_64/claude-rs"),
         cargo_target_exe: write_file(root, "manifest/target/debug/claude-rs"),

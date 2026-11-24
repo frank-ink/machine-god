@@ -17,7 +17,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$RepoOwner = "frank-ink"
+$RepoOwner = "gschaidergabriel"
 $RepoName = "machine-god"
 $RepoSlug = "$RepoOwner/$RepoName"
 $RootPackage = "claude-code-rust"

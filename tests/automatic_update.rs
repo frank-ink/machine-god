@@ -146,7 +146,7 @@ fn normal_exit_detaches_the_real_worker_and_preserves_absolute_and_relative_prof
         std::fs::copy(env!("CARGO_BIN_EXE_claude-rs"), &exe).unwrap();
         std::fs::write(
             package.join("package.json"),
-            r#"{"name":"@frank-ink/machine-god-linux-x64-gnu"}"#,
+            r#"{"name":"@gschaidergabriel/machine-god-linux-x64-gnu"}"#,
         )
         .unwrap();
         let profile = if relative { PathBuf::from("chosen") } else { f.path("chosen") };

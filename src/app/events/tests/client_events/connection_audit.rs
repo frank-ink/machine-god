@@ -298,7 +298,7 @@ fn update_check_event_persists_result_and_preserves_unrelated_settings_without_c
             result: crate::app::settings::UpdateCheckResult {
                 current_version: "0.2.0".into(),
                 latest_version: "0.3.0".into(),
-                release_url: "https://github.com/frank-ink/machine-god/releases/tag/v0.3.0"
+                release_url: "https://github.com/gschaidergabriel/machine-god/releases/tag/v0.3.0"
                     .into(),
                 checked_at_unix_secs: 12345,
                 source: "github_release".into(),
@@ -308,7 +308,7 @@ fn update_check_event_persists_result_and_preserves_unrelated_settings_without_c
     let saved: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
     assert_eq!(
         saved["updates"]["last_result"],
-        json!({"current_version":"0.2.0","latest_version":"0.3.0","release_url":"https://github.com/frank-ink/machine-god/releases/tag/v0.3.0","checked_at_unix_secs":12345,"source":"github_release"})
+        json!({"current_version":"0.2.0","latest_version":"0.3.0","release_url":"https://github.com/gschaidergabriel/machine-god/releases/tag/v0.3.0","checked_at_unix_secs":12345,"source":"github_release"})
     );
     assert_eq!(saved["updates"]["autoInstall"], true);
     assert_eq!(saved["updates"]["skipped_version"], "9.9.9");

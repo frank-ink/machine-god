@@ -27,7 +27,7 @@ test("selectTarget resolves glibc Linux platform package", () => {
   const selected = selectTarget(processLike("linux", "x64", "2.39"));
 
   assert.equal(selected.error, undefined);
-  assert.equal(selected.info.packageName, "@frank-ink/machine-god-linux-x64-gnu");
+  assert.equal(selected.info.packageName, "@gschaidergabriel/machine-god-linux-x64-gnu");
 });
 
 test("selectTarget rejects musl Linux without reinstall advice", () => {
@@ -68,7 +68,7 @@ test("resolveInstall returns binary and bridge paths when package payload is com
     processLike: processLike("darwin", "arm64", undefined),
     dirname: path.join("node_modules", "claude-code-rust", "bin"),
     requireResolve(request) {
-      assert.equal(request, "@frank-ink/machine-god-darwin-arm64/package.json");
+      assert.equal(request, "@gschaidergabriel/machine-god-darwin-arm64/package.json");
       return packageJsonPath;
     },
     existsSync() {

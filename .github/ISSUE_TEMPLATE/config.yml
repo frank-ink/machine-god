@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions & Discussion
-    url: https://github.com/frank-ink/machine-god/discussions
+    url: https://github.com/gschaidergabriel/machine-god/discussions
     about: Use GitHub Discussions for questions, help, and general conversation
   - name: Code of Conduct Report
-    url: https://frank-ink.github.io/machine-god/governance.html#community-conduct-and-reporting
+    url: https://gschaidergabriel.github.io/machine-god/governance.html#community-conduct-and-reporting
     about: Report code of conduct concerns privately to the project maintainer

@@ -208,7 +208,7 @@ async fn cache_boundary_invalid_release_and_explicit_disable_control_real_reques
                 crate::app::events::handle_client_event(&mut app, event);
                 assert_cache(
                     &app,
-                    "https://github.com/frank-ink/machine-god/releases/tag/v99.0.0",
+                    "https://github.com/gschaidergabriel/machine-god/releases/tag/v99.0.0",
                 );
             } else {
                 assert_eq!(listener.accept().unwrap_err().kind(), std::io::ErrorKind::WouldBlock);
@@ -272,7 +272,7 @@ async fn successful_http_status_still_requires_a_usable_release_and_recovers_aft
         assert_eq!(app.global_settings.updates.last_result, cache);
         assert_eq!(app.input.text(), "preserve my draft");
         check(&mut app, r#"{"tag_name":"v99.0.0"}"#).await;
-        assert_cache(&app, "https://github.com/frank-ink/machine-god/releases/tag/v99.0.0");
+        assert_cache(&app, "https://github.com/gschaidergabriel/machine-god/releases/tag/v99.0.0");
     }
     for value in [None, Some(json!(null)), Some(json!("  ")), Some(json!(URL))] {
         let (_dir, mut app) = fixture(None);
@@ -286,7 +286,7 @@ async fn successful_http_status_still_requires_a_usable_release_and_recovers_aft
             if value == Some(json!(URL)) {
                 URL
             } else {
-                "https://github.com/frank-ink/machine-god/releases/tag/v99.0.0"
+                "https://github.com/gschaidergabriel/machine-god/releases/tag/v99.0.0"
             },
         );
     }

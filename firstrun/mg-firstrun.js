@@ -22,7 +22,7 @@ import { runAisStep } from "../fusion/ais.js";
 import { runGridStep } from "../grid/setup.js";
 
 export const STATE_VERSION = 2;
-export const RELEASE_BASE = "https://github.com/frank-ink/machine-god/releases/download/models-v1";
+export const RELEASE_BASE = "https://github.com/gschaidergabriel/machine-god/releases/download/models-v1";
 export const MODEL = {
   file: "Qwen3.5-0.8B-omega-organ-r4.Q8_0.gguf",
   size: 811842976,

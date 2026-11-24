@@ -15,7 +15,7 @@ Run commands from the repository root unless a section says otherwise. Complete 
 | npm packages, installers or packaging scripts | Full package-layout validation | `npm-package-layout` in `pr.yml` |
 | Documentation | Book build, links, moved anchors and relevant examples | `docs.yml`; CLI table coverage in Rust tests |
 
-The workflow files are the executable authority for CI job contents: [pr.yml](https://github.com/frank-ink/machine-god/blob/main/.github/workflows/pr.yml), [_agent-sdk.yml](https://github.com/frank-ink/machine-god/blob/main/.github/workflows/_agent-sdk.yml), and [docs.yml](https://github.com/frank-ink/machine-god/blob/main/.github/workflows/docs.yml). PR title lint and CodeQL also run in GitHub. A passing local suite does not establish that those remote checks passed.
+The workflow files are the executable authority for CI job contents: [pr.yml](https://github.com/gschaidergabriel/machine-god/blob/main/.github/workflows/pr.yml), [_agent-sdk.yml](https://github.com/gschaidergabriel/machine-god/blob/main/.github/workflows/_agent-sdk.yml), and [docs.yml](https://github.com/gschaidergabriel/machine-god/blob/main/.github/workflows/docs.yml). PR title lint and CodeQL also run in GitHub. A passing local suite does not establish that those remote checks passed.
 
 ## Rust
 

@@ -12,7 +12,7 @@ export const BUN_RUNTIME_MANIFEST_RELATIVE_PATH = "scripts/runtime/bun-runtime-m
 export const PLATFORM_PACKAGES = [
   {
     dir: "darwin-arm64",
-    packageName: "@frank-ink/machine-god-darwin-arm64",
+    packageName: "@gschaidergabriel/machine-god-darwin-arm64",
     os: ["darwin"],
     cpu: ["arm64"],
     binaryName: "claude-rs",
@@ -23,7 +23,7 @@ export const PLATFORM_PACKAGES = [
   },
   {
     dir: "darwin-x64",
-    packageName: "@frank-ink/machine-god-darwin-x64",
+    packageName: "@gschaidergabriel/machine-god-darwin-x64",
     os: ["darwin"],
     cpu: ["x64"],
     binaryName: "claude-rs",
@@ -34,7 +34,7 @@ export const PLATFORM_PACKAGES = [
   },
   {
     dir: "linux-x64-gnu",
-    packageName: "@frank-ink/machine-god-linux-x64-gnu",
+    packageName: "@gschaidergabriel/machine-god-linux-x64-gnu",
     os: ["linux"],
     cpu: ["x64"],
     libc: ["glibc"],
@@ -46,7 +46,7 @@ export const PLATFORM_PACKAGES = [
   },
   {
     dir: "linux-arm64-gnu",
-    packageName: "@frank-ink/machine-god-linux-arm64-gnu",
+    packageName: "@gschaidergabriel/machine-god-linux-arm64-gnu",
     os: ["linux"],
     cpu: ["arm64"],
     libc: ["glibc"],
@@ -58,7 +58,7 @@ export const PLATFORM_PACKAGES = [
   },
   {
     dir: "win32-x64-msvc",
-    packageName: "@frank-ink/machine-god-win32-x64-msvc",
+    packageName: "@gschaidergabriel/machine-god-win32-x64-msvc",
     os: ["win32"],
     cpu: ["x64"],
     binaryName: "claude-rs.exe",
@@ -69,7 +69,7 @@ export const PLATFORM_PACKAGES = [
   },
   {
     dir: "win32-arm64-msvc",
-    packageName: "@frank-ink/machine-god-win32-arm64-msvc",
+    packageName: "@gschaidergabriel/machine-god-win32-arm64-msvc",
     os: ["win32"],
     cpu: ["arm64"],
     binaryName: "claude-rs.exe",

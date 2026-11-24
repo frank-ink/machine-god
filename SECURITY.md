@@ -11,7 +11,7 @@
 
 **Please do NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, use [GitHub Security Advisories](https://github.com/frank-ink/machine-god/security/advisories/new)
+Instead, use [GitHub Security Advisories](https://github.com/gschaidergabriel/machine-god/security/advisories/new)
 to report vulnerabilities privately.
 
 Please include:

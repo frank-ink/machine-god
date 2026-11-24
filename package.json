@@ -17,12 +17,12 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frank-ink/machine-god.git"
+    "url": "git+https://github.com/gschaidergabriel/machine-god.git"
   },
   "bugs": {
-    "url": "https://github.com/frank-ink/machine-god/issues"
+    "url": "https://github.com/gschaidergabriel/machine-god/issues"
   },
-  "homepage": "https://github.com/frank-ink/machine-god#readme",
+  "homepage": "https://github.com/gschaidergabriel/machine-god#readme",
   "bin": {
     "claude-rs": "bin/claude-rs.js"
   },

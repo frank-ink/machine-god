@@ -1,7 +1,7 @@
 name: Issue Triage
 
 on:
-  # disabled in frank-ink/machine-god (needs infrastructure this repo does not have); manual only
+  # disabled in gschaidergabriel/machine-god (needs infrastructure this repo does not have); manual only
   workflow_dispatch:
 
 permissions: {}

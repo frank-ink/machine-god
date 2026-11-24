@@ -178,7 +178,7 @@ fn script_dispatch_preserves_selected_release_directory_and_noninteractive_inten
                 &args[..5],
                 ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
             );
-            assert!(args[5].contains("https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1"));
+            assert!(args[5].contains("https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1"));
             for value in ["CLAUDE_RS_RELEASE=9.9.9", "CLAUDE_RS_KEEP_NPM=1"] {
                 assert!(j.lines().any(|l| l == value));
             }
@@ -209,7 +209,7 @@ fn script_dispatch_preserves_selected_release_directory_and_noninteractive_inten
                 assert!(!j.lines().any(|l| l.starts_with(&format!("{key}="))));
             }
             let download = std::fs::read_to_string(f.path("download-journal")).unwrap();
-            assert!(download.contains("arg=https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh"));
+            assert!(download.contains("arg=https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh"));
             let script = PathBuf::from(std::fs::read_to_string(f.path("download-path")).unwrap());
             assert!(!script.parent().unwrap().exists(), "temporary download cleaned up");
         }

@@ -23,13 +23,13 @@ One command. It downloads the matching release for your system, checks its SHA-2
 **Linux / macOS** (Terminal):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | bash
 ```
 
 **Windows** (PowerShell, not as administrator):
 
 ```powershell
-irm https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1 | iex
+irm https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1 | iex
 ```
 
 Then open a **new** terminal and type:
@@ -39,7 +39,7 @@ machine-god
 ```
 
 Prebuilt for Linux x64/arm64, macOS Intel/Apple Silicon, Windows x64/arm64.
-All releases: [github.com/frank-ink/machine-god/releases](https://github.com/frank-ink/machine-god/releases).
+All releases: [github.com/gschaidergabriel/machine-god/releases](https://github.com/gschaidergabriel/machine-god/releases).
 
 # First start, step by step
 
@@ -215,9 +215,9 @@ Machine God is a fork of [claude-code-rust](https://github.com/srothgan/claude-c
 
 An alternative terminal frontend for Claude Code, written in Rust. Your conversation stays in your terminal's own scrollback, without flicker.
 
-[![Version](https://img.shields.io/github/v/release/frank-ink/machine-god?label=version)](https://github.com/frank-ink/machine-god/releases/latest)
-[![CI](https://github.com/frank-ink/machine-god/actions/workflows/pr.yml/badge.svg)](https://github.com/frank-ink/machine-god/actions/workflows/pr.yml)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://frank-ink.github.io/machine-god/)
+[![Version](https://img.shields.io/github/v/release/gschaidergabriel/machine-god?label=version)](https://github.com/gschaidergabriel/machine-god/releases/latest)
+[![CI](https://github.com/gschaidergabriel/machine-god/actions/workflows/pr.yml/badge.svg)](https://github.com/gschaidergabriel/machine-god/actions/workflows/pr.yml)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gschaidergabriel.github.io/machine-god/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ### About
@@ -230,7 +230,7 @@ Claude Code Rust (`claude-rs`) is a terminal UI for Claude Code built on [Ratatu
 
 ### Prerequisite
 
-Install the Claude Code CLI and keep `claude` on `PATH` for some functionality not yet supported by the Anthropic SDK. See the [dependency and feature overview](https://frank-ink.github.io/machine-god/about.html#claude-cli-dependencies) for details.
+Install the Claude Code CLI and keep `claude` on `PATH` for some functionality not yet supported by the Anthropic SDK. See the [dependency and feature overview](https://gschaidergabriel.github.io/machine-god/about.html#claude-cli-dependencies) for details.
 
 ### Install
 
@@ -239,13 +239,13 @@ Install the Claude Code CLI and keep `claude` on `PATH` for some functionality n
 **macOS/Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh
 ```
 
 **Windows PowerShell:**
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 ```
 
 <details>
@@ -259,7 +259,7 @@ npm install -g claude-code-rust
 
 </details>
 
-See the [installation guide](https://frank-ink.github.io/machine-god/installation.html) for release pinning, custom install locations, switching install methods, uninstall, and troubleshooting.
+See the [installation guide](https://gschaidergabriel.github.io/machine-god/installation.html) for release pinning, custom install locations, switching install methods, uninstall, and troubleshooting.
 
 ### Usage
 
@@ -269,7 +269,7 @@ claude-rs --model opus --permission-mode plan "Review this project"
 claude-rs --continue
 ```
 
-Follow [Your first session](https://frank-ink.github.io/machine-god/usage.html) for a complete walkthrough. See the [CLI reference](https://frank-ink.github.io/machine-god/cli.html) for startup flags, shell completions and man pages.
+Follow [Your first session](https://gschaidergabriel.github.io/machine-god/usage.html) for a complete walkthrough. See the [CLI reference](https://gschaidergabriel.github.io/machine-god/cli.html) for startup flags, shell completions and man pages.
 
 ### Why use it
 
@@ -292,7 +292,7 @@ That makes it a good fit if you:
 - resize windows or split panes while Claude is working;
 - prefer a keyboard-driven interface with a single native binary.
 
-It is not a feature-for-feature copy of Claude Code. Some stock features are unavailable, and a few account and plugin operations still call the `claude` CLI. The [feature overview](https://frank-ink.github.io/machine-god/about.html#feature-overview) lists both. There are no benchmarks against the stock interface yet; the comparison above describes how each renderer works, not measured speed or memory.
+It is not a feature-for-feature copy of Claude Code. Some stock features are unavailable, and a few account and plugin operations still call the `claude` CLI. The [feature overview](https://gschaidergabriel.github.io/machine-god/about.html#feature-overview) lists both. There are no benchmarks against the stock interface yet; the comparison above describes how each renderer works, not measured speed or memory.
 
 ### What you get
 
@@ -303,13 +303,13 @@ It is not a feature-for-feature copy of Claude Code. Some stock features are una
 
 ### Documentation
 
-Choose a path through the [documentation](https://frank-ink.github.io/machine-god/):
+Choose a path through the [documentation](https://gschaidergabriel.github.io/machine-god/):
 
-- **Start using the app:** [Install](https://frank-ink.github.io/machine-god/installation.html) and complete [your first session](https://frank-ink.github.io/machine-god/usage.html).
-- **Work with it:** [Conversations](https://frank-ink.github.io/machine-god/conversations.html), [configuration](https://frank-ink.github.io/machine-god/configure.html), and [MCP servers and plugins](https://frank-ink.github.io/machine-god/integrations.html).
-- **Look something up:** [CLI reference](https://frank-ink.github.io/machine-god/cli.html), [slash commands](https://frank-ink.github.io/machine-god/commands.html), and [settings reference](https://frank-ink.github.io/machine-god/settings.html).
-- **Resolve a problem:** [Troubleshooting](https://frank-ink.github.io/machine-god/troubleshooting.html) and [diagnostics](https://frank-ink.github.io/machine-god/diagnostics.html).
-- **Contribute or maintain:** [Development](https://frank-ink.github.io/machine-god/development.html), [testing](https://frank-ink.github.io/machine-god/testing.html), [architecture](https://frank-ink.github.io/machine-god/architecture.html), and [contribution policy](CONTRIBUTING.md).
+- **Start using the app:** [Install](https://gschaidergabriel.github.io/machine-god/installation.html) and complete [your first session](https://gschaidergabriel.github.io/machine-god/usage.html).
+- **Work with it:** [Conversations](https://gschaidergabriel.github.io/machine-god/conversations.html), [configuration](https://gschaidergabriel.github.io/machine-god/configure.html), and [MCP servers and plugins](https://gschaidergabriel.github.io/machine-god/integrations.html).
+- **Look something up:** [CLI reference](https://gschaidergabriel.github.io/machine-god/cli.html), [slash commands](https://gschaidergabriel.github.io/machine-god/commands.html), and [settings reference](https://gschaidergabriel.github.io/machine-god/settings.html).
+- **Resolve a problem:** [Troubleshooting](https://gschaidergabriel.github.io/machine-god/troubleshooting.html) and [diagnostics](https://gschaidergabriel.github.io/machine-god/diagnostics.html).
+- **Contribute or maintain:** [Development](https://gschaidergabriel.github.io/machine-god/development.html), [testing](https://gschaidergabriel.github.io/machine-god/testing.html), [architecture](https://gschaidergabriel.github.io/machine-god/architecture.html), and [contribution policy](CONTRIBUTING.md).
 
 For the design history, including the move from fullscreen to inline rendering in 0.12.0, see [I rebuilt Claude Code's terminal UI in Rust. Then I deleted 12,000 lines of it.](https://medium.com/@simonrothgang/i-rebuilt-claude-codes-terminal-ui-in-rust-then-i-deleted-12-000-lines-of-it-e8593a200452)
 
@@ -325,7 +325,7 @@ Startup is still constrained by the upstream Claude Agent SDK runtime that this 
 
 ### Billing
 
-This app uses Anthropic's Agent SDK. See the [billing note](https://frank-ink.github.io/machine-god/about.html#billing-note) for the current upstream policy source and account-dependent limits.
+This app uses Anthropic's Agent SDK. See the [billing note](https://gschaidergabriel.github.io/machine-god/about.html#billing-note) for the current upstream policy source and account-dependent limits.
 
 ### License
 

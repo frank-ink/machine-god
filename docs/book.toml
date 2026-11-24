@@ -10,8 +10,8 @@ build-dir = "book"
 create-missing = false
 
 [output.html]
-git-repository-url = "https://github.com/frank-ink/machine-god"
-edit-url-template = "https://github.com/frank-ink/machine-god/edit/main/docs/{path}"
+git-repository-url = "https://github.com/gschaidergabriel/machine-god"
+edit-url-template = "https://github.com/gschaidergabriel/machine-god/edit/main/docs/{path}"
 site-url = "/claude-code-rust/"
 default-theme = "rust"
 preferred-dark-theme = "ayu"

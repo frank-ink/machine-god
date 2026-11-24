@@ -46,7 +46,7 @@ Important invariants:
 
 ## Validate packaging changes
 
-Follow the `npm-package-layout` job in [pr.yml](https://github.com/frank-ink/machine-god/blob/main/.github/workflows/pr.yml) for the full local command sequence, prerequisites and mock-payload checks. The [scripts guide](https://github.com/frank-ink/machine-god/blob/main/scripts/README.md) describes the packaging tools. Mock payload validation checks layout; it does not establish that a real release binary starts. Real-binary and registry smoke checks are separate release validations.
+Follow the `npm-package-layout` job in [pr.yml](https://github.com/gschaidergabriel/machine-god/blob/main/.github/workflows/pr.yml) for the full local command sequence, prerequisites and mock-payload checks. The [scripts guide](https://github.com/gschaidergabriel/machine-god/blob/main/scripts/README.md) describes the packaging tools. Mock payload validation checks layout; it does not establish that a real release binary starts. Real-binary and registry smoke checks are separate release validations.
 
 Use the platform mapping in `scripts/shared/npm-package-config.mjs` when selecting a target. Generated directories (`dist-npm/`, `dist-install/` and `dist-pack/`) are outputs; change their generators rather than editing them.
 

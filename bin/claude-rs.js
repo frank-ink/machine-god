@@ -7,34 +7,34 @@ const path = require("node:path");
 
 const TARGETS = {
   "darwin:arm64": {
-    packageName: "@frank-ink/machine-god-darwin-arm64",
+    packageName: "@gschaidergabriel/machine-god-darwin-arm64",
     exe: "claude-rs",
     display: "darwin:arm64"
   },
   "darwin:x64": {
-    packageName: "@frank-ink/machine-god-darwin-x64",
+    packageName: "@gschaidergabriel/machine-god-darwin-x64",
     exe: "claude-rs",
     display: "darwin:x64"
   },
   "linux:x64": {
-    packageName: "@frank-ink/machine-god-linux-x64-gnu",
+    packageName: "@gschaidergabriel/machine-god-linux-x64-gnu",
     exe: "claude-rs",
     libc: "glibc",
     display: "linux:x64 glibc"
   },
   "linux:arm64": {
-    packageName: "@frank-ink/machine-god-linux-arm64-gnu",
+    packageName: "@gschaidergabriel/machine-god-linux-arm64-gnu",
     exe: "claude-rs",
     libc: "glibc",
     display: "linux:arm64 glibc"
   },
   "win32:x64": {
-    packageName: "@frank-ink/machine-god-win32-x64-msvc",
+    packageName: "@gschaidergabriel/machine-god-win32-x64-msvc",
     exe: "claude-rs.exe",
     display: "win32:x64"
   },
   "win32:arm64": {
-    packageName: "@frank-ink/machine-god-win32-arm64-msvc",
+    packageName: "@gschaidergabriel/machine-god-win32-arm64-msvc",
     exe: "claude-rs.exe",
     display: "win32:arm64"
   }

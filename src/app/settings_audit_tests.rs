@@ -44,7 +44,7 @@ fn manual_candidates_require_a_newer_release_and_retain_the_actual_payload() {
             settings.updates.last_install_error =
                 Some("installer could not replace executable".into());
             let expected_url = if url.trim().is_empty() {
-                "https://github.com/frank-ink/machine-god/releases/tag/v2.0.0"
+                "https://github.com/gschaidergabriel/machine-god/releases/tag/v2.0.0"
             } else {
                 url
             };

@@ -54,16 +54,16 @@ fn archive_ownership_requires_each_file_and_the_root_identity() {
 #[test]
 fn npm_ownership_comes_from_supported_identity_and_bin_location() {
     for (identity, bin, expected) in [
-        (Some(r#"{"name":"@frank-ink/machine-god-win32-x64-msvc"}"#), true, InstallMethod::Npm),
+        (Some(r#"{"name":"@gschaidergabriel/machine-god-win32-x64-msvc"}"#), true, InstallMethod::Npm),
         (
-            Some(r#"{"name":"@frank-ink/machine-god-linux-arm64-gnu"}"#),
+            Some(r#"{"name":"@gschaidergabriel/machine-god-linux-arm64-gnu"}"#),
             true,
             InstallMethod::Npm,
         ),
-        (Some(r#"{"name":"@frank-ink/machine-god-darwin-arm64"}"#), true, InstallMethod::Npm),
-        (Some(r#"{"name":"@frank-ink/machine-god-unofficial"}"#), true, InstallMethod::Unknown),
+        (Some(r#"{"name":"@gschaidergabriel/machine-god-darwin-arm64"}"#), true, InstallMethod::Npm),
+        (Some(r#"{"name":"@gschaidergabriel/machine-god-unofficial"}"#), true, InstallMethod::Unknown),
         (
-            Some(r#"{"name":"@frank-ink/machine-god-win32-x64-msvc"}"#),
+            Some(r#"{"name":"@gschaidergabriel/machine-god-win32-x64-msvc"}"#),
             false,
             InstallMethod::Unknown,
         ),
@@ -72,7 +72,7 @@ fn npm_ownership_comes_from_supported_identity_and_bin_location() {
         (None, false, InstallMethod::Unknown),
     ] {
         let directory = tempfile::tempdir().unwrap();
-        let root = directory.path().join("node_modules/@frank-ink/machine-god-win32-x64-msvc");
+        let root = directory.path().join("node_modules/@gschaidergabriel/machine-god-win32-x64-msvc");
         let exe = root.join(if bin { "bin/claude-rs" } else { "claude-rs" });
         write(&exe, "binary");
         if let Some(identity) = identity {

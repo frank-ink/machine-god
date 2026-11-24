@@ -5,12 +5,12 @@ use std::path::{Path, PathBuf};
 
 const ROOT_PACKAGE_NAME: &str = "claude-code-rust";
 const NPM_PLATFORM_PACKAGE_NAMES: [&str; 6] = [
-    "@frank-ink/machine-god-darwin-arm64",
-    "@frank-ink/machine-god-darwin-x64",
-    "@frank-ink/machine-god-linux-arm64-gnu",
-    "@frank-ink/machine-god-linux-x64-gnu",
-    "@frank-ink/machine-god-win32-arm64-msvc",
-    "@frank-ink/machine-god-win32-x64-msvc",
+    "@gschaidergabriel/machine-god-darwin-arm64",
+    "@gschaidergabriel/machine-god-darwin-x64",
+    "@gschaidergabriel/machine-god-linux-arm64-gnu",
+    "@gschaidergabriel/machine-god-linux-x64-gnu",
+    "@gschaidergabriel/machine-god-win32-arm64-msvc",
+    "@gschaidergabriel/machine-god-win32-x64-msvc",
 ];
 
 #[cfg(target_os = "windows")]

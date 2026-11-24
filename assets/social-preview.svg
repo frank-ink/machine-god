@@ -56,5 +56,5 @@
   <!-- Footer line: repo handle (left). Bottom-right intentionally left empty. -->
   <text x="48" y="592" textLength="520" lengthAdjust="spacingAndGlyphs"
         font-family="ui-monospace, 'Cascadia Code', 'Consolas', 'Menlo', monospace"
-        font-size="23" fill="#6a7080">github.com/frank-ink/machine-god</text>
+        font-size="23" fill="#6a7080">github.com/gschaidergabriel/machine-god</text>
 </svg>

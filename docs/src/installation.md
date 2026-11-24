@@ -17,13 +17,13 @@ The scripts download a complete release archive from GitHub, verify the release 
 **macOS/Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh
 ```
 
 **Windows PowerShell:**
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 ```
 
 ## Verify and start
@@ -60,12 +60,12 @@ The options below apply to the script installer. For npm, use npm to select and 
 Use `CLAUDE_RS_RELEASE` to install a specific release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | CLAUDE_RS_RELEASE=v0.14.0 sh
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | CLAUDE_RS_RELEASE=v0.14.0 sh
 ```
 
 ```powershell
 $env:CLAUDE_RS_RELEASE = "v0.14.0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 ```
 
 The version can include or omit the `v` prefix.
@@ -81,7 +81,7 @@ When the selected version is already installed, an interactive installation asks
 Use `--yes` or `-Yes` to approve an intentional same-version reinstall, for example to repair an installation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh -s -- --release v0.14.0 --yes
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --release v0.14.0 --yes
 ```
 
 ```powershell
@@ -97,13 +97,13 @@ Choosing a custom install directory creates or updates the installation at that 
 On macOS/Linux, pass installer flags after `sh -s --`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh -s -- --install-dir "$HOME/.local/share/claude-rs" --bin-dir "$HOME/.local/bin"
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --install-dir "$HOME/.local/share/claude-rs" --bin-dir "$HOME/.local/bin"
 ```
 
 For non-interactive Unix installs:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh -s -- --yes
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --yes
 ```
 
 The Unix installer also accepts:
@@ -126,7 +126,7 @@ When using the PowerShell one-liner, configure the installer with environment va
 ```powershell
 $env:CLAUDE_RS_INSTALL_DIR = "$env:LOCALAPPDATA\Programs\claude-rs"
 $env:CLAUDE_RS_NO_MODIFY_PATH = "1"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 ```
 
 If you download the script first, PowerShell flags are also available:
@@ -211,12 +211,12 @@ Get-Command claude-rs -All
 To switch from npm to the install script, either let the installer prompt you or pass the explicit removal flag:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh -s -- --remove-npm
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --remove-npm
 ```
 
 ```powershell
 $env:CLAUDE_RS_REMOVE_NPM = "1"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 Remove-Item Env:\CLAUDE_RS_REMOVE_NPM
 ```
 
@@ -235,7 +235,7 @@ If the wrong `claude-rs` runs after switching methods, see [Troubleshooting](tro
 Remove a script install on macOS/Linux with `--uninstall`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --uninstall
 ```
 
 On Windows, PowerShell supports `-Uninstall` when the script is downloaded first:
@@ -248,7 +248,7 @@ With the PowerShell one-liner, arguments cannot be passed through `iex`, so use 
 
 ```powershell
 $env:CLAUDE_RS_UNINSTALL = "1"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 Remove-Item Env:\CLAUDE_RS_UNINSTALL
 ```
 

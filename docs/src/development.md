@@ -1,6 +1,6 @@
 # Build and run locally
 
-Use this page to run a checkout without installing a global `claude-rs`. For contribution scope and review requirements, read [CONTRIBUTING.md](https://github.com/frank-ink/machine-god/blob/main/CONTRIBUTING.md). For an ordinary installation, use [Installation](installation.md).
+Use this page to run a checkout without installing a global `claude-rs`. For contribution scope and review requirements, read [CONTRIBUTING.md](https://github.com/gschaidergabriel/machine-god/blob/main/CONTRIBUTING.md). For an ordinary installation, use [Installation](installation.md).
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ The native build tools compile dependencies including Oniguruma through `onig_sy
 Run these commands in a shell with Git, Cargo, npm and Bun available:
 
 ```bash
-git clone https://github.com/frank-ink/machine-god.git
+git clone https://github.com/gschaidergabriel/machine-god.git
 cd claude-code-rust
 npm ci
 npm run build --prefix agent-sdk

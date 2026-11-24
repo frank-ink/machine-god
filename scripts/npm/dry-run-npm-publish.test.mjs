@@ -14,7 +14,7 @@ import {
 
 test("npmTarballName matches npm scoped package tarball filenames", () => {
   assert.equal(
-    npmTarballName("@frank-ink/machine-god-linux-x64-gnu", "1.2.3"),
+    npmTarballName("@gschaidergabriel/machine-god-linux-x64-gnu", "1.2.3"),
     "srothgan-claude-code-rust-linux-x64-gnu-1.2.3.tgz",
   );
   assert.equal(npmTarballName(ROOT_PACKAGE_NAME, "1.2.3"), "claude-code-rust-1.2.3.tgz");

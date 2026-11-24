@@ -15,10 +15,10 @@ use std::time::{Duration, Instant};
 
 #[cfg(not(target_os = "windows"))]
 const UNIX_INSTALLER_URL: &str =
-    "https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh";
+    "https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh";
 #[cfg(target_os = "windows")]
 const WINDOWS_INSTALLER_URL: &str =
-    "https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1";
+    "https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1";
 
 const WORKER_SUBCOMMAND: &str = "update-worker";
 const WORKER_INSTALL_TIMEOUT: Duration = Duration::from_secs(10 * 60);
