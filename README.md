@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/machine-god-banner.jpg" alt="Machine God: the creation of Adam, rebuilt as code" width="900">
+</p>
+
 <pre align="center">
          ·         ┃         ·         
      ·        ╲    ▲    ╱        ·     
