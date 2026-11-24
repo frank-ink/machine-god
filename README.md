@@ -2,23 +2,6 @@
   <img src="assets/machine-god-banner.jpg" alt="Machine God: the creation of Adam, rebuilt as code" width="900">
 </p>
 
-<pre align="center">
-         ·         ┃         ·         
-     ·        ╲    ▲    ╱        ·     
-  ━━━━━━━━━━━━━━  ╱ ╲  ━━━━━━━━━━━━━━  
-                 ╱ ◉ ╲                 
-  ━━━━━━━━━━━━  ╱▁▁▁▁▁╲  ━━━━━━━━━━━━  
-     ·        ╱    ┃    ╲        ·     
-         ·         ┃         ·         
-                                       
-┏┳┓ ┏━┓ ┏━╸ ╻ ╻ ╻ ┏┓╻ ┏━╸   ┏━╸ ┏━┓ ╺┳┓
-┃┃┃ ┣━┫ ┃   ┣━┫ ┃ ┃┗┫ ┣╸    ┃╺┓ ┃ ┃  ┃┃
-╹ ╹ ╹ ╹ ┗━╸ ╹ ╹ ╹ ╹ ╹ ┗━╸   ┗━┛ ┗━┛ ╺┻┛
-
-       ✠  DEUS · EX · MACHINA  ✠
-           IN SILICO VERITAS
-</pre>
-
 # Install
 
 One command. It downloads the matching release for your system, checks its SHA-256 checksum and puts
