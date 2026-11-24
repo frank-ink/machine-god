@@ -844,9 +844,14 @@ resolve_tag() {
   case "$requested" in
     latest | "")
       latest_json="$tmpdir/latest.json"
-      download "https://api.github.com/repos/$repo_slug/releases/latest" "$latest_json" ||
+      if download "https://api.github.com/repos/$repo_slug/releases/latest" "$latest_json"; then
+        tag="$(json_tag_name "$latest_json")"
+      elif command -v curl >/dev/null 2>&1; then
+        tag="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$repo_slug/releases/latest" 2>/dev/null | sed -n 's#.*/tag/##p')"
+        [ -n "$tag" ] || die "could not resolve latest GitHub Release"
+      else
         die "could not resolve latest GitHub Release"
-      tag="$(json_tag_name "$latest_json")"
+      fi
       [ -n "$tag" ] || die "could not parse latest GitHub Release tag"
       printf '%s\n' "$tag"
       ;;
