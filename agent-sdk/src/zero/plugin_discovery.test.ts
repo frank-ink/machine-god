@@ -472,7 +472,7 @@ describe("plugin discovery", () => {
     const result = await discoverPluginsWithErrors(root);
     const acceptedNames = new Set(result.plugins.map((p) => p.manifest.name));
     const rejectedNames = new Set(result.failures.map((f) => {
-      const parts = f.manifestPath.split("/");
+      const parts = f.manifestPath.split(/[\\/]/);
       return parts[parts.length - 2]; // directory name
     }));
 
