@@ -9,13 +9,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, "zero")
+import capability_gate  # noqa: E402
+
 
 def run_gate(capabilities_md: str) -> subprocess.CompletedProcess:
     """Run capability_gate.py against a temporary capabilities.md file."""
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write(capabilities_md)
         temp_path = Path(f.name)
-    
+
     try:
         result = subprocess.run([
             sys.executable, 'zero/capability_gate.py', '--check', str(temp_path)
@@ -23,6 +26,15 @@ def run_gate(capabilities_md: str) -> subprocess.CompletedProcess:
         return result
     finally:
         temp_path.unlink()
+
+
+def test_parse_unknown_runner_fail_closed():
+    """Unknown runner rows must fail closed, not be skipped."""
+    assert capability_gate.runner_for("./unknown_runner.sh test") is None
+    valid, msg = capability_gate.run_list("unknown", "./unknown_runner.sh test")
+    assert valid is False, f"Expected fail-closed, got valid={valid} msg={msg}"
+    assert "unknown runner" in msg.lower(), f"Expected 'unknown runner' in msg, got {msg}"
+    print("PASS: test_parse_unknown_runner_fail_closed")
 
 
 def test_capability_gate_rejects_nonexistent_cargo_test():
@@ -154,6 +166,7 @@ This project uses capability_gate.py --check capabilities.md for validation.
 
 
 if __name__ == '__main__':
+    test_parse_unknown_runner_fail_closed()
     test_capability_gate_rejects_nonexistent_cargo_test()
     test_capability_gate_rejects_nonexistent_cargo_test_with_package()
     test_capability_gate_rejects_nonexistent_vitest()

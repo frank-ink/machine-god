@@ -4,6 +4,9 @@ import { dirname, join, resolve } from "node:path";
 
 export const PLUGIN_MANIFEST_FILENAME = "plugin.json";
 
+/** Epistemic class for compound values. UNKNOWN stays UNKNOWN. */
+export type EpistemicClass = "UNKNOWN" | "ZERO" | "ERROR" | "MEASURED";
+
 /**
  * Mirrors the Rust loader's PluginManifest shape.
  *
@@ -21,6 +24,7 @@ export interface DiscoveredPlugin {
   pluginPath: string;
   manifestPath: string;
   manifest: PluginManifest;
+  epistemic: EpistemicClass;
 }
 
 export type PluginManifestErrorCode =
@@ -162,6 +166,19 @@ export async function loadPluginManifestFromDirectory(
   );
 }
 
+/**
+ * Loads a bundled manifest for a named plugin from a bundle root.
+ * Mirrors the Rust loader's bundled-manifest discovery.
+ */
+export async function loadBundledManifest(
+  bundleRoot: string,
+  pluginName: string,
+): Promise<PluginManifest> {
+  return loadPluginManifest(
+    join(bundleRoot, pluginName, PLUGIN_MANIFEST_FILENAME),
+  );
+}
+
 const SKIPPED_DIRECTORIES = new Set([
   ".git",
   ".hg",
@@ -240,6 +257,7 @@ export async function discoverPluginsWithErrors(
         pluginPath: dirname(manifestPath),
         manifestPath,
         manifest,
+        epistemic: "UNKNOWN",
       });
     } catch (error: unknown) {
       if (error instanceof PluginManifestError) {

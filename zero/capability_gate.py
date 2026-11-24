@@ -11,6 +11,7 @@ ON_VIOLATION -> exit non-zero (fail-closed)
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -57,7 +58,12 @@ def runner_for(command: str) -> Optional[str]:
 
 
 def parse_capabilities_md(path: Path) -> List[GateCheck]:
-    """Parse capabilities.md and extract every gate command from table cells."""
+    """Parse capabilities.md and extract every gate command from table cells.
+
+    One GateCheck per capability row / gate cell. No dedupe by gate command:
+    the same command may appear for multiple capabilities and each row gets
+    its own gate identity.
+    """
     lines = path.read_text(encoding="utf-8").splitlines()
     checks: List[GateCheck] = []
     for line in lines:
@@ -77,27 +83,24 @@ def parse_capabilities_md(path: Path) -> List[GateCheck]:
                         test_runner=runner,
                     )
                 )
-    # Deduplicate by gate command, preserving first-seen order
-    seen = set()
-    unique: List[GateCheck] = []
-    for c in checks:
-        if c.gate_command not in seen:
-            seen.add(c.gate_command)
-            unique.append(c)
-    return unique
+    return checks
 
 
 def extract_cargo_filter(cmd: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Extract package selector (-p) and test filter from cargo test command.
-    Returns (package, test_filter) or (None, None) if not a cargo test command.
+
+    Returns:
+        (None, None) for non-cargo commands.
+        (package, test_filter) for cargo test commands, where package is None
+        when no -p selector is present and test_filter is "" when no filter
+        is given.
     """
-    # Match: cargo test [-p package] [filter]
-    m = re.search(r"^cargo test\s+(?:-p\s+(\S+)\s+)?(.*)$", cmd)
+    m = re.match(r"^cargo test(?:\s+-p\s+(\S+))?(?:\s+(.*))?$", cmd)
     if not m:
         return None, None
     package = m.group(1)
-    test_filter = m.group(2).strip() if m.group(2) else ""
+    test_filter = (m.group(2) or "").strip()
     return package, test_filter
 
 
@@ -118,7 +121,7 @@ def run_list(runner: str, command: str) -> Tuple[bool, str]:
     try:
         if runner == "cargo":
             package, test_filter = extract_cargo_filter(command)
-            if package is None:
+            if package is None and test_filter is None:
                 return False, f"Invalid cargo test command: {command}"
             cmd = ["cargo", "test", "--list"]
             if package:
@@ -211,21 +214,27 @@ def main() -> int:
     print("CI Gate section: PRESENT with capability_gate.py invocation")
 
     checks = parse_capabilities_md(capabilities_path)
-    
+
     # Fail-closed: empty checks table is a validation failure
     if not checks:
         print("GATE VALIDATION FAILED: No gate commands found in capabilities.md (empty checks table)")
         return 1
 
     all_valid = True
-    for check in checks:
+    for idx, check in enumerate(checks, start=1):
         valid, msg = run_list(check.test_runner, check.gate_command)
         check.valid = valid
         check.error = None if valid else msg
-        status = "PASS" if valid else "FAIL"
-        print(f"  [{status}] {check.capability}: {check.gate_command}")
+        test_id = f"gate-{idx:04d}"
+        record = {
+            "capability": check.capability,
+            "gate": check.gate_command,
+            "test_id": test_id,
+            "result": "PASS" if valid else "FAIL",
+            "receipt": msg,
+        }
+        print(json.dumps(record, ensure_ascii=False))
         if not valid:
-            print(f"         ERROR: {msg}")
             all_valid = False
 
     if all_valid:

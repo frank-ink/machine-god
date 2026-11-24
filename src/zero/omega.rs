@@ -5,13 +5,15 @@
 //! [CLAYCODE]
 //! module omega
 //! architecture OmegaGround {
-//!   stateAuthority R_t: OmegaState { endpoint: SocketAddr, persona: Sacral, lang: Lang }
-//!   path build_chat_request -> parse_reply -> fallback_sentence
-//!   invariant loopback_only: addr.ip().is_loopback() ON_VIOLATION -> TriggerEmergencyDeescalation
+//!   stateAuthority R_t: OmegaState { endpoint: Endpoint, persona: Sacral, lang: Lang }
+//!   path endpoint_from -> build_chat_request -> parse_reply -> fallback_sentence
+//!   invariant loopback_only: endpoint.host.is_loopback() ON_VIOLATION -> TriggerEmergencyDeescalation
 //!   invariant persona_sacral: tone == Sacral ON_VIOLATION -> TriggerEmergencyDeescalation
 //!   invariant lang_closed: detect_language(text) in {DE, EN, UNKNOWN} ON_VIOLATION -> TriggerEmergencyDeescalation
+//!   invariant fallback_honest: fallback_sentence contains endpoint.port ON_VIOLATION -> TriggerEmergencyDeescalation
 //! }
 //! hypothesis H_lang_detect: detect_language maps German/English text to Lang::De / Lang::En
+//! hypothesis H_endpoint_from: endpoint_from(None) = 8111, endpoint_from(Some("8123")) = 8123, endpoint_from(Some("abc")) = Err
 //! promotion MEASURED -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME
 //! [/CLAYCODE]
 
@@ -59,18 +61,62 @@ impl Persona {
     }
 }
 
+/// Endpoint for the local llama.cpp server. Always loopback.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Endpoint {
+    pub host: String,
+    pub port: u16,
+}
+
+impl Endpoint {
+    pub fn new(host: String, port: u16) -> Result<Self> {
+        let ip = IpAddr::from_str(&host)
+            .map_err(|_| anyhow!("invalid host: {}", host))?;
+        if !ip.is_loopback() {
+            return Err(anyhow!("non-loopback address rejected: {}", host));
+        }
+        Ok(Self { host, port })
+    }
+
+    pub fn url(&self) -> String {
+        format!("http://{}:{}/v1/chat/completions", self.host, self.port)
+    }
+
+    pub fn host_port(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+}
+
+/// Pure: build endpoint from optional port string. No env access.
+/// - None -> default port 8111
+/// - Some("8123") -> port 8123
+/// - Some("abc") -> Err
+pub fn endpoint_from(port: Option<&str>) -> Result<Endpoint> {
+    let port = match port {
+        None => DEFAULT_PORT,
+        Some(s) => s.parse::<u16>()
+            .map_err(|_| anyhow!("invalid port: {}", s))?,
+    };
+    Endpoint::new(LOOPBACK_HOST.to_string(), port)
+}
+
+/// Env-reading wrapper for CLI use.
+pub fn endpoint_from_env() -> Result<Endpoint> {
+    let port = std::env::var(ENV_PORT).ok();
+    endpoint_from(port.as_deref())
+}
+
 /// Persisted ground-mode state (R_t in GRF terms).
 #[derive(Debug, Clone)]
 pub struct OmegaState {
-    pub endpoint: String,
+    pub endpoint: Endpoint,
     pub persona: Persona,
     pub lang: Lang,
 }
 
 impl OmegaState {
     pub fn from_env() -> Result<Self> {
-        let endpoint = OmegaConfig::endpoint_from_env()?;
-        OmegaConfig::validate_loopback(&endpoint)?;
+        let endpoint = endpoint_from_env()?;
         Ok(Self {
             endpoint,
             persona: Persona::Sacral,
@@ -82,57 +128,28 @@ impl OmegaState {
 /// Configuration for the local llama.cpp endpoint.
 #[derive(Debug, Clone)]
 pub struct OmegaConfig {
-    pub endpoint: String,
+    pub endpoint: Endpoint,
 }
 
 impl OmegaConfig {
-    /// Build endpoint from `MACHINE_GOD_OMEGA_PORT` (default 8111). Always 127.0.0.1.
-    pub fn endpoint_from_env() -> Result<String> {
-        let port = std::env::var(ENV_PORT)
-            .ok()
-            .and_then(|p| p.parse::<u16>().ok())
-            .unwrap_or(DEFAULT_PORT);
-        Ok(format!(
-            "http://{}:{}/v1/chat/completions",
-            LOOPBACK_HOST, port
-        ))
-    }
-
     /// Hard invariant: only loopback addresses are admissible.
-    pub fn validate_loopback(endpoint: &str) -> Result<()> {
-        let host = extract_host(endpoint)?;
-        let ip = IpAddr::from_str(&host)
-            .map_err(|_| anyhow!("invalid host in endpoint: {}", host))?;
+    pub fn validate_loopback(endpoint: &Endpoint) -> Result<()> {
+        let ip = IpAddr::from_str(&endpoint.host)
+            .map_err(|_| anyhow!("invalid host in endpoint: {}", endpoint.host))?;
         if !ip.is_loopback() {
             return Err(anyhow!(
                 "non-loopback address rejected by ground-mode invariant: {}",
-                host
+                endpoint.host
             ));
         }
         Ok(())
     }
 
     pub fn from_env() -> Result<Self> {
-        let endpoint = Self::endpoint_from_env()?;
+        let endpoint = endpoint_from_env()?;
         Self::validate_loopback(&endpoint)?;
         Ok(Self { endpoint })
     }
-}
-
-/// Extract the host portion from `http://host:port/path`.
-fn extract_host(endpoint: &str) -> Result<String> {
-    let without_scheme = endpoint
-        .strip_prefix("http://")
-        .ok_or_else(|| anyhow!("endpoint must use http:// scheme"))?;
-    let host_port = without_scheme
-        .split('/')
-        .next()
-        .ok_or_else(|| anyhow!("empty endpoint"))?;
-    let host = host_port
-        .split(':')
-        .next()
-        .ok_or_else(|| anyhow!("missing host"))?;
-    Ok(host.to_string())
 }
 
 /// OpenAI-compatible chat request.
@@ -224,19 +241,27 @@ pub fn parse_reply(response: &str) -> Result<String> {
 }
 
 /// Pure: honest fallback sentence when the local server is unreachable.
-pub fn fallback_sentence(lang: Lang) -> String {
+/// Uses the actual configured endpoint (host:port) in the message.
+pub fn fallback_sentence(lang: Lang, endpoint: &Endpoint) -> String {
+    let host_port = endpoint.host_port();
     match lang {
         Lang::De => {
-            "Der lokale Maschine-Gott ist nicht erreichbar. Bitte prüfen Sie den llama.cpp-Server auf 127.0.0.1:8111."
-                .to_string()
+            format!(
+                "Der lokale Maschine-Gott ist nicht erreichbar. Bitte prüfen Sie den llama.cpp-Server auf {}.",
+                host_port
+            )
         }
         Lang::En => {
-            "The local Machine God is not reachable. Please check the llama.cpp server on 127.0.0.1:8111."
-                .to_string()
+            format!(
+                "The local Machine God is not reachable. Please check the llama.cpp server on {}.",
+                host_port
+            )
         }
         Lang::Unknown => {
-            "Machine God not reachable. Check the local llama.cpp server on 127.0.0.1:8111."
-                .to_string()
+            format!(
+                "Machine God not reachable. Check the local llama.cpp server on {}.",
+                host_port
+            )
         }
     }
 }
@@ -251,7 +276,7 @@ pub async fn chat_completion(
     let client = reqwest::Client::new();
     let request = build_chat_request(messages, model);
     let resp = client
-        .post(&config.endpoint)
+        .post(&config.endpoint.url())
         .json(&request)
         .send()
         .await
@@ -320,15 +345,50 @@ mod tests {
     }
 
     #[test]
+    fn endpoint_from_none_returns_default() {
+        let ep = endpoint_from(None).unwrap();
+        assert_eq!(ep.host, "127.0.0.1");
+        assert_eq!(ep.port, 8111);
+        assert_eq!(ep.url(), "http://127.0.0.1:8111/v1/chat/completions");
+    }
+
+    #[test]
+    fn endpoint_from_some_valid_port() {
+        let ep = endpoint_from(Some("8123")).unwrap();
+        assert_eq!(ep.host, "127.0.0.1");
+        assert_eq!(ep.port, 8123);
+        assert_eq!(ep.url(), "http://127.0.0.1:8123/v1/chat/completions");
+    }
+
+    #[test]
+    fn endpoint_from_invalid_port_returns_err() {
+        let result = endpoint_from(Some("abc"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("invalid port"));
+    }
+
+    #[test]
+    fn endpoint_from_port_zero_valid() {
+        let ep = endpoint_from(Some("0")).unwrap();
+        assert_eq!(ep.port, 0);
+    }
+
+    #[test]
+    fn endpoint_from_port_max_valid() {
+        let ep = endpoint_from(Some("65535")).unwrap();
+        assert_eq!(ep.port, 65535);
+    }
+
+    #[test]
     fn loopback_enforcement_accepts_127_0_0_1() {
-        assert!(OmegaConfig::validate_loopback("http://127.0.0.1:8111/v1/chat/completions").is_ok());
-        assert!(OmegaConfig::validate_loopback("http://127.0.0.1:9000/v1/chat/completions").is_ok());
+        assert!(OmegaConfig::validate_loopback(&Endpoint::new("127.0.0.1".to_string(), 8111).unwrap()).is_ok());
+        assert!(OmegaConfig::validate_loopback(&Endpoint::new("127.0.0.1".to_string(), 9000).unwrap()).is_ok());
     }
 
     #[test]
     fn loopback_enforcement_rejects_non_loopback() {
-        assert!(OmegaConfig::validate_loopback("http://192.168.1.1:8111/v1/chat/completions").is_err());
-        assert!(OmegaConfig::validate_loopback("http://203.0.113.8:8111/v1/chat/completions").is_err());
+        assert!(OmegaConfig::validate_loopback(&Endpoint::new("192.168.1.1".to_string(), 8111).unwrap()).is_err());
+        assert!(OmegaConfig::validate_loopback(&Endpoint::new("203.0.113.8".to_string(), 8111).unwrap()).is_err());
     }
 
     #[test]
@@ -345,29 +405,36 @@ mod tests {
     }
 
     #[test]
-    fn fallback_sentence_german() {
-        let s = fallback_sentence(Lang::De);
+    fn fallback_sentence_german_contains_endpoint() {
+        let ep = Endpoint::new("127.0.0.1".to_string(), 8111).unwrap();
+        let s = fallback_sentence(Lang::De, &ep);
         assert!(s.contains("Maschine-Gott"));
         assert!(s.contains("127.0.0.1:8111"));
+        assert!(!s.is_empty());
     }
 
     #[test]
-    fn fallback_sentence_english() {
-        let s = fallback_sentence(Lang::En);
+    fn fallback_sentence_english_contains_endpoint() {
+        let ep = Endpoint::new("127.0.0.1".to_string(), 8123).unwrap();
+        let s = fallback_sentence(Lang::En, &ep);
         assert!(s.contains("Machine God"));
-        assert!(s.contains("127.0.0.1:8111"));
+        assert!(s.contains("127.0.0.1:8123"));
+        assert!(!s.is_empty());
     }
 
     #[test]
-    fn fallback_sentence_unknown() {
-        let s = fallback_sentence(Lang::Unknown);
+    fn fallback_sentence_unknown_contains_endpoint() {
+        let ep = Endpoint::new("127.0.0.1".to_string(), 9999).unwrap();
+        let s = fallback_sentence(Lang::Unknown, &ep);
+        assert!(s.contains("Machine God"));
+        assert!(s.contains("127.0.0.1:9999"));
         assert!(!s.is_empty());
     }
 
     #[tokio::test]
     async fn chat_completion_server_down_returns_error() {
         let config = OmegaConfig {
-            endpoint: "http://127.0.0.1:19999/v1/chat/completions".to_string(),
+            endpoint: Endpoint::new("127.0.0.1".to_string(), 19999).unwrap(),
         };
         let messages = vec![ChatMessage {
             role: "user".to_string(),
@@ -406,7 +473,7 @@ mod tests {
         });
 
         let config = OmegaConfig {
-            endpoint: format!("http://{}/v1/chat/completions", addr),
+            endpoint: Endpoint::new(addr.ip().to_string(), addr.port()).unwrap(),
         };
         OmegaConfig::validate_loopback(&config.endpoint).unwrap();
 

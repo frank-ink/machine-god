@@ -10,6 +10,7 @@ import {
   discoverPlugins,
   discoverPluginsWithErrors,
   findPlugin,
+  loadBundledManifest,
   loadPluginManifest,
   parsePluginManifest,
 } from "./plugin_discovery.js";
@@ -85,6 +86,10 @@ describe("plugin discovery", () => {
     assert.deepEqual(
       plugins.map((plugin) => plugin.manifest.name),
       ["alpha", "beta"],
+    );
+    assert.ok(
+      plugins.every((plugin) => plugin.epistemic === "UNKNOWN"),
+      "discovered plugins are UNKNOWN until measured",
     );
   });
 
@@ -495,5 +500,34 @@ describe("plugin discovery", () => {
     const expectedRejectCount = fixtures.filter(([, , accept]) => !accept).length;
     assert.equal(result.plugins.length, expectedAcceptCount);
     assert.equal(result.failures.length, expectedRejectCount);
+  });
+
+  it("loadBundledManifest loads a manifest from a bundle root", async () => {
+    const root = await temporaryDirectory();
+    await writeManifest(join(root, "omega"), {
+      name: "omega",
+      version: "0.1.0",
+      description: "Bundled omega plugin",
+      entrypoint: "omega.js",
+      permissions: [],
+    });
+
+    const manifest = await loadBundledManifest(root, "omega");
+
+    assert.equal(manifest.name, "omega");
+    assert.equal(manifest.version, "0.1.0");
+    assert.equal(manifest.entrypoint, "omega.js");
+  });
+
+  it("loadBundledManifest throws READ_FAILED for a missing bundled plugin", async () => {
+    const root = await temporaryDirectory();
+    await assert.rejects(
+      () => loadBundledManifest(root, "does-not-exist"),
+      (error: unknown) => {
+        assert.ok(error instanceof PluginManifestError);
+        assert.equal(error.code, "READ_FAILED");
+        return true;
+      },
+    );
   });
 });

@@ -349,7 +349,7 @@ function rootAllowedFile(filePath) {
     return true;
   }
 
-  return /^agent-sdk\/dist\/bridge\/[A-Za-z0-9_-]+\.js$/.test(filePath);
+  return /^agent-sdk\/dist\/(bridge|zero)\/[A-Za-z0-9_-]+\.js$/.test(filePath);
 }
 
 function expectNoLifecycleScripts(packageJson, context) {

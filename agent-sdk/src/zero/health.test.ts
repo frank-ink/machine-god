@@ -86,6 +86,7 @@ async function createPlugin(
       entrypoint,
       permissions: [],
     },
+    epistemic: "UNKNOWN",
   };
 }
 

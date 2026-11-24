@@ -25,6 +25,17 @@ pub const DEFAULT_REGISTRY_PATH: &str = "zero/capabilities.json";
 pub const DEFAULT_REPORT_PATH: &str = "zero/test-report.json";
 pub const FEATURES_COMMAND: &str = "/features";
 
+/// Exact, documented column order for the `/features` table.
+/// Must match docs/zero/capabilities.md one-to-one.
+pub const TABLE_COLUMNS: [&str; 6] = [
+    "capability",
+    "status",
+    "promotion_stage",
+    "evidence_ref",
+    "gate",
+    "tracking_issue",
+];
+
 /// The registry compiled into the binary: the same file the pipeline writes.
 pub const EMBEDDED_REGISTRY_JSON: &str = include_str!("../../zero/capabilities.json");
 /// The seed test report compiled into the binary; the pipeline replaces it.
@@ -62,6 +73,49 @@ impl fmt::Display for CapabilityStatus {
     }
 }
 
+/// Promotion stage in the CVIR ladder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PromotionStage {
+    Measure,
+    Falsify,
+    MatchedAblation,
+    VerifiedOutcome,
+    CausalCredit,
+    BoundedAdmission,
+    ReentryTest,
+    ControlInfluence,
+    Unknown,
+}
+
+impl PromotionStage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PromotionStage::Measure => "MEASURE",
+            PromotionStage::Falsify => "FALSIFY",
+            PromotionStage::MatchedAblation => "MATCHED_ABLATION",
+            PromotionStage::VerifiedOutcome => "VERIFIED_OUTCOME",
+            PromotionStage::CausalCredit => "CAUSAL_CREDIT",
+            PromotionStage::BoundedAdmission => "BOUNDED_ADMISSION",
+            PromotionStage::ReentryTest => "REENTRY_TEST",
+            PromotionStage::ControlInfluence => "CONTROL_INFLUENCE",
+            PromotionStage::Unknown => "UNKNOWN",
+        }
+    }
+}
+
+impl fmt::Display for PromotionStage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl Default for PromotionStage {
+    fn default() -> Self {
+        PromotionStage::Unknown
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LocalizedText {
     #[serde(default)]
@@ -74,6 +128,8 @@ pub struct LocalizedText {
 pub struct Capability {
     pub capability: String,
     pub status: CapabilityStatus,
+    #[serde(default)]
+    pub promotion_stage: PromotionStage,
     /// `test:<test name>@<commit>` for MEASURED entries, empty otherwise.
     #[serde(default)]
     pub evidence_ref: String,
@@ -482,9 +538,9 @@ fn dash_if_empty(value: &str) -> String {
     }
 }
 
-fn push_row(out: &mut String, cells: &[String; 4], widths: &[usize; 4]) {
-    let mut parts: Vec<String> = Vec::with_capacity(4);
-    for i in 0..4 {
+fn push_row(out: &mut String, cells: &[String; 6], widths: &[usize; 6]) {
+    let mut parts: Vec<String> = Vec::with_capacity(6);
+    for i in 0..6 {
         let mut cell = cells[i].clone();
         let len = cell.chars().count();
         if len < widths[i] {
@@ -496,43 +552,49 @@ fn push_row(out: &mut String, cells: &[String; 4], widths: &[usize; 4]) {
     out.push('\n');
 }
 
-/// `/features` table: capability | status | evidence_ref | gate
+/// `/features` table: capability | status | promotion_stage | evidence_ref | gate | tracking_issue
 pub fn render_table(registry: &CapabilityRegistry) -> String {
-    const HEADERS: [&str; 4] = ["capability", "status", "evidence_ref", "gate"];
+    let headers = TABLE_COLUMNS;
 
-    let mut rows: Vec<[String; 4]> = Vec::with_capacity(registry.capabilities.len());
+    let mut rows: Vec<[String; 6]> = Vec::with_capacity(registry.capabilities.len());
     for cap in &registry.capabilities {
         rows.push([
             cap.capability.clone(),
             cap.status.as_str().to_string(),
+            cap.promotion_stage.as_str().to_string(),
             dash_if_empty(&cap.evidence_ref),
             dash_if_empty(&cap.gate),
+            dash_if_empty(cap.tracking_issue.as_deref().unwrap_or("")),
         ]);
     }
 
-    let mut widths: [usize; 4] = [0, 0, 0, 0];
-    for (i, header) in HEADERS.iter().enumerate() {
+    let mut widths: [usize; 6] = [0, 0, 0, 0, 0, 0];
+    for (i, header) in headers.iter().enumerate() {
         widths[i] = header.chars().count();
     }
     for row in &rows {
-        for i in 0..4 {
+        for i in 0..6 {
             widths[i] = widths[i].max(row[i].chars().count());
         }
     }
 
     let mut out = String::new();
-    let header_cells: [String; 4] = [
-        HEADERS[0].to_string(),
-        HEADERS[1].to_string(),
-        HEADERS[2].to_string(),
-        HEADERS[3].to_string(),
+    let header_cells: [String; 6] = [
+        headers[0].to_string(),
+        headers[1].to_string(),
+        headers[2].to_string(),
+        headers[3].to_string(),
+        headers[4].to_string(),
+        headers[5].to_string(),
     ];
     push_row(&mut out, &header_cells, &widths);
-    let separator: [String; 4] = [
+    let separator: [String; 6] = [
         "-".repeat(widths[0]),
         "-".repeat(widths[1]),
         "-".repeat(widths[2]),
         "-".repeat(widths[3]),
+        "-".repeat(widths[4]),
+        "-".repeat(widths[5]),
     ];
     push_row(&mut out, &separator, &widths);
     for row in &rows {
@@ -554,7 +616,12 @@ pub fn render_ground_summary(registry: &CapabilityRegistry, language: Language) 
         Language::English => out.push_str("Capability registry (canonical):\n"),
     }
     for cap in &registry.capabilities {
-        out.push_str(&format!("- {} [{}]", cap.capability, cap.status.as_str()));
+        out.push_str(&format!(
+            "- {} [{}] promotion={}",
+            cap.capability,
+            cap.status.as_str(),
+            cap.promotion_stage.as_str()
+        ));
         if cap.status == CapabilityStatus::Measured && !cap.evidence_ref.trim().is_empty() {
             out.push_str(&format!(" evidence={}", cap.evidence_ref));
         }
@@ -763,11 +830,48 @@ mod tests {
     fn render_table_has_required_columns() {
         let registry = CapabilityRegistry::embedded().unwrap();
         let table = render_table(&registry);
-        let header = table.lines().next().unwrap_or("");
-        assert!(header.contains("capability"));
-        assert!(header.contains("status"));
-        assert!(header.contains("evidence_ref"));
-        assert!(header.contains("gate"));
+        let mut lines = table.lines();
+        let header = lines.next().unwrap_or("");
+        let separator = lines.next().unwrap_or("");
+
+        let expected: [&str; 6] = TABLE_COLUMNS;
+
+        let cells: Vec<String> = header
+            .split(" | ")
+            .map(|c| c.trim().to_string())
+            .collect();
+        assert_eq!(
+            cells.len(),
+            expected.len(),
+            "header must have exactly {} columns",
+            expected.len()
+        );
+        assert_eq!(
+            cells, expected,
+            "header columns must match documented order exactly"
+        );
+
+        let sep_cells: Vec<String> = separator
+            .split(" | ")
+            .map(|c| c.trim().to_string())
+            .collect();
+        assert_eq!(
+            sep_cells.len(),
+            expected.len(),
+            "separator must have exactly {} columns",
+            expected.len()
+        );
+
+        // No duplicate columns.
+        let mut seen = BTreeSet::new();
+        for cell in &cells {
+            assert!(
+                seen.insert(cell.as_str()),
+                "duplicate column: {}",
+                cell
+            );
+        }
+
         for cap in &registry.capabilities {
             assert!(table.contains(&cap.capability));
             assert!(table.contains(cap.status.as_str()));
@@ -834,7 +938,10 @@ mod tests {
     fn features_command_renders_table() {
         let registry = CapabilityRegistry::embedded().unwrap();
         let out = handle_features_command("/features", &registry).unwrap();
+        assert!(out.contains("promotion_stage"));
         assert!(out.contains("evidence_ref"));
+        assert!(out.contains("gate"));
+        assert!(out.contains("tracking_issue"));
         assert!(handle_features_command("/help", &registry).is_none());
     }
 
