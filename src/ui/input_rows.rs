@@ -42,7 +42,7 @@ pub(crate) fn build_composer_hint_rows(app: &App) -> Vec<Line<'static>> {
     if let Some(hint) = &app.session_runtime.login_hint {
         rows.push(Line::from(Span::styled(
             format!("Authentication required: {} -- {}", hint.method_name, hint.method_description),
-            Style::default().fg(ratatui::style::Color::Yellow),
+            Style::default().fg(theme::ACCENT),
         )));
         rows.push(Line::from(Span::styled(
             "Type /login to authenticate, or run `claude auth login` in another terminal",
@@ -82,7 +82,7 @@ pub(crate) fn build_composer_hint_rows(app: &App) -> Vec<Line<'static>> {
             Span::styled("Suggestion: ", Style::default().fg(theme::DIM)),
             Span::styled(
                 suggestion.trim().to_owned(),
-                Style::default().fg(ratatui::style::Color::White),
+                Style::default().fg(theme::ACCENT),
             ),
             Span::styled("    Tab to accept", Style::default().fg(theme::DIM)),
         ]));

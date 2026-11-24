@@ -127,7 +127,7 @@ fn append_user_blocks(
                 };
                 rows.push_lines(vec![Line::from(Span::styled(
                     label,
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::DIM),
+                    Style::default().fg(Color::Gray).add_modifier(Modifier::DIM),
                 ))]);
             }
             _ => {}

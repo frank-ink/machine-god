@@ -4,12 +4,13 @@ use crate::app::{
     App, AppStatus, ChatMessage, MessageBlock, SurfaceMode, TerminalLifecycleState, WelcomeBlock,
 };
 use crate::ui::host_tips::HOST_TIPS;
+use crate::ui::machine_god_art;
 use crate::ui::theme;
 use crate::ui::wrap::{
     StyledChunk, display_width, join_column_lines, wrap_styled_chunks,
     wrap_styled_chunks_with_hanging_prefix,
 };
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use std::time::{Duration, Instant};
 
@@ -113,7 +114,7 @@ pub(crate) fn welcome_commit_ready(
 /// prompt, a notice or resumed history snaps the crab to rest) and the window
 /// since the first connection has not closed. Later connects of the process
 /// never reopen it.
-fn hello_window(app: &App, width: u16, now: Instant) -> Option<Duration> {
+pub(crate) fn hello_window(app: &App, width: u16, now: Instant) -> Option<Duration> {
     if !motion_allowed(app)
         || !ferris_column_visible(usize::from(width))
         || !welcome_is_whole_transcript(app)
@@ -208,10 +209,11 @@ pub(crate) fn overview_lines(
         Style::default().fg(theme::ACCENT).add_modifier(Modifier::BOLD)
     };
 
-    let ferris_width = ferris_column_width();
-    let overview_width = width.saturating_sub(ferris_width.saturating_add(FERRIS_TEXT_GAP));
-    let side_by_side = ferris_column_visible(width);
-    let text_width = if side_by_side { overview_width } else { width };
+    let motif = motif_size_for(width);
+    let motif_width = motif.map_or(0, motif_column_width);
+    let side_by_side = motif.is_some();
+    let text_width =
+        if side_by_side { width.saturating_sub(motif_width.saturating_add(FERRIS_TEXT_GAP)) } else { width };
     let text_rows = overview_text_rows(
         block,
         &subscription_value,
@@ -219,11 +221,15 @@ pub(crate) fn overview_lines(
         &session_value,
         text_width,
     );
-    let mut lines = crate::ui::sacred_banner::banner_lines(width);
-    lines.extend(if side_by_side {
-        join_column_lines(ferris_rows(ferris), text_rows, ferris_width, FERRIS_TEXT_GAP)
-    } else {
-        text_rows
+    let mut lines = Vec::new();
+    lines.extend(match motif {
+        Some(size) => join_column_lines(
+            motif_rows(size, motif_frame_for(ferris), theme::colors_enabled()),
+            text_rows,
+            motif_width,
+            FERRIS_TEXT_GAP,
+        ),
+        None => text_rows,
     });
     lines.push(Line::default());
     lines
@@ -266,14 +272,106 @@ fn welcome_field_lines(
     wrap_styled_chunks_with_hanging_prefix(&prefix, &body, width, Style::default())
 }
 
-fn ferris_column_width() -> usize {
+/// Machine God motif size (replaces Ferris): LARGE beside a roomy overview, SMALL beside a narrow one,
+/// none when even the small motif would squeeze the overview below its minimum.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum MotifSize {
+    Large,
+    Small,
+}
+
+const LARGE_MOTIF_MIN_OVERVIEW: usize = 60;
+
+pub(crate) fn motif_size_for(width: usize) -> Option<MotifSize> {
+    let room = |size| width.saturating_sub(motif_column_width(size).saturating_add(FERRIS_TEXT_GAP));
+    if room(MotifSize::Large) >= LARGE_MOTIF_MIN_OVERVIEW {
+        Some(MotifSize::Large)
+    } else if room(MotifSize::Small) >= minimum_overview_width() {
+        Some(MotifSize::Small)
+    } else {
+        None
+    }
+}
+
+fn motif_column_width(size: MotifSize) -> usize {
+    let cols = match size {
+        MotifSize::Large => machine_god_art::LARGE_COLS,
+        MotifSize::Small => machine_god_art::SMALL_COLS,
+    };
+    display_width(FERRIS_LEFT_PADDING).saturating_add(cols)
+}
+
+/// Frame of the red pulse for a given time since start: pure, so tests can pin instants.
+pub(crate) fn motif_frame(elapsed: Duration) -> usize {
+    let step = elapsed.as_millis() / u128::from(machine_god_art::FRAME_MS);
+    usize::try_from(step % machine_god_art::FRAME_COUNT as u128).unwrap_or(0)
+}
+
+/// Motif frame for the tick-driven Ferris pose: rest -> 0, every moving pose -> a pulse frame (1..FRAME_COUNT).
+fn motif_frame_for(ferris: &FerrisFrame) -> usize {
+    if *ferris == FERRIS_REST {
+        return 0;
+    }
+    CONNECTING_FRAMES
+        .iter()
+        .chain(HELLO_FRAMES.iter())
+        .position(|f| f == ferris)
+        .map_or(0, |i| 1 + i % machine_god_art::FRAME_COUNT.saturating_sub(1).max(1))
+}
+
+fn motif_color(class: char) -> Option<Color> {
+    match class {
+        'g' => Some(Color::Rgb(110, 110, 110)),
+        'w' => Some(Color::Rgb(205, 205, 205)),
+        'r' => Some(Color::Rgb(150, 30, 35)),
+        'R' => Some(Color::Rgb(255, 45, 45)),
+        _ => None,
+    }
+}
+
+pub(crate) fn motif_rows(size: MotifSize, frame: usize, color: bool) -> Vec<Line<'static>> {
+    let frame = frame % machine_god_art::FRAME_COUNT;
+    let (art, mask): (&[&str], &[&str]) = match size {
+        MotifSize::Large => (&machine_god_art::LARGE_ART[frame], &machine_god_art::LARGE_MASK[frame]),
+        MotifSize::Small => (&machine_god_art::SMALL_ART[frame], &machine_god_art::SMALL_MASK[frame]),
+    };
+    art.iter()
+        .zip(mask.iter())
+        .map(|(row, classes)| {
+            let mut spans = vec![Span::raw(FERRIS_LEFT_PADDING)];
+            let mut run = String::new();
+            let mut run_class = ' ';
+            for (ch, class) in row.chars().zip(classes.chars()) {
+                if class != run_class && !run.is_empty() {
+                    spans.push(motif_span(std::mem::take(&mut run), run_class, color));
+                }
+                run_class = class;
+                // U+2800 (blank braille) keeps every motif cell the same width in bytes and columns.
+                run.push(if ch == ' ' { '\u{2800}' } else { ch });
+            }
+            if !run.is_empty() {
+                spans.push(motif_span(run, run_class, color));
+            }
+            Line::from(spans)
+        })
+        .collect()
+}
+
+fn motif_span(text: String, class: char, color: bool) -> Span<'static> {
+    match motif_color(class).filter(|_| color) {
+        Some(fg) => Span::styled(text, Style::default().fg(fg)),
+        None => Span::raw(text),
+    }
+}
+
+pub(crate) fn ferris_column_width() -> usize {
     display_width(FERRIS_LEFT_PADDING)
         .saturating_add(FERRIS_REST.iter().map(|line| display_width(line)).max().unwrap_or(0))
 }
 
 /// Whether a row `width` columns wide shows the crab beside the overview; a
 /// narrower one shows the overview text alone.
-fn ferris_column_visible(width: usize) -> bool {
+pub(crate) fn ferris_column_visible(width: usize) -> bool {
     let overview_offset = ferris_column_width().saturating_add(FERRIS_TEXT_GAP);
     width.saturating_sub(overview_offset) >= minimum_overview_width()
 }

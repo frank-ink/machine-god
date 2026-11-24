@@ -90,10 +90,10 @@ fn apply_textarea_highlights(
     committed_mentions: &[mention::CommittedMentionSpan],
 ) {
     let slash_style = Style::default().fg(theme::SLASH_COMMAND);
-    let mention_style = Style::default().fg(Color::Cyan);
+    let mention_style = Style::default().fg(theme::ACCENT);
     let subagent_style = Style::default().fg(theme::SUBAGENT_TOKEN);
-    let paste_style = Style::default().fg(Color::Green);
-    let image_badge_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+    let paste_style = Style::default().fg(theme::DIM);
+    let image_badge_style = Style::default().fg(theme::ACCENT).add_modifier(Modifier::BOLD);
 
     for (row, line) in lines.iter().enumerate() {
         if let Some((start, end)) = slash_command_range(line) {

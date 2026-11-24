@@ -215,7 +215,9 @@ pub(crate) fn output_region<'a>(
 /// Compare the artwork independently of metadata and without fixing its glyphs.
 pub(crate) fn welcome_art(region: &[String]) -> Vec<String> {
     let start = region.iter().position(|row| row.contains("Version:")).expect("version field");
-    let column = region[start].find("Version:").expect("version label");
+    let byte_column = region[start].find("Version:").expect("version label");
+    // Character column, not byte offset: the welcome art is multi-byte braille.
+    let column = region[start][..byte_column].chars().count();
     region[start..]
         .iter()
         .map(|row| row.chars().take(column).collect::<String>())

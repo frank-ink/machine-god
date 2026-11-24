@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Machine God welcome banner: an all-seeing machine eye above the name, a sacral motto below,
-//! coloured from turquoise (top) to blue (bottom). Narrow terminals get a one-line fallback.
+//! Machine God welcome banner (legacy): an all-seeing machine eye above the name,
+//! a sacral motto below, coloured in red/gray palette.
+//! Kept for potential future use; not currently called from welcome.rs.
+
+#![allow(dead_code)]
+// Kept for potential future use as an alternative banner style.
+// The current welcome uses machine_god_art.rs with braille animation instead.
 
 use crate::ui::theme;
 use crate::ui::wrap::display_width;
@@ -26,7 +31,7 @@ const EYE: char = '◉';
 const MOTTO: [&str; 2] = ["✠  DEUS · EX · MACHINA  ✠", "IN SILICO VERITAS"];
 /// Narrow terminals: the widest name that still fits.
 const FALLBACK: [&str; 2] = ["✠ MACHINE GOD ✠", "MACHINE GOD"];
-const EYE_COLOR: Color = Color::Rgb(220, 255, 255);
+const EYE_COLOR: Color = Color::Rgb(255, 45, 45); // bright red from machine_god_art palette
 
 fn mix(a: u8, b: u8, i: usize, n: usize) -> u8 {
     let (a, b) = (i32::from(a), i32::from(b));
@@ -35,9 +40,9 @@ fn mix(a: u8, b: u8, i: usize, n: usize) -> u8 {
     u8::try_from((a + (b - a) * i / span).clamp(0, 255)).unwrap_or(0)
 }
 
-/// Turquoise (0, 230, 220) on the first row fading to blue (40, 120, 255) on the last.
+/// Gray (110,110,110) on the first row fading to blood red (200,30,40) on the last.
 pub(crate) fn row_color(i: usize, n: usize) -> Color {
-    Color::Rgb(mix(0, 40, i, n), mix(230, 120, i, n), mix(220, 255, i, n))
+    Color::Rgb(mix(110, 200, i, n), mix(110, 30, i, n), mix(110, 40, i, n))
 }
 
 fn left_pad(text: &str, width: usize) -> String {
@@ -114,8 +119,30 @@ mod tests {
     }
 
     #[test]
-    fn gradient_runs_from_turquoise_to_blue() {
-        assert_eq!(row_color(0, ART.len()), Color::Rgb(0, 230, 220));
-        assert_eq!(row_color(ART.len() - 1, ART.len()), Color::Rgb(40, 120, 255));
+    fn gradient_runs_from_gray_to_blood_red() {
+        // First row: gray (110,110,110)
+        assert_eq!(row_color(0, ART.len()), Color::Rgb(110, 110, 110));
+        // Last row: blood red (200,30,40)
+        assert_eq!(row_color(ART.len() - 1, ART.len()), Color::Rgb(200, 30, 40));
+    }
+
+    #[test]
+    fn eye_color_is_bright_red() {
+        assert_eq!(EYE_COLOR, Color::Rgb(255, 45, 45));
+    }
+
+    #[test]
+    fn no_blue_or_cyan_in_row_colors() {
+        for i in 0..ART.len() {
+            let c = row_color(i, ART.len());
+            if let Color::Rgb(r, g, b) = c {
+                // In our palette, blue component should never exceed red (no blue/cyan dominance)
+                assert!(b <= r, "row {i} has blue > red: {c:?}");
+            }
+        }
+        // EYE_COLOR also should not be blue/cyan
+        if let Color::Rgb(r, _g, b) = EYE_COLOR {
+            assert!(b <= r, "EYE_COLOR has blue > red: {EYE_COLOR:?}");
+        }
     }
 }

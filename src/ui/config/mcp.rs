@@ -493,7 +493,7 @@ fn summary_lines(app: &App) -> Vec<Line<'static>> {
             theme::STATUS_WARNING,
         ),
         Span::styled(" ", Style::default()),
-        badge_span(&format!("pending {}", counts.pending), Color::Black, Color::Cyan),
+        badge_span(&format!("pending {}", counts.pending), Color::Black, Color::Gray),
         Span::styled(" ", Style::default()),
         badge_span(&format!("disabled {}", counts.disabled), Color::White, Color::DarkGray),
         Span::styled(" ", Style::default()),
@@ -501,7 +501,7 @@ fn summary_lines(app: &App) -> Vec<Line<'static>> {
     ];
     if app.mcp.in_flight {
         stats_spans.push(Span::styled(" ", Style::default()));
-        stats_spans.push(badge_span("refreshing", Color::Black, Color::Cyan));
+        stats_spans.push(badge_span("refreshing", Color::Black, Color::Gray));
     }
 
     let mut lines = vec![Line::from(stats_spans), Line::default()];
@@ -833,7 +833,7 @@ fn status_color(status: McpServerConnectionStatus) -> Color {
     match status {
         McpServerConnectionStatus::Connected => theme::ACCENT,
         McpServerConnectionStatus::NeedsAuth => theme::STATUS_WARNING,
-        McpServerConnectionStatus::Pending => Color::Cyan,
+        McpServerConnectionStatus::Pending => Color::Gray,
         McpServerConnectionStatus::Disabled => Color::DarkGray,
         McpServerConnectionStatus::Failed => theme::STATUS_ERROR,
     }

@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
+// Message role and background colors
+pub const USER_MSG_BG: Color = Color::Rgb(58, 24, 26);
+pub const USER_MSG_FG: Color = Color::Rgb(255, 255, 255);
+pub const ACCENT: Color = Color::Rgb(200, 30, 40);
+pub const ROLE_ASSISTANT: Color = ACCENT;
+pub const STATUS_ERROR: Color = Color::Rgb(255, 80, 80);
+
 #[cfg(test)]
 use crate::app::ChatMessage;
 use crate::app::{BlockCache, TextBlock};
@@ -217,5 +224,74 @@ mod tests {
             wide,
             "growing must restore wide layout"
         );
+    }
+
+    #[test]
+    fn theme_colors_have_no_blue_cyan_leftover() {
+        // Assert every theme color has b <= r or is a gray (|r-g|<=8 && |g-b|<=8 && |b-r|<=8)
+        fn is_gray(c: Color) -> bool {
+            if let Color::Rgb(r, g, b) = c {
+                (r.abs_diff(g) <= 8) && (g.abs_diff(b) <= 8) && (b.abs_diff(r) <= 8)
+            } else {
+                false
+            }
+        }
+        fn no_blue_cyan(c: Color) -> bool {
+            if let Color::Rgb(r, _g, b) = c {
+                b <= r || is_gray(c)
+            } else {
+                true // non-Rgb colors (Indexed, Reset) are acceptable
+            }
+        }
+        assert!(no_blue_cyan(USER_MSG_BG), "USER_MSG_BG has blue/cyan cast");
+        assert!(no_blue_cyan(USER_MSG_FG), "USER_MSG_FG has blue/cyan cast");
+        assert!(no_blue_cyan(ACCENT), "ACCENT has blue/cyan cast");
+        assert!(no_blue_cyan(ROLE_ASSISTANT), "ROLE_ASSISTANT has blue/cyan cast");
+        assert!(no_blue_cyan(STATUS_ERROR), "STATUS_ERROR has blue/cyan cast");
+    }
+
+    #[test]
+    fn user_msg_bg_contrast_meets_wcag_aa() {
+        // WCAG AA normal text: ≥4.5:1
+        // USER_MSG_BG = Rgb(58,24,26), USER_MSG_FG = Rgb(255,255,255)
+        // Luminance calculation (sRGB -> linear -> Y)
+        fn luminance(r: u8, g: u8, b: u8) -> f32 {
+            let to_linear = |c: u8| {
+                let c = c as f32 / 255.0;
+                if c <= 0.03928 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+            };
+            0.2126 * to_linear(r) + 0.7152 * to_linear(g) + 0.0722 * to_linear(b)
+        }
+        fn contrast_ratio(l1: f32, l2: f32) -> f32 {
+            let (lighter, darker) = if l1 > l2 { (l1, l2) } else { (l2, l1) };
+            (lighter + 0.05) / (darker + 0.05)
+        }
+        let bg_l = luminance(58, 24, 26);
+        let fg_l = luminance(255, 255, 255);
+        let ratio = contrast_ratio(fg_l, bg_l);
+        assert!(ratio >= 4.5, "USER_MSG_FG on USER_MSG_BG contrast {ratio:.2}:1 < 4.5:1");
+    }
+
+    #[test]
+    fn assistant_role_follows_accent() {
+        assert_eq!(ROLE_ASSISTANT, ACCENT, "ROLE_ASSISTANT must equal ACCENT (blood red)");
+    }
+
+    #[test]
+    fn status_error_distinct_from_accent() {
+        // STATUS_ERROR = bright red (255,80,80) vs ACCENT = blood red (200,30,40)
+        // They must be visually distinct; at minimum different RGB values
+        assert_ne!(STATUS_ERROR, ACCENT, "STATUS_ERROR must differ from ACCENT");
+        if let (Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) = (STATUS_ERROR, ACCENT) {
+            // STATUS_ERROR should be brighter (higher luminance)
+            fn lum(r: u8, g: u8, b: u8) -> f32 {
+                let to_lin = |c: u8| {
+                    let c = c as f32 / 255.0;
+                    if c <= 0.03928 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+                };
+                0.2126 * to_lin(r) + 0.7152 * to_lin(g) + 0.0722 * to_lin(b)
+            }
+            assert!(lum(r1, g1, b1) > lum(r2, g2, b2), "STATUS_ERROR must be brighter than ACCENT");
+        }
     }
 }

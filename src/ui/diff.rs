@@ -134,7 +134,7 @@ fn render_raw_diff_line(line: &str) -> Line<'static> {
     {
         Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
     } else if line.starts_with("@@") {
-        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+        Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD)
     } else if line.starts_with("+++ ") {
         Style::default().fg(Color::Green)
     } else if line.starts_with("--- ") {

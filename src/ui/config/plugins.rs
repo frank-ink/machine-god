@@ -269,6 +269,6 @@ fn installed_plugin_badge(entry: &InstalledPluginEntry) -> Span<'static> {
     if entry.mcp_server_names.is_empty() {
         common::badge_span("SKILL", Color::White, Color::Rgb(64, 64, 64))
     } else {
-        common::badge_span("MCP", Color::White, Color::Rgb(34, 92, 124))
+        common::badge_span("MCP", Color::White, Color::Rgb(110, 110, 110))
     }
 }

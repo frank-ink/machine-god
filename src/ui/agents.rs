@@ -17,7 +17,7 @@ use crate::app::agents::{
 use crate::app::{App, ToolCallInfo};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
-use ratatui::style::{Color, Style};
+use ratatui::style::Style;
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{List, ListItem, ListState, Paragraph, Wrap};
 
@@ -202,12 +202,19 @@ fn render_list(
 }
 
 fn status_badge(status: SubagentStatus) -> Span<'static> {
+    use ratatui::style::Color;
     let (fg, bg) = match status {
-        SubagentStatus::Pending => (Color::Black, Color::Cyan),
+        // Pending = idle/connecting: gray background (DIM), black text
+        SubagentStatus::Pending => (Color::Black, theme::DIM),
+        // Running = active: ACCENT (blood red) background, black text
         SubagentStatus::Running => (Color::Black, theme::ACCENT),
+        // Stopping = warning: STATUS_WARNING background, black text
         SubagentStatus::Stopping => (Color::Black, theme::STATUS_WARNING),
+        // Completed = neutral: white background, black text
         SubagentStatus::Completed => (Color::Black, Color::White),
+        // Failed = error: STATUS_ERROR (bright red) background, white text
         SubagentStatus::Failed => (Color::White, theme::STATUS_ERROR),
+        // Stopped/Interrupted = dim gray: DARK_GRAY background, white text
         SubagentStatus::Stopped | SubagentStatus::Interrupted => (Color::White, Color::DarkGray),
     };
     badge_span(status.label(), fg, bg)
@@ -289,6 +296,7 @@ fn transcript_state(app: &App, task_id: &str) -> &'static str {
 
 /// The selected subagent: identity and model choice, transcript, activity and prompt.
 fn detail_lines(app: &App, row: &SubagentRow<'_>, width: u16) -> Vec<Line<'static>> {
+    use ratatui::style::Color;
     let value = Color::White;
     let mut lines = vec![
         Line::from(vec![

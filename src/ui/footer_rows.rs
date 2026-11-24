@@ -139,7 +139,7 @@ fn format_field(app: &App, id: FooterFieldId) -> FooterItem {
         }
         FooterFieldId::RunningSubagents => {
             let running = crate::app::agents::running_subagent_count(app);
-            (running > 0).then(|| (format!("[AGENTS:{running}]"), Color::Yellow))
+            (running > 0).then(|| (format!("[AGENTS:{running}]"), theme::SUBAGENT_TOKEN))
         }
         FooterFieldId::Directory => Some((format!("Loc: {}", app.cwd), gray)),
         FooterFieldId::GitBranch => app
@@ -157,11 +157,11 @@ fn format_field(app: &App, id: FooterFieldId) -> FooterItem {
 fn footer_notice(app: &App) -> FooterItem {
     let permissions = pending_permission_request_count(app);
     if permissions > 0 {
-        return Some((format!("{permissions} PEND. PERM."), Color::Yellow));
+        return Some((format!("{permissions} PEND. PERM."), theme::BTW_ACCENT));
     }
     let auth = mcp_needs_auth_count(app);
     if auth > 0 && should_show_startup_mcp_hint(app) {
-        return Some((format!("{auth} MCP NEEDS AUTH"), Color::Yellow));
+        return Some((format!("{auth} MCP NEEDS AUTH"), theme::BTW_ACCENT));
     }
     app.session_runtime
         .mode
@@ -322,10 +322,10 @@ fn should_show_startup_mcp_hint(app: &App) -> bool {
 fn mode_color(mode_id: &str) -> Color {
     match mode_id {
         "default" => theme::DIM,
-        "auto" | "acceptEdits" => Color::Yellow,
-        "plan" => Color::Blue,
+        "auto" | "acceptEdits" => theme::ACCENT,
+        "plan" => theme::DIM,
         "bypassPermissions" | "dontAsk" => Color::Red,
-        _ => Color::Magenta,
+        _ => Color::Rgb(110, 110, 110),
     }
 }
 
@@ -333,7 +333,7 @@ fn fast_mode_badge(state: model::FastModeState) -> (&'static str, Color) {
     match state {
         model::FastModeState::Unknown => ("FAST:?", theme::DIM),
         model::FastModeState::Off => ("FAST:OFF", theme::DIM),
-        model::FastModeState::Cooldown => ("FAST:CD", Color::Yellow),
+        model::FastModeState::Cooldown => ("FAST:CD", theme::BTW_ACCENT),
         model::FastModeState::On => ("FAST:ON", theme::ACCENT),
     }
 }
@@ -344,7 +344,7 @@ fn startup_status_badge(app: &App) -> Option<(&'static str, Color)> {
         crate::app::AppStatus::Ready => Some(("READY", theme::DIM)),
         crate::app::AppStatus::CommandPending
         | crate::app::AppStatus::Thinking
-        | crate::app::AppStatus::Running => Some(("WORKING", Color::Yellow)),
+        | crate::app::AppStatus::Running => Some(("WORKING", theme::ACCENT)),
         crate::app::AppStatus::Error => Some(("ERROR", theme::STATUS_ERROR)),
     }
 }
@@ -427,6 +427,22 @@ mod tests {
         assert!(!text.contains("Opus"));
         app.session_runtime.current_model.as_mut().expect("model").supports_effort = false;
         assert!(!line_text(&serialize_footer(&app, &layout, 80)).contains("High"));
+    }
+
+    #[test]
+    fn mode_color_never_returns_magenta() {
+        // Known modes
+        assert_eq!(mode_color("default"), theme::DIM);
+        assert_eq!(mode_color("auto"), theme::ACCENT);
+        assert_eq!(mode_color("acceptEdits"), theme::ACCENT);
+        assert_eq!(mode_color("plan"), theme::DIM);
+        assert_eq!(mode_color("bypassPermissions"), Color::Red);
+        assert_eq!(mode_color("dontAsk"), Color::Red);
+        // Unknown mode -> palette gray, not Magenta
+        let unknown = mode_color("unknown_mode_xyz");
+        assert_ne!(unknown, Color::Magenta);
+        // Should be the palette gray Rgb(110,110,110)
+        assert_eq!(unknown, Color::Rgb(110, 110, 110));
     }
 }
 

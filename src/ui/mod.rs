@@ -5,6 +5,7 @@ mod agents;
 mod autocomplete;
 mod config;
 mod copy;
+pub(crate) mod machine_god_art;
 pub(crate) mod sacred_banner;
 mod diff;
 pub(crate) mod footer_rows;
@@ -32,6 +33,8 @@ mod two_column_list;
 mod update;
 mod welcome;
 mod wrap;
+#[cfg(test)]
+mod theme_palette_test;
 
 pub use message::SpinnerState;
 pub(crate) use welcome::{ferris_hello_live, welcome_is_whole_transcript};
