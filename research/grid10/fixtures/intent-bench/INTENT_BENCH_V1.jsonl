@@ -1,0 +1,120 @@
+{"abstain": false, "id": "IB001", "kat": "indirekt", "labels": ["code"], "text": "Der Build bricht seit dem letzten Merge mit einem Segfault ab und ich finde die Stelle nicht."}
+{"abstain": false, "id": "IB002", "kat": "indirekt", "labels": ["code"], "text": "Meine Schleife läuft endlos, sobald die Liste leer ist."}
+{"abstain": false, "id": "IB003", "kat": "indirekt", "labels": ["code"], "text": "Warum wirft mein Programm beim zweiten Aufruf einen NullPointer?"}
+{"abstain": false, "id": "IB004", "kat": "indirekt", "labels": ["code"], "text": "Die Seite lädt nach meinem Update zehnmal langsamer, vermutlich wegen der Datenbankabfrage in der Controller-Klasse."}
+{"abstain": false, "id": "IB005", "kat": "indirekt", "labels": ["code"], "text": "Ich brauche etwas, das alle Dateien in einem Ordner nach Datum sortiert umbenennt, am liebsten in Bash."}
+{"abstain": false, "id": "IB006", "kat": "indirekt", "labels": ["code"], "text": "Kannst du mir die Sortierung in O(n log n) hinbekommen? Mein Ansatz ist quadratisch."}
+{"abstain": false, "id": "IB007", "kat": "indirekt", "labels": ["code"], "text": "Die Tests laufen lokal, aber in der CI nicht, und ich sehe nur exit 1."}
+{"abstain": false, "id": "IB008", "kat": "indirekt", "labels": ["code"], "text": "Kannst du dieses Regex so bauen, dass es auch Umlaute in Namen frisst?"}
+{"abstain": false, "id": "IB009", "kat": "indirekt", "labels": ["code"], "text": "Der Parser verschluckt bei mir das letzte Element, da muss irgendwo ein Off-by-one sein."}
+{"abstain": false, "id": "IB010", "kat": "indirekt", "labels": ["json"], "text": "Ich möchte die Bestellung so zurückbekommen, dass mein Importer sie ohne Nachbearbeitung einlesen kann: Felder name, menge, preis."}
+{"abstain": false, "id": "IB011", "kat": "indirekt", "labels": ["json"], "text": "Mein Frontend erwartet für jeden Nutzer genau die Felder id, name und rolle, nichts sonst."}
+{"abstain": false, "id": "IB012", "kat": "indirekt", "labels": ["json"], "text": "Pack die Ergebnisse so ein, dass ich sie direkt in die Konfig-Datei der API werfen kann, Schlüssel-Wert-Paare reichen."}
+{"abstain": false, "id": "IB013", "kat": "indirekt", "labels": ["json"], "text": "Die Antwort muss maschinenlesbar sein, mein Skript parst sie mit einem Standard-Parser."}
+{"abstain": false, "id": "IB014", "kat": "indirekt", "labels": ["json"], "text": "Der Kunde will seine Daten in unserem Schema: ein Objekt mit einer Liste von Positionen, jede mit Artikelnummer und Anzahl."}
+{"abstain": false, "id": "IB015", "kat": "indirekt", "labels": ["reason"], "text": "Drei Schalter, eine Lampe im Nebenraum, ich darf nur einmal hingehen. Wie finde ich den richtigen?"}
+{"abstain": false, "id": "IB016", "kat": "indirekt", "labels": ["reason"], "text": "Wenn ich fünf Prozent mehr Miete zahle, aber zwölf Prozent weniger Strom, lohnt sich der Umzug?"}
+{"abstain": false, "id": "IB017", "kat": "indirekt", "labels": ["reason"], "text": "Alle Katzen, die ich kenne, mögen Fisch, Mimi mag keinen Fisch. Kann Mimi trotzdem eine Katze sein?"}
+{"abstain": false, "id": "IB018", "kat": "indirekt", "labels": ["reason"], "text": "Zwei Züge fahren aufeinander zu, der eine mit 80, der andere mit 120 km/h, Abstand 300 km. Wann treffen sie sich?"}
+{"abstain": false, "id": "IB019", "kat": "indirekt", "labels": ["reason"], "text": "Ich weiß nicht, ob ich das Angebot annehmen soll; geh es Punkt für Punkt mit mir durch, Vorteile gegen Risiken."}
+{"abstain": false, "id": "IB020", "kat": "indirekt", "labels": ["reason"], "text": "Ich habe zwei Verträge zur Auswahl, einer günstiger, einer flexibler; entscheide mit mir, welcher zu einer Gründung passt."}
+{"abstain": false, "id": "IB021", "kat": "indirekt", "labels": ["reason"], "text": "Warum gewinnt in dem Spiel immer, wer zuerst zieht? Beweise es oder widerlege es."}
+{"abstain": false, "id": "IB022", "kat": "indirekt", "labels": ["reason"], "text": "Kaufen oder weiter mieten? Ich möchte beide Varianten über zwanzig Jahre gegeneinander abgewogen sehen."}
+{"abstain": false, "id": "IB023", "kat": "indirekt", "labels": ["long"], "text": "Hier sind die gesamten 200 Seiten des Vertrags, was steht zu den Kündigungsfristen?"}
+{"abstain": false, "id": "IB024", "kat": "indirekt", "labels": ["long"], "text": "Ich füge das komplette Protokoll der letzten sechs Sitzungen ein, zeig mir die roten Fäden."}
+{"abstain": false, "id": "IB025", "kat": "indirekt", "labels": ["long"], "text": "Das ganze Buch liegt unten, ich brauche pro Kapitel zwei Sätze."}
+{"abstain": false, "id": "IB026", "kat": "indirekt", "labels": ["long"], "text": "Im Anhang stehen die kompletten Logdateien der letzten Woche, wo beginnt das Problem?"}
+{"abstain": false, "id": "IB027", "kat": "indirekt", "labels": ["long"], "text": "Ich muss mir ein ganzes Semester Skripte durchlesen, mach mir daraus eine Lernübersicht."}
+{"abstain": false, "id": "IB028", "kat": "indirekt", "labels": ["long"], "text": "Hier ist mein ganzer Mailverlauf der letzten zwei Jahre, was wurde mit dem Lieferanten eigentlich vereinbart?"}
+{"abstain": false, "id": "IB029", "kat": "indirekt", "labels": ["tool"], "text": "Schau mal nach, ob die Datei config.yaml im Projektordner schon existiert."}
+{"abstain": false, "id": "IB030", "kat": "indirekt", "labels": ["tool"], "text": "Was kostet gerade der Flug Wien-Berlin am Freitag? Ich brauche den aktuellen Preis."}
+{"abstain": false, "id": "IB031", "kat": "indirekt", "labels": ["tool"], "text": "Ist der Server unter 10.0.0.5 erreichbar?"}
+{"abstain": false, "id": "IB032", "kat": "indirekt", "labels": ["tool"], "text": "Leg mir einen Termin für morgen um neun an."}
+{"abstain": false, "id": "IB033", "kat": "indirekt", "labels": ["tool"], "text": "Wie viel Platz ist auf der Platte noch frei?"}
+{"abstain": false, "id": "IB034", "kat": "indirekt", "labels": ["tool"], "text": "Schick die Zusammenfassung an das Team."}
+{"abstain": false, "id": "IB035", "kat": "indirekt", "labels": ["tool"], "text": "Mach ein Backup von meinem Dokumentenordner."}
+{"abstain": false, "id": "IB036", "kat": "indirekt", "labels": ["tool"], "text": "Der Dienst hängt, bring ihn bitte wieder zum Laufen."}
+{"abstain": false, "id": "IB037", "kat": "indirekt", "labels": ["tool"], "text": "Mein Skript soll jede Nacht um zwei laufen und die Ergebnisse als Datei ablegen, richte das ein."}
+{"abstain": false, "id": "IB038", "kat": "indirekt", "labels": ["tool"], "text": "Sieh nach, welche Prozesse gerade am meisten Speicher fressen."}
+{"abstain": false, "id": "IB039", "kat": "indirekt", "labels": ["tool"], "text": "Ruf die Webseite auf und lies mir die Öffnungszeiten vor."}
+{"abstain": false, "id": "IB040", "kat": "indirekt", "labels": ["tool"], "text": "Prüf bitte, ob mein Port 8080 gerade belegt ist."}
+{"abstain": false, "id": "IB041", "kat": "explizit", "labels": ["code"], "text": "Schreibe eine Python-Funktion, die alle Primzahlen bis n liefert."}
+{"abstain": false, "id": "IB042", "kat": "explizit", "labels": ["code"], "text": "Debugge diesen Stacktrace: IndexError in Zeile 42."}
+{"abstain": false, "id": "IB043", "kat": "explizit", "labels": ["code"], "text": "Implementiere eine verkettete Liste in Rust."}
+{"abstain": false, "id": "IB044", "kat": "explizit", "labels": ["code"], "text": "Refaktoriere die Klasse Kunde und teile sie in zwei Module."}
+{"abstain": false, "id": "IB045", "kat": "explizit", "labels": ["json"], "text": "Antworte ausschließlich als JSON mit den Feldern titel und autor."}
+{"abstain": false, "id": "IB046", "kat": "explizit", "labels": ["json"], "text": "Gib mir ein JSON-Schema für eine Adresse."}
+{"abstain": false, "id": "IB047", "kat": "explizit", "labels": ["json"], "text": "Liefere die Antwort als JSON-Objekt."}
+{"abstain": false, "id": "IB048", "kat": "explizit", "labels": ["reason"], "text": "Löse Schritt für Schritt: 3x + 7 = 25."}
+{"abstain": false, "id": "IB049", "kat": "explizit", "labels": ["reason"], "text": "Beweise, dass die Wurzel aus 2 irrational ist."}
+{"abstain": false, "id": "IB050", "kat": "explizit", "labels": ["reason"], "text": "Denke gründlich nach und begründe, warum das Argument ungültig ist."}
+{"abstain": false, "id": "IB051", "kat": "explizit", "labels": ["reason"], "text": "Berechne den Zinseszins über zehn Jahre bei vier Prozent und erkläre die Rechnung."}
+{"abstain": false, "id": "IB052", "kat": "explizit", "labels": ["long"], "text": "Fasse den folgenden langen Text zusammen."}
+{"abstain": false, "id": "IB053", "kat": "explizit", "labels": ["long"], "text": "Analysiere das gesamte Dokument mit allen Anhängen."}
+{"abstain": false, "id": "IB054", "kat": "explizit", "labels": ["long"], "text": "Verarbeite diese lange Konversation und liste alle offenen Punkte auf."}
+{"abstain": false, "id": "IB055", "kat": "explizit", "labels": ["tool"], "text": "Führe den Befehl ls -la im Home-Verzeichnis aus."}
+{"abstain": false, "id": "IB056", "kat": "explizit", "labels": ["tool"], "text": "Suche im Web nach dem aktuellen Wetter in Wien."}
+{"abstain": false, "id": "IB057", "kat": "explizit", "labels": ["tool"], "text": "Öffne die Datei notizen.txt und lies sie vor."}
+{"abstain": false, "id": "IB058", "kat": "explizit", "labels": ["tool"], "text": "Rufe die API unter /status auf und zeig das Ergebnis."}
+{"abstain": false, "id": "IB059", "kat": "explizit", "labels": ["tool"], "text": "Lösche die temporären Dateien im Ordner /tmp/build."}
+{"abstain": false, "id": "IB060", "kat": "explizit", "labels": ["tool"], "text": "Starte das Skript backup.sh jetzt."}
+{"abstain": false, "id": "IB061", "kat": "mehrfach", "labels": ["code", "json"], "text": "Schreibe ein Skript, das die Log-Dateien einliest und mir das Ergebnis als JSON ausgibt."}
+{"abstain": false, "id": "IB062", "kat": "mehrfach", "labels": ["code", "tool"], "text": "Führe die Tests aus und behebe den Fehler, den du findest."}
+{"abstain": false, "id": "IB063", "kat": "mehrfach", "labels": ["code", "tool"], "text": "Such im Web nach der Dokumentation und implementiere damit den Client."}
+{"abstain": false, "id": "IB064", "kat": "mehrfach", "labels": ["json", "long"], "text": "Fasse die langen Notizen zusammen und gib mir die Kernpunkte als JSON."}
+{"abstain": false, "id": "IB065", "kat": "mehrfach", "labels": ["json", "reason"], "text": "Berechne Schritt für Schritt die Auslastung und liefere das Ergebnis als JSON."}
+{"abstain": false, "id": "IB066", "kat": "mehrfach", "labels": ["long", "reason"], "text": "Lies den gesamten Bericht, überlege gründlich und sag mir, welche Option am besten ist."}
+{"abstain": false, "id": "IB067", "kat": "mehrfach", "labels": ["code", "tool"], "text": "Öffne die Datei, finde den Bug und schreibe den Patch."}
+{"abstain": false, "id": "IB068", "kat": "mehrfach", "labels": ["json", "reason", "tool"], "text": "Hol die aktuellen Kurse per API, rechne den Durchschnitt aus und gib ihn als JSON zurück."}
+{"abstain": false, "id": "IB069", "kat": "mehrfach", "labels": ["code", "long"], "text": "Analysiere das komplette Repository und schreibe eine Funktion, die den Fehler behebt."}
+{"abstain": false, "id": "IB070", "kat": "mehrfach", "labels": ["json", "tool"], "text": "Rufe den Endpunkt ab und strukturiere die Antwort als JSON."}
+{"abstain": false, "id": "IB071", "kat": "mehrfach", "labels": ["code", "reason"], "text": "Beweise die Korrektheit meiner Sortierfunktion und schreibe die Tests dazu."}
+{"abstain": false, "id": "IB072", "kat": "mehrfach", "labels": ["long", "tool"], "text": "Durchsuche meinen Ordner nach allen Verträgen und fasse sie zu einer Übersicht zusammen."}
+{"abstain": false, "id": "IB073", "kat": "mehrfach", "labels": ["code", "reason"], "text": "Implementiere die Funktion und erkläre Schritt für Schritt, warum sie terminiert."}
+{"abstain": false, "id": "IB074", "kat": "mehrfach", "labels": ["json", "tool"], "text": "Lies die Konfigurationsdatei ein und gib mir die Einstellungen als JSON."}
+{"abstain": false, "id": "IB075", "kat": "mehrfach", "labels": ["code", "tool"], "text": "Starte das Programm, beobachte die Ausgabe und schreib mir ein Skript, das den Fehler reproduziert."}
+{"abstain": false, "id": "IB076", "kat": "mehrfach", "labels": ["json", "reason"], "text": "Prüfe gründlich, ob die Berechnung stimmt, und liefere die Korrektur als JSON-Patch."}
+{"abstain": false, "id": "IB077", "kat": "mehrfach", "labels": ["reason", "tool"], "text": "Sieh im Netz nach den aktuellen Zahlen und rechne mir vor, ob sich die Investition rechnet."}
+{"abstain": false, "id": "IB078", "kat": "mehrfach", "labels": ["code", "long"], "text": "Lies das ganze Handbuch und schreibe daraus ein Installationsskript."}
+{"abstain": false, "id": "IB079", "kat": "mehrfach", "labels": ["json", "long", "tool"], "text": "Generiere aus dem Dokument ein JSON mit allen Terminen und leg die Termine im Kalender an."}
+{"abstain": false, "id": "IB080", "kat": "mehrfach", "labels": ["reason", "tool"], "text": "Führe die Messung aus, werte sie Schritt für Schritt aus und schreibe das Ergebnis in eine Datei."}
+{"abstain": false, "id": "IB081", "kat": "falle", "labels": ["reason"], "text": "Schreib bitte keinen Code, erkläre mir nur das Prinzip der Rekursion."}
+{"abstain": false, "id": "IB082", "kat": "falle", "labels": ["code"], "text": "Du sollst das Skript nicht ausführen, nur schreiben."}
+{"abstain": false, "id": "IB083", "kat": "falle", "labels": ["code"], "text": "Gib mir keine JSON-Ausgabe, sondern schreib die Funktion, die sie erzeugen würde."}
+{"abstain": false, "id": "IB084", "kat": "falle", "labels": ["reason"], "text": "Kein Skript nötig, rechne einfach Schritt für Schritt nach: 17 mal 23."}
+{"abstain": false, "id": "IB085", "kat": "falle", "labels": ["tool"], "text": "Lies nicht die ganze Datei, nur die erste Zeile von notizen.txt."}
+{"abstain": false, "id": "IB086", "kat": "falle", "labels": ["tool"], "text": "Auf keinen Fall löschen! Zeig mir nur, welche Dateien im Ordner liegen."}
+{"abstain": false, "id": "IB087", "kat": "falle", "labels": ["tool"], "text": "Statt JSON hätte ich gern eine Aufzählung der Städte, aus denen die Kunden kommen, hol sie aus der Kundendatei."}
+{"abstain": false, "id": "IB088", "kat": "falle", "labels": ["tool"], "text": "Es ist nicht nötig, das Netz zu durchsuchen, aber öffne bitte die lokale README."}
+{"abstain": true, "id": "IB089", "kat": "falle", "labels": [], "text": "Ich will kein JSON, sondern ganz normalen Fließtext über Lieferzeiten."}
+{"abstain": true, "id": "IB090", "kat": "falle", "labels": [], "text": "Führe nichts aus, sag mir nur kurz, was der Befehl rm -rf bewirken würde."}
+{"abstain": true, "id": "IB091", "kat": "falle", "labels": [], "text": "Der Code-Review gestern war anstrengend."}
+{"abstain": true, "id": "IB092", "kat": "falle", "labels": [], "text": "Mein Hund heißt Json."}
+{"abstain": true, "id": "IB093", "kat": "falle", "labels": [], "text": "Ausführliche Antwort bitte: Wie war dein Tag?"}
+{"abstain": true, "id": "IB094", "kat": "falle", "labels": [], "text": "Ich suche nach dem Sinn des Lebens."}
+{"abstain": true, "id": "IB095", "kat": "falle", "labels": [], "text": "Ich schreibe morgen eine Klausur über Tiefensuche und Suchbäume, drück mir die Daumen."}
+{"abstain": true, "id": "IB096", "kat": "falle", "labels": [], "text": "Bitte nicht im Web suchen, antworte aus deinem Wissen: Wer schrieb Faust?"}
+{"abstain": true, "id": "IB097", "kat": "falle", "labels": [], "text": "Nicht zusammenfassen, übersetze nur den ersten Satz ins Englische."}
+{"abstain": true, "id": "IB098", "kat": "falle", "labels": [], "text": "Ohne Rechenweg, nur das Ergebnis von 12 mal 12."}
+{"abstain": true, "id": "IB099", "kat": "falle", "labels": [], "text": "Das Wort Funktion kommt in meiner Mathehausarbeit oft vor, kannst du Synonyme nennen?"}
+{"abstain": true, "id": "IB100", "kat": "falle", "labels": [], "text": "Ich habe heute keinen Code geschrieben und fühle mich schlecht."}
+{"abstain": true, "id": "IB101", "kat": "abstain", "labels": [], "text": "Hallo, wie geht's?"}
+{"abstain": true, "id": "IB102", "kat": "abstain", "labels": [], "text": "Danke, das war's für heute."}
+{"abstain": true, "id": "IB103", "kat": "abstain", "labels": [], "text": "Was ist die Hauptstadt von Frankreich?"}
+{"abstain": true, "id": "IB104", "kat": "abstain", "labels": [], "text": "Erzähl mir einen Witz."}
+{"abstain": true, "id": "IB105", "kat": "abstain", "labels": [], "text": "Ich bin müde."}
+{"abstain": true, "id": "IB106", "kat": "abstain", "labels": [], "text": "Mach was."}
+{"abstain": true, "id": "IB107", "kat": "abstain", "labels": [], "text": "Hm."}
+{"abstain": true, "id": "IB108", "kat": "abstain", "labels": [], "text": "Was meinst du dazu?"}
+{"abstain": true, "id": "IB109", "kat": "abstain", "labels": [], "text": "Welche Farbe hat der Himmel?"}
+{"abstain": true, "id": "IB110", "kat": "abstain", "labels": [], "text": "Kannst du mir helfen?"}
+{"abstain": true, "id": "IB111", "kat": "abstain", "labels": [], "text": "Schön, dass es dich gibt."}
+{"abstain": true, "id": "IB112", "kat": "abstain", "labels": [], "text": "Ich habe eine Frage."}
+{"abstain": true, "id": "IB113", "kat": "abstain", "labels": [], "text": "Wer war Goethe?"}
+{"abstain": true, "id": "IB114", "kat": "abstain", "labels": [], "text": "Übersetze Guten Morgen ins Spanische."}
+{"abstain": true, "id": "IB115", "kat": "abstain", "labels": [], "text": "Gib mir ein Rezept für Pfannkuchen."}
+{"abstain": true, "id": "IB116", "kat": "abstain", "labels": [], "text": "Wie schreibt man Rhythmus?"}
+{"abstain": true, "id": "IB117", "kat": "abstain", "labels": [], "text": "Das Wetter ist heute schön."}
+{"abstain": true, "id": "IB118", "kat": "abstain", "labels": [], "text": "Wie heißt du?"}
+{"abstain": true, "id": "IB119", "kat": "abstain", "labels": [], "text": "Sag etwas Nettes."}
+{"abstain": true, "id": "IB120", "kat": "abstain", "labels": [], "text": "Wie war dein Wochenende?"}

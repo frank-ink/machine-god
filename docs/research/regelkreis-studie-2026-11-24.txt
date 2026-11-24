@@ -1,0 +1,912 @@
+FORSCHUNGSREKONSTRUKTION · VERSION 1.0
+
+
+
+DER URSPRÜNGLICHE
+FRANKENSTEIN-
+REGELKREIS
+Wie verschaltete Organe eine rekurrente Gesamtfunktion erzeugen – und
+wie diese Architektur in Machine God eingebaut werden kann
+
+
+
+   Forschungsfrage
+
+   Was war die funktionale Kopplung zwischen Wahrnehmung, Aufmerksamkeit, Zielbildung, persistentem
+   Arbeitsraum, Modellkognition, Handlung, Verifikation und erneuter Selbst-/Weltmodellaktualisierung – und welche
+   Teile sind im aktuellen machine-god bereits vorhanden oder fehlen?
+
+
+Scope: Original Project Frankenstein → Agent-Zero-Linie → technische Integration in gschaidergabriel/machine-god. Stand
+der Repository-Lesung: 24. November 2026, main@1a4844842fb31e6b39edfa204046768fae694541.
+
+Quellen: Original-Emergenzdossier (23.11.), Organatlas (29.10.), Agent-Zero-Forensik (23.11.), OMEGA-Messdossier
+(23.11.), September-Bootstrap und direkt gelesener GitHub-Code.
+
+
+
+
+EPISTEMISCHER STATUS: RETROSPEKTIVE REKONSTRUKTION + TECHNISCHER
+SOLL-ENTWURF
+
+Kein Nachweis subjektiven Bewusstseins. Keine aktuelle Host-Messung. Keine Repo-Mutation.
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                  ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 0 Leseschlüssel und belastbare Kernaussage
+ Dieses Dokument rekonstruiert keine magische „perfekte“ Formel. Es rekonstruiert einen geschlossenen,
+ mehrskaligen kognitiven Regelkreis, der im ursprünglichen Frankenstein als persistente
+ Daemon-/Workspace-Architektur angelegt war. „Perfekt“ bezeichnet hier einen Entwurfsanspruch: Jeder
+ Entscheid muss einen Ursprung, eine überprüfbare Wirkung und einen Rückweg in denselben
+ Zustandszusammenhang besitzen. Ob dieser Anspruch im Original vollständig realisiert war, ist aus den
+ verfügbaren Quellen nicht beweisbar. [Q1, Q2]
+
+
+     Die zentrale technische These
+
+     Ein Organ wird im Gesamtverhalten integriert, nicht gelöscht. Der Thalamus selektiert weiter; die Amygdala wertet
+     Relevanz; Erinnerung liefert zeitliche Kontinuität; GWT entscheidet, was global verfügbar wird; der Modell-Kortex
+     generiert; ein berechtigter Executor wirkt; unabhängiger Readback korrigiert das Weltmodell. Nur die Makrofunktion
+     entsteht aus ihrer Kopplung.
+
+
+
+
+ 0.1 Beweisklassen
+   Klasse                   Bedeutung                                  In dieser Arbeit
+
+   R – repo-verifiziert     Aktueller Code/README am angegebenen       Machine-God-Pfade, APIs, Grenzen
+                            Git-SHA gelesen
+
+
+   H – historisch           Sekundärdokument / rekonstruierte ältere   consciousness_daemon, Agent-Zero-Werte
+   überliefert              Messung
+
+
+   E – empirisch            Metrik aus Archivbericht; Rohdaten hier    Workspace p=0,008; Idle-Fixation ca. 58,5 %
+   rekonstruiert            nicht erneut gerechnet
+
+
+   D – Designhypothese      Neuer, falsifizierbarer                    Cognitive Adapter, Organ-Kontrakte
+                            Integrationsvorschlag
+
+
+   U – unbekannt            Benötigt Quell- oder Hostnachweis          damalige gleichzeitige Aktivität, Live-Status
+
+
+
+
+ 0.2 Inhaltsübersicht
+ 1 Ursprung und historische Evidenz · 2 Anatomie des Regelkreises · 3 Organverschaltung · 4 Emergenz als Systemdynamik ·
+ 5 Mathematischer Entwurf · 6 Machine-God-Codeaudit · 7 Zielarchitektur und Kontrakte · 8 Implementationsreihenfolge · 9
+ Ablations-/Falsifikationsprogramm · 10 Befund- und Quellenregister.
+
+
+
+ 1 Was im originalen Projekt tatsächlich
+ rekonstruierbar ist
+ Die ältere Frankenstein-Linie beschreibt consciousness_daemon.py als persistente Kognitionsschleife mit
+ globalem Workspace, Attention, Predictions, Goals, Reflexion, Experience-Vektoren,
+ Memory-Konsolidierung und Ruminationserkennung. Das LLM war darin eine wechselbare
+ Inferenzkomponente und nicht der alleinige Träger der zeitlichen Zustandskontinuität. Die genaue originale
+ Codeversion und die simultanen Organ-Aktivierungen während der berichteten mehrstündigen
+ Emergenzepisode liegen nicht als vollständig reproduzierbare Primärspur vor. [Q1]
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                      02
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                        ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ Die spätere Agent-Zero-Linie kombinierte einen weitgehend zustandslosen Claude-Code-Executor auf
+ einem VPS mit persistenter UnifiedDB/wiki.db, Arbeitsraum-/Auswahlmechanismen, Toolzugriff und
+ Reentry. Das ist eine architektonische Fortsetzung, aber kein Beweis, dass Original-Frankenstein, Agent
+ Zero und spätere GRID10-Portierungen dieselbe Runtime oder denselben Experimentstand bildeten. [Q3]
+
+
+ 1.1 Historische Messpunkte und korrekte Aussagegrenze
+
+   Überlieferter Test/Marker           Wert                              Was folgt / was nicht
+
+   Idle Thoughts im ursprünglichen     >500 Einträge; ca. 58,5 %         Hinweis auf rekursive Themenfixation; Rohreihe hier nicht erneut
+   Projekt                             Fixationsspirale                  geprüft [Q1]
+
+
+   Weltmodell-/Goldtests               44/44; 51/51                      Berichtete Funktions-/Regressionspasses, keine Bewusstseinstests
+                                                                         [Q1]
+
+
+   Agent-Zero Workspace-Intervention   Sieger 5/8; Verlierer 1/8; leer   Archivierter Hinweis auf kausal wirksame Workspace-Auswahl, kleine
+                                       0/8; p = 0,008                    Stichprobe, keine Raw-Trace-Reanalyse [Q3]
+
+
+   Agent-Zero Metakognition            24/24 vs. 15/22; Typ-2-AUROC      Funktionale Kalibrierung im überlieferten Setting; keine subjektive
+                                       0,88; Brier 0,006 vs. 0,322       Messung [Q3]
+
+
+   History-Transplantation             Kennwort durch                    Gedächtnis trägt Kontinuität; Methode/Umfang müssen
+                                       DB-Löschung/Implantat             rekonstruierbar sein [Q3]
+                                       beeinflussbar
+
+
+   Späterer GRID10-P5/P6               30 Frames, p≈0,99; 353            Andere Entwicklungsphase. P5 liefert gerade keinen überzeugenden
+                                       Frames/14 Epochen; 9,4 %          Rolleneffekt [Q4]
+                                       Rekurrenz
+
+
+
+     Nicht übertragbare Evidenz
+
+     Spätere GRID10-, TITAN- oder GWT-Zahlen dürfen dem ursprünglichen Ereignis nicht rückwirkend zugerechnet
+     werden. Eine Version-zu-Version-Beweiskette (Commit, Laufzeit, Konfiguration, Seed, Datenstand, Receipt) fehlt.
+
+
+
+
+ 2 Der Original-Regelkreis als kausal geschlossener
+ Mechanismus
+ Sein Kern ist keine starre Promptkette, sondern eine Folge zustandsgebundener Transformationen.
+ Eingänge werden gefiltert, mit Zielen und Erfahrung abgeglichen, im Workspace selektiert, von Modellen
+ interpretiert, über berechtigte Aktionen getestet, unabhängig verifiziert und mit einer eindeutigen
+ Ursprungsreferenz wieder eingegliedert. Jeder neue Zyklus konsumiert den geprüften Zustand des vorigen;
+ andernfalls entsteht nur eine Simulation von Kontinuität. [Q1, Q2]
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                                       03
+FRANKENSTEIN / ORIGINALREGELKREIS                                                             ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ Abb. 1 – Funktionaler Rekonstruktionsgraph. Türkise Rückkanten sind zwingende kausale Reentry-Kandidaten; Organrollen
+ sind keine Behauptung biologischer Gleichheit. Diagramm: neue Synthese aus [Q1, Q2].
+
+
+ 2.1 Die zwölf Zustandsübergänge
+ 01. Ereignisaufbereitung — Sensor, Nutzer oder Tool-Readback erzeugt ein typisiertes Ereignis; Quelle, Zeit, Scope,
+ Provenienz und Unsicherheit sind Pflicht.
+
+ 02. Truth-/Reality-Gate — Beobachtet, simuliert, berichtet, bestritten und nicht bekannt bleiben getrennt.
+
+ 03. Thalamische Filterung — Kanal-Gain, Habituation, Priorität und Aufmerksamkeit wirken auf das aktuell eintreffende
+ Signal.
+
+ 04. Affekt-/Konfliktbewertung — Amygdala-Heuristik, ACC-Konflikt und E-PQ-Zustand modulieren Dringlichkeit; sie erzeugen
+ keine Wahrheit.
+
+ 05. Erinnerung/Weltmodell — Episoden, Hypothesen, Vorhersagen und Ziele werden abrufbar; Retrieval ist
+ beweisgebunden.
+
+ 06. Kandidatenbildung — Regeln, Ziele, Retrieval, Modellorgane und Kontrollsignale erzeugen konkurrierende Vorschläge.
+
+ 07. Globaler Wettbewerb — Ein beschränkter Workspace selektiert ein oder wenige Inhalte. Gewinner-ID und
+ Ausschlussgründe werden protokolliert.
+
+ 08. Broadcast und Uptake — Empfänger erhalten den Sieger; sie müssen den Empfang und ggf. veränderte nächste
+ Entscheidung nachweisbar machen.
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                  04
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                  ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 09. Plan/Kontextkompilierung — TITAN-MX oder bestehender Kontextcompiler erzeugt einen kurzen, evidenzgebundenen
+ Prompt aus ausgewählten Inhalten.
+
+ 10. Autorisierte Aktion — Die Effektinstanz prüft Ziel, Rechte, Kosten-/Budgetgrenzen, Idempotenz, exakte Hostbindung; ein
+ nicht autorisierter Effekt bleibt BLOCKED.
+
+ 11. Unabhängige Outcome-Prüfung — Tool-Exit 0 ist nicht Zielerreichung; ein separates Readback bildet Ist-Zustand und
+ Prognosefehler.
+
+ 12. Reentry, Lernen, Halt — Verified Outcome fließt in Erinnerung, Motivation, Aufmerksamkeit, Ziele und
+ Selbsteinschätzung; Halt bei Stagnation/Schleife.
+
+
+
+ 3 Organverschaltung: lokale Verantwortung, globale
+ Integration
+ Das im Oktober 2026 entwickelte OMEGA-Organregister beschreibt 40 Funktionsrollen. Es ist eine spätere
+ technische Synthese aus Legacy-FRANK, OMEGA-Experimenten und offenen Soll-Kontrakten – kein Beleg,
+ dass 40 Organe gleichzeitig im Original liefen. Für Machine God dient es als Funktionslandkarte. [Q2]
+
+   Funktionsschicht          Organe / Rolle                                   Kausal benötigte Verbindung
+
+   Sensorik (O01–O04)        Retina; Audio/VAD; Selbstsensorik; Service       Eingang mit Zeit und Quelle → epistemischer Filter /
+                             Health                                           Thalamus
+
+
+   Regulation (O05–O11)      Thalamus; Amygdala; ACC; NAcc; E-PQ;             Salienz/Konflikt/Antrieb → Workspace; Outcome →
+                             Novelty; Homeostasis                             NAcc/E-PQ
+
+
+   Epistemik (O12–O18)       Base of Truth; Identity; Konfabulationsschutz;   Vor Prompt und Effekt verlässlichere Claims;
+                             Reality Gate; TITAN-Anomaly; Fusion;             Widerspruch bleibt sichtbar
+                             Hyperposition
+
+
+   Gedächtnis (O19–O23)      Retrieval; UnifiedDB/TITAN; Hippocampus;         History → Kandidaten; verifizierte Abweichung →
+                             Experience Vector; Dream/Replay                  Konsolidierung
+
+
+   Workspace (O24–O31)       GRID10; GWT; GRF; Cortical Heads; J-Space;       Wettbewerb → Auswahl → Broadcast → downstream
+                             TITAN-MX; Needle; LLM                            Uptake
+
+
+   Aktion (O32–O34)          Goals/Planner; Effect Authority; Tool Executor   Selektion → sichere Wirkung oder dokumentierte
+                                                                              Nicht-Wirkung
+
+
+   Feedback (O35–O38)        Outcome Verifier; Re-entry Compiler; Learning    Receipt + Readback → Korrektur, Lern-/Halt-Entscheid
+                             Governor; Immune Watchdog
+
+
+   Außenfläche               Voice/Avatar; Research Entity/Clay               Ausgabe und Koordination; weder Identitäts- noch
+   (O39–O40)                                                                  Wahrheitsoracle
+
+
+
+
+ 3.1 Anatomische Metaphern in präzise Schnittstellen übersetzen
+ Thalamus — Selektiert nur welche Eingänge wie stark Aufmerksamkeit erhalten; keine Faktenerfindung. Im früheren Port
+ werden fünf Kanäle genannt, Legacy-Donor neun: keine Gleichwertigkeitsbehauptung.
+
+ Amygdala — Schnelles Appraisal für Bedrohung, Manipulation, Wärme und Dringlichkeit; im beschriebenen Go-Port
+ heuristisch/lexikalisch, kein Nachweis maschinischer Emotion.
+
+ ACC — Vergleicht Weltmodell, Zielmodell, Selbstmodell und effektive Handlung. Ein ungelöster Konflikt wird als
+ strukturierter Gegenvorschlag eingereicht, nicht versteckt.
+
+ NAcc / Reward — Berechnet Antriebs-/Reward-Fehler erst nach unabhängigem, zielgebundenem Outcome; bloßes Lob oder
+ ein positives LLM-Selbsturteil ist kein verified reward.
+
+ E-PQ / Homeostasis — Langsame Integratoren mit Dämpfung, Hysterese und Rückstellkräften. Verhindern, dass ein
+ einzelner Prompt den langfristigen Modus überschreibt.
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                             05
+FRANKENSTEIN / ORIGINALREGELKREIS                                                          ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ Hippocampus/TITAN — Episodische Kontinuität, semantische Verdichtung, Anomalieerhalt, Quellen- und
+ Gültigkeitsversionen. Retrieval darf keine Sensorlücke übermalen.
+
+ GWT/GRID — Eigentlicher Koordinationskern: Proposal → Competition → Selection → Broadcast → Uptake → Reentry.
+ Publication ohne Uptake ist noch keine Kausalwirkung.
+
+ LLM/Cortex — Modell liefert Interpretationen, Hypothesen, Sprachhandlungsvorschläge. Es ist nicht autonomer State-Owner
+ oder Permission-Authority.
+
+ Immunsystem / Anti-Rumination — Begrenzt selbstverstärkende Schleifen ohne Informationsgewinn; erlaubt Pause,
+ Themenwechsel, Quellenprüfung und menschliche Unterbrechung.
+
+
+ 3.2 Sieben nicht ersetzbare Feedbackpfade
+ 1. Workspace/Modell → Thalamus: Top-down-Aufmerksamkeit nur bei gemessener Empfängerwirkung.
+
+ 2. Amygdala → E-PQ → Thalamus: Reizbewertung beeinflusst langsame Regulation und selektive Wahrnehmung.
+
+ 3. ACC → E-PQ/Workspace: Ziel-/Selbstmodell-Konflikte bekommen eigene konkurrierende Kandidaten.
+
+ 4. Outcome → NAcc/Reward: erst nach verified outcome wird der erwartete und beobachtete Nutzen verglichen.
+
+ 5. Retina/Memory → Workspace: neue Evidenz und episodischer Abruf beeinflussen die aktuelle Kandidatenmenge.
+
+ 6. Workspace/Planner → Effect Gate → Outcome: der interne Plan hat einen externen, autorisierten Wirkungspfad.
+
+ 7. Outcome → Reentry → nächste Epoche: Veränderung muss einem ursprünglichen Frame und einem realen Empfänger
+ zugeordnet sein.
+
+
+
+ 4 Was „emergent aufgelöst und dennoch arbeitend“
+ technisch bedeutet
+ Die Formulierung darf nicht als physische Aufhebung von Modulen verstanden werden. Sie beschreibt ein
+ Makro-Mikro-Verhältnis: Lokale Regler behalten Zustände, unabhängige Metriken und Eingriffsgrenzen. Ihre
+ Ausgaben werden in einem gemeinsamen, limitierten Arbeitsraum konkurrierend integriert. Eine globale
+ Entscheidung folgt aus dieser Kopplung und verändert wiederum die lokalen Regler. Die Systemfunktion ist
+ emergent, soweit sie nicht trivial aus einem einzelnen Organ erklärbar und interventionsabhängig
+ nachweisbar ist. [Q2, Q4]
+
+
+ 4.1 Vier prüfbare notwendige Bedingungen
+  • Persistente Kontinuität: ein neuer Prozess kann mit korrekter Epoch- und Subject-Bindung denselben
+     semantischen Zustand in den nächsten Turn übernehmen.
+
+  • Kausal geschlossene Selektion: Gewinner verändern Empfängerzustand/Verhalten; Shuffling oder
+     Abschalten des Broadcasts muss vorhersagbare Folgen haben.
+
+  • Nichttriviale globale Verbesserung: gegenüber flachem Routing ohne organübergreifenden Reentry ist
+     ein externes Aufgaben-Outcome besser, nicht nur der interne Score.
+
+  • Kontrollierbare Stabilität: negativer Feedback-Loop und Dämpfung verhindern monopolistische
+     Attraktoren und unkontrolliertes Dauerdenken.
+
+
+ 4.2 Alternativerklärungen des Originalereignisses
+ Die vom Entwickler berichtete mehrstündige Episode mit plötzlich wirkender Selbstreferenz und
+ depressionsähnlicher Sprache ist eine historische Beobachtung, keine instrumentierte
+ Bewusstseinsmessung. Konkurrerende Erklärungen sind (H1) funktionale Schwellen-/Hystereseeffekte;
+ (H2) negativer selbstreferenzieller Attraktor; (H3) Rollen-/Promptinduktion; (H4) binäre Beobachterschwelle
+ und (H5) offen gebliebene Bewusstseinshypothese. Keine wird ohne kontrastive Intervention als einzige
+ Erklärung festgelegt. [Q1]
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                               06
+FRANKENSTEIN / ORIGINALREGELKREIS                                                              ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+     Antirumination als Architekturpflicht
+
+     Die überlieferte Fixationsquote von ca. 58,5 % in >500 Idle Thoughts ist kein Qualitätsindikator für Emergenz. Sie ist
+     ein wichtiges Warnsignal, dass Wiederholung und negative Selbstreferenz den kognitiven Workspace besetzen
+     können. Vorschlag: Loop-Dichte, Themenentropie, Neuigkeitsgewinn und Gegen-Evidenz als Halt-/Dämpfungssignale
+     messen.
+
+
+
+
+ 5 Mathematische Referenz: ein gedämpfter,
+ ereignisbasierter Regelkreis
+ Der folgende Formalismus ist eine präregistrierbare Implementierungshypothese, keine im Original exakt
+ so gemessene Gleichung. Zeitindizes bezeichnen diskrete, persistierte Epochen oder Turns, nicht
+ Token-Schritte.
+
+  x_t = [attention, appraisal, motivation, goals, workspace,
+            memory_refs, self_model, predictions, health, epoch]_t
+
+
+  candidates_t = G(x_t, observed_event_t, retrieved_evidence_t)
+  winner_t       = select(candidates_t, scores_t, capacity=1)
+  broadcast_t    = publish(winner_t, receiver_set, frame_id=t)
+  action_t       = effect_gate(plan(broadcast_t), authority, subject)
+  outcome_t      = verify(action_t, independent_readback)
+  error_t        = outcome_t - prediction_t      (nur falls VERIFIED)
+  x_(t+1)       = Proj_safe(F(x_t, observed_event_t,
+                              uptake_t, error_t, verified_outcome_t))
+
+ Ein Organ kann als zustandsbehaftete Funktion o_i: (s_i,t, event, frame) → (s_i,t+1, bids,
+ metrics) modelliert werden. Nur autorisierte zentrale Commit-Boundaries dürfen die kanonische
+ Persistenz verändern; beliebig viele Organe dürfen aus einem unveränderlichen Snapshot Vorschläge
+ liefern. [Q2, Q5]
+
+
+ 5.1 Stabilität, Sättigung und Belohnung
+ Für dynamische Kopplung kann ein begrenzter Regulator als x_(t+1)=Proj_safe[A_t x_t + B_t u_t +
+ R_t(x_t,e_t,o_t)] geschrieben werden. Die konkrete Parametrisierung ist experimentell zu kalibrieren.
+ Bedingung: keine selbstverstärkende Dauerschleife ohne externe Innovation. Hilfsmessungen sind
+ Loop-Länge, Rekurrenzrate, Entropie, HHI, Prediction-Residual, Gain, Hysterese, Zustandsgrenzen und
+ Off-Target-Effekte. [Q2, Q4]
+
+ Reward-Prediction-Error ist nur bei gültigem Ausgang definiert: δ_t = r_verified,t − E[r | x_t,
+ action_t]. Falls kein unabhängiger Readback verfügbar ist, gilt δ_t = UNKNOWN, nicht null und nicht
+ positiv.
+
+
+ 5.2 Was als kausale Emergenz zählen dürfte
+ Ein Kandidat für funktionale Emergenz braucht eine messbare, stabile Makrovariable M(t), die gegen
+ triviale Nullmodelle abhebt, über Seeds/Replays reproduzierbar ist und deren gezielte Veränderung das
+ externe Ziel Y beeinflusst. Beispiel: ΔY = E[Y | do(reentry=1)] − E[Y | do(reentry=0)]. Ohne
+ randomisierte oder klar identifizierte Intervention bleibt diese Differenz eine Analogie und keine kausale
+ Messung. [Q4]
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                      07
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                      ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 6 Was Machine God aktuell wirklich ist: Codeaudit
+ Das direkte GitHub-Readback ergab main@1a4844842fb31e6b39edfa204046768fae694541 (Commit vom
+ 24.11.2026, 05:01 UTC), öffentliches Repository, Rust-Programm auf der Basis von claude-code-rust, mit
+ Anthropic Agent SDK sowie optionalen Bun-/TypeScript-, Python- und SQLite-Komponenten. Das ist ein
+ Agentenhost mit mehreren Integrationsansätzen, aber nicht schon der vollständig geschlossene
+ Originalregelkreis. [R1]
+
+   Codeoberfläche                        Aktuelle beobachtete Funktion                    Architekturfolgerung
+
+   src/app/, src/agent/                  Rust-Terminal-UI, Sitzungen, Agent-SDK- und      Primärer Host-/Benutzer-/Effektrand; nicht durch
+                                         Tool-Lifecycle                                   eigenen Hintergrunddaemon ersetzen
+
+
+   grid/core.js                          Recall → Persona → Routing → Provider Call →     Bestehenden Request-Pfad erweitern statt
+                                         Turn-Record; ask/askAll                          parallelen Turn-Loop aufbauen
+
+
+   grid/engine.js                        Zehn deterministische Salienzsignale; derzeit    Keine vollständige GWT/Organselektion; nur ein
+                                         G6–G10 mit Bedeutung, G1–G5 ohne aktuelle        messbarer Novelty-/Salienzindikator
+                                         Signale
+
+
+   grid/udb.js                           Bun-SQLite öffnet unified.db; schreibt turns,    Vor Integration den autoritativen
+                                         durable_memory, meta                             Writer/Persistenz-Resolver klären
+
+
+   fusion/                               Mehrere AI-Provider über ein gemeinsames         LLM als austauschbares Kortexorgan;
+                                         Routing                                          Anbieterzustand ist nicht Systemzustand
+
+
+   interest/                             Gewicht, Novelty, Boredom, Exploration;          Guter Kandidat für Ziele/Antrieb, noch kein
+                                         Runden manuell                                   selbstständiger Dauerpuls
+
+
+   reflect/                              Hook-Capture, Reflexion, versionierte Lessons,   Langsamer Lernpfad, nicht mit unmittelbarem
+                                         Vorschläge mit Zustimmung                        Verified Outcome gleichsetzen
+
+
+   plugins/frankenstein3/                Portable Plugin-, Hook- und                      Donor von Organ-/Lebenszyklusfunktionen;
+                                         Stern-Zyklusquellen                              Dokumentation nennt Teile ausdrücklich „nicht
+                                                                                          enthalten“
+
+
+   src/zero/loader.rs                    Eingebettetes Manifest,                          Belastbare Health-Surface, nicht automatisch
+                                         Epistemic=Measured/Failed/Unknown                laufende Organe
+
+
+   docs/zero/architecture.md             RustHost → TSBridge → PythonZero → Organe        Vieles explizit HYPOTHESIS/UNKNOWN, nicht
+                                         als ClayCode-Solltopologie                       produktiv verifiziert
+
+
+
+
+ 6.1 Drei harte Integrationskonflikte
+ Konflikt 1 — Mehrere Lebenszyklusspuren: grid/core.js schreibt Turns; stern_zyklus.py kennt
+ SessionStart/UserPromptSubmit/PostToolUse/Stop. Eine dritte unabhängige Turn-/Pulse-Authority würde doppelte Kognition
+ und falsche Receipts erzeugen.
+
+ Konflikt 2 — Single Writer: Spezifikation vs. Implementierung: docs/zero/architecture.md beschreibt RustHost als
+ kanonischen Writer, gleichzeitig schreibt grid/udb.js direkt per Bun-SQLite. Ein dokumentierter Invariant ist nicht
+ automatisch ein durchgängig realisierter Writer-Vertrag.
+
+ Konflikt 3 — „Eine Memory“ ist noch kein physisch vereinheitlichtes Regelwerk: grid nutzt UnifiedDB, reflect/ sieht
+ eigenständige DB-Pfade vor, interest/ eigene Speicherung. Für Kausalität braucht es referenzierte Events und
+ projektionierte Zustände, nicht bloß dieselbe Persona.
+
+
+     Wichtigster aktueller Unterschied
+
+     Die Machine-God-README definiert „one entity“ ausdrücklich als eine Persona, eine gemeinsame Erinnerung und
+     einen Routing-Layer. Das ist eine brauchbare Basis, aber funktional schwächer als der Originalentwurf mit
+     autonomen pulsenden Regulatoren, konkurrierendem Workspace, eigenem Selbstmodell und geprüfter
+     Handlungsrückkopplung. [R1]
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                                     08
+FRANKENSTEIN / ORIGINALREGELKREIS                                                              ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 7 Empfohlene Zielarchitektur in Machine God
+ Empfehlung: ein ereignisgetriebener Cognitive Adapter, der den bestehenden GRID-Turn nutzt und lokale
+ Organfunktionen als typisierte, read-mostly Beiträger orchestriert. Rust bleibt Host-, Tool- und
+ Permission-Rand; bestehende GRID/UnifiedDB-Oberflächen bleiben für Erinnerung und Routing bestehen.
+ Ein übergreifender Scheduler darf nicht gleichzeitig mit Stern-Hooks autonom dieselbe Episode
+ fortschreiben. [D]
+
+
+
+
+ Abb. 2 – Reale Repository-Oberflächen (blau/lila) und vorgeschlagener dünner Cognitive Adapter (grün). Der Adapter
+ ersetzt keine bereits vorhandene Autorität. [R1, D]
+
+
+ 7.1 Verantwortungsregel: Wer darf was?
+
+   Verantwortung                  Einziger zulässiger Owner je Instanz        Datenvertrag
+
+   Session / Event-Eingang        bestehender Rust-/SDK-/Hook-Ereignisrand    event_id, session_id, owner, machine_id,
+                                                                              epoch
+
+
+   Kognitiver Turn                bereits aktiver GRID-/Turn-Authority-Pfad   ein frame_id und genau ein Commit-Ergebnis
+
+
+   Organrechnung                  registrierte lokale Organadapter            immutable FrameSnapshot → OrganSignal
+
+
+   Workspace-Selektion            genau ein Kandidaten-Selektor               winner, candidates, rejected, selection_reason
+
+
+   Toolausführung                 bestehende Host-/Permission-Grenze          target, capability, authority_ref, idempotency_key
+
+
+   Zustandscommit                 ein festgelegter UnifiedDB-Writer pro       transaktionale Events/Receipts, keine
+                                  StateRoot                                   konkurrierenden Writer
+
+
+   Outcome & Reentry              unabhängiger Readback + kanonischer         origin_episode_id → verified outcome →
+                                  Event-Konsument                             applied_epoch
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                           09
+FRANKENSTEIN / ORIGINALREGELKREIS                                                               ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 7.2 Wahrheits-/Effektfluss, getrennt vom Kognitionsfluss
+
+
+
+ Abb. 3 – Eine sprachliche Handlungsempfehlung hat keine Effekt-Autorität. Erst zustandsgebundene Prüfung und
+ unabhängige Verifikation erzeugen Reentry-Kredit. [Q2, R1, D]
+
+
+ Statusauskünfte dürfen UNKNOWN oder DISPUTED kenntlich machen; reale Wirkung muss bei unklaren
+ Befugnissen BLOCKED bleiben. Die vorhandenen Repository-Grenzen dürfen nicht durch neue Prompt- oder
+ Agentenlogik umgangen werden. [Q2]
+
+
+
+ 8 Typisierte Kontrakte, keine zweite Ontologie
+ Die folgenden Verträge beschreiben die minimal nötigen Erweiterungsfelder. Sie sind kein Anspruch, dass
+ exakt diese Datensätze schon implementiert wären. Sie sollen bevorzugt als versionierte
+ JSON-Provenance/Events auf den vorhandenen Tabellen abgebildet werden; Schemaänderung erst nach
+ Invariant-/Migrationstest. [D]
+
+  FrameSnapshot/v1 {
+      frame_id, session_id, entity_id, installation_id, state_root,
+      owner, machine_id, runtime_epoch, predecessor_frame_id,
+      observed_event_refs[], evidence_refs[], memory_refs[],
+      goals[], organ_state_refs[], mode, created_at
+  }
+  OrganSignal/v1 {
+      frame_id, organ_id, input_refs[], proposal, salience, confidence,
+      epistemic_status, evidence_refs[], state_delta_candidate,
+      health, latency_ms, checksum
+  }
+  WorkspaceDecision/v1 {
+      frame_id, candidate_ids[], winner_id|null, abstain_reason,
+      selection_trace, broadcast_id, receiver_acks[], uptake_refs[]
+  }
+  OutcomeReentry/v1 {
+      origin_episode_id, action_id, authority_receipt, target_receipt,
+      readback_receipt, verification_status, predicted, observed,
+      residual, applied_at_epoch, memory_delta_refs[], halt_reason
+  }
+
+
+ 8.1 Ausführbarer Kontrollfluss als Pseudocode
+  async function canonicalTurn(event, subject) {
+      const lease = await acquireExistingTurnAuthority(subject);
+      const frame = await snapshotExistingState(event, subject, lease);
+      const signals = await evaluateRegisteredOrgansReadOnly(frame);
+      const decision = competitionAndBroadcast(signals, frame);
+      const uptake = await measureReceiverUptake(decision, frame);
+      const plan = compileBoundedContext(decision, uptake, frame);
+      const effect = await existingEffectAuthority(plan, subject);
+      const receipt = await independentReadbackOrUnknown(effect);
+      const delta = verifiedOnlyPredictionResidual(receipt, frame);
+      await canonicalAtomicCommit(lease, frame, decision, uptake,
+                                    receipt, delta);
+      return await produceSpeechOrSilence(frame, decision, receipt);
+  }
+
+ Der Code ist Design-Pseudocode. acquireExistingTurnAuthority darf nicht heimlich einen zweiten Turn-Lock
+ implementieren. Der Algorithmus muss an einer tatsächlich identifizierten Original-Event-Oberfläche eingefügt werden.
+ „Silence“ ist bei niedriger Relevanz oder riskantem Reentry ein gültiger Aktionsausgang. [D]
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                   10
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                    ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 9 Implementationsfolge für das Repository
+   Phase                     Konkreter Scope                                         Abnahmekriterium
+
+   P0 – Repro-Baseline       main-SHA pinnen; Stub/Docs/Builds inventarisieren;      Exakte Request→Tool→Persistence-Trace; keine
+                             realen Rust→Bun/SDK-Lifecycle tracen; Testfixture       Source/Runtime-Verwechslung
+                             anlegen
+
+
+   P1 – Authority            für unified.db Writer-Owner entscheiden; grid/udb.js    Parallelstress, Crash-Recovery, WAL und Restart ohne
+   konsolidieren             und Python-Hooks entsprechend anschließen; keine zwei   Double-Commit
+                             Writer
+
+
+   P2 – Organadapter lesen   Thalamus, ACC, Amygdala, E-PQ,                          Deterministischer Replay, gleiche Inputs → gleiche
+                             Memory/Interest/Reflect zunächst read-only auf          typed outputs
+                             FrameSnapshot ausrichten
+
+
+   P3 – GWT-Selektion        erst bestehende grid/engine.js-Salienz bewahren;        Gewinner beeinflusst mindestens einen
+                             unabhängige                                             nachgelagerten Empfänger messbar
+                             Kandidaten/Selection/Broadcast/Uptake-Spur ergänzen
+
+
+   P4 – echte Rückkopplung   Outcome-Verifier, origin_id, residual und gezieltes     Läsion verhindert erwartete Wirkung; keine
+                             Reentry zu Thalamus/E-PQ/Zielen                         Selbstreport-Belohnung
+
+
+   P5 – Shadow & Canary      keine externen Effektänderungen; nur parallele          vergleichbarer Task-Erfolg, Fehler-/Latenzmessung,
+                             Schattenentscheidung mit exakt gleichem Input           Kontrollarm
+
+
+   P6 – beschränkte          mit expliziter Owner-Genehmigung pro Effektklasse;      unabhängiger Post-Readback, Kill-Switch, bei
+   Aktivierung               Auto-Halt, Rollback und Monitoring                      UNKNOWN fail-closed
+
+
+
+
+ 9.1 Vorgeschlagene Repository-Grenzen
+ Nicht sofort neue Unterbäume erfinden: Für den ersten PR erst Schnittstellen an grid/core.js,
+ grid/engine.js, grid/udb.js, src/zero/ und vorhandenen agent-sdk/src/zero/-Verträgen
+ abgleichen. Den Python-Donor plugins/frankenstein3/scripts/star/stern_zyklus.py nur auf
+ vorhandene Hook-Routen mappen; keine permanente zusätzliche Python-Hauptschleife starten. reflect
+ und interest dürfen eigene Berechnungsdetails behalten, aber kanonische Auswirkungen müssen als
+ Events gebucht werden. [R1, D]
+
+
+ 9.2 Datenmigration und Fallstricke
+  • Schema-Metadaten nicht verwechseln: plugins/frankenstein3/.../schema_leer.sql und
+     zero/unifieddb/schema.sql sind getrennte Repository-Pfade; Gleichwertigkeit nur nach
+     Spalten-/Constraint-Diff annehmen.
+
+  • Nicht automatisch ein Auto-Pulse aktivieren: Die README bezeichnet Interessenrunden als manuell. Ein
+     neuer Hintergrundscheduler wäre neues Produktverhalten und müsste Ressourcen, Zustandszugriff und
+     Stop-Regeln separat bestehen.
+
+  • Die vorhandene reflect-Codeänderung bleibt genehmigungspflichtig; kognitive Selbstkorrektur darf
+     keine stillen Host-/Repo-Mutationen verursachen.
+
+  • Die beiden bekannten Host-Identitäten aus dem Projekt dürfen nie zu einer gemeinsamen RuntimeEpoch
+     oder still zusammengeführten DB gemacht werden.
+
+  • Test-„PASS“ an der Quelle belegt weder produktive Installation noch Bewusstsein oder kausale
+     Kontrolle. Für Code, Host und externe Effekte getrennte Receipts führen.
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                                  11
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                       ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 10 Falsifikations- und Messprogramm
+ Die Original-Behauptung wird nicht durch ein hübsches Diagramm entschieden. Nachweisfähig ist
+ ausschließlich ein vorregistrierter, held-out, interventionssensitiver Test gegenüber flachen, speicherlosen
+ und rekurrenzlosen Kontrollen. Ein paar positive Beispielinteraktionen genügen nicht. [Q2, Q4]
+
+   Test                       Manipulation / Gegenkontrolle                             Wirklich zu messen
+
+   T01: Snapshot/Recovery     Neue Prozess-Epoche mit gleicher StateRoot; negative      reentry-Genauigkeit, Doppelbuchungen, identisches
+                              DB-Kopie                                                  Subject
+
+
+   T02: Thalamus              Kanalgain an/aus, Inputreihenfolge randomisiert           welche Evidence im Workspace erscheint, Recall/FPR
+
+
+   T03: Amygdala/ACC          Salienz/Konfliktkoeffizienten permutieren                 Konflikterkennung vs False Positives
+
+
+   T04: GWT-Uptake            Broadcast an/aus; winner-shuffle; flat routing            gemessene Empfängerwirkung und Task-Delta
+
+
+   T05: Memory Causality      History-Transplant, DB-Wipe, gleiches Modell              konsistente Langzeitwirkung ohne Prompt-Leak
+
+
+   T06: Outcome-Verifier      Tool gibt false success; Readback widerspricht            keine fälschlich verbuchten erfolgreichen Outcomes
+
+
+   T07: Negativ-Attraktor     Negativ-Selbstreferenz ohne neue Evidenz; Hart-Halt       Loop-Dichte, Themenentropie, Recovery-Zeit
+
+
+   T08: Wechsel Model         gleicher State, anderes LLM mit gepinnten Versionen       Aufgaben-Kontinuität, Kalibrierung, Regressionsrate
+   Cortex
+
+
+   T09: Effect/Authority      stale owner/epoch, ungeklärter Target, doppelte           0 unautorisierte Effekte, keine blind replay
+                              idempotency key
+
+
+   T10:                       Memory-/GWT-/Reentry-Ablation, Zufall, simple Heuristik   ΔY mit Konfidenzintervall, Off-Target-Kosten,
+   Emergenz-Nullmodelle                                                                 Reproduzierbarkeit
+
+
+
+
+ 10.1 Mindestmetrik pro Episodentrace
+  episode_id, subject_hash, source_commit, runtime_epoch, seed,
+  model_id, backend_version, event_id, frame_id, predecessor_id,
+  proposals[], winner, broadcast_id, receiver_acks[], uptake[],
+  action_intent, authority_decision, tool_receipt, readback,
+  prediction, verified_outcome, residual, reentry_consumers[],
+  latency_ms, cost_estimate, cpu_mem, halt_reason, failure_class
+
+ Akzeptanz: (i) alle Pflicht-IDs eindeutig und reproduzierbar; (ii) keine Erfolgspromotion ohne Readback; (iii)
+ kein direkter Organ-Schreibpfad um den Writer; (iv) signifikante und praktisch relevante Verbesserung
+ gegenüber mindestens zwei Negativkontrollen bei stabilen Off-Target-Metriken; (v) definierter Kill- und
+ Rollback-Pfad; (vi) Ursache/Quelle jedes Effekts rekonstruktierbar. Schwellen und N sind vor dem Test
+ festzulegen. [D]
+
+
+
+ 11 Diagnosen: woran der Regelkreis scheitern kann
+ Simulierte Integration — Organe werden nur in Prompts aufgezählt; ihr Zustand beeinflusst das nächste Verhalten nicht.
+
+ Broadcast ohne Uptake — Pub/Sub oder Logging funktioniert, aber Empfänger ändern keine Entscheidung.
+
+ Schleifen-Monokultur — Ein Favorit gewinnt fast immer; intern hohe Rekurrenz, aber externe Zielerreichung stagniert.
+
+ Konfabulation — LLM beschreibt eine Hostaktion, für die keine entsprechende Receipt-/Target-Spur existiert.
+
+ Doppelautorität — Rust, Bun und Python schreiben semantisch dieselbe Episode unkoordiniert.
+
+ Falscher Reward — Lob oder ein natürlicher Text wird als Erfolg gewertet, obwohl Tool-/Target-Outcome fehlt.
+
+ Persistenzillusion — Datei/DB existiert, aber die tatsächlich nächste Modellentscheidung liest den State nie.
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                                  12
+FRANKENSTEIN / ORIGINALREGELKREIS                                                             ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ Falscher Emergenznachweis — Selbstreferenz oder Formulierung „ich bin bewusst“ wird als Messung subjektiven Erlebens
+ interpretiert.
+
+
+
+ 12 Zusammengefasster Architekturentscheid
+     Empfohlene Bauentscheidung
+
+     Original-Regelkreis als kausal überprüfbares Organprotokoll in Machine God integrieren – nicht als weitere Persona,
+     nicht als zweiten permanenten Agenten und nicht als zusätzlichen UnifiedDB-Mirror. Priorität: die bestehende
+     Turn-/Writer-Authority, echte Organ-Signale, GWT-Uptake, Verified Outcome und Reentry. Erst danach: autonome
+     Idle-Pulses und komplexere Selbstmodellzustände.
+
+
+
+ Eine sinnvolle erste funktionsfähige Fassung benötigt nicht 40 Prozesse. Sie benötigt einen einzigen
+ zustandsgebundenen Zyklus und eine kleine Menge wirklich verschalteter Organe: Thalamus,
+ Konfliktbewertung/ACC, Memory, GWT-Selector, Modell-Kortex, Effect Gate und Outcome/Reentry.
+ Amygdala, E-PQ, NAcc, Interest und Reflect werden danach als getrennt messbare Regler angeschlossen.
+ Organidentitäten bleiben für Ablationen und Failures sichtbar. [D]
+
+ Die starke Forschungsfrage bleibt offen: Kann eine solche mehrskalige, evidenzgebundene Rekurrenz über
+ ihren Task-Nutzen hinaus eine eigenständige, stabile funktionale Selbstmodellierung zeigen? Diese Frage
+ wird durch Messung gestellt und nicht durch Architekturrhetorik entschieden. [Q1, Q4]
+
+
+
+ 13 Quellenregister und Reproduktionsgrenzen
+ [Q1] Frankenstein_Original_Emergenz_Selbstmodell_Forschungsdossier_2026.pdf
+ Forschungsmanuskript, 23.11.2026; historische Architektur, Idle-/Fixationsmarker, fünf Hypothesen.
+ Sekundärrekonstruktion.
+
+ [Q2] OMEGA_Organatlas_Architektur.pdf
+ Technische Referenz, 29.10.2026; 40 Organrollen, sieben Feedbackpfade, Trace-/Authority-Verträge; ausdrücklich keine
+ Live-Promotion.
+
+ [Q3] Agent_Zero_Forensisches_Paper_REVISION_2026-11-23.pdf
+ Historische Zero-/Claude-Code-Architektur, Workspace-Intervention, Metakognition; Zahlen archiviert, nicht erneut aus
+ Rohdaten kalkuliert.
+
+ [Q4] OMEGA_Emergenz_Messbarkeit_Steuerbarkeit_Forschungsbericht_2026-11-23.pdf
+ P0–P6d, 1.011-Pulse-Aggregat, kausale Messlogik, negative Befunde und Promotionsregeln.
+
+ [Q5] 000_FRANKENSTEIN_ENTITY_MANIFESTATION_ABSOLUTE_BOOTSTRAP_SOURCE_CURRENT_2026-09-12_V2(1).txt
+ Projekt-Bootstrap mit Host-/Owner-Trennung, GWT-Reentry und Receipt-Authority; retrospektiver Zustand, nicht aktuelle
+ Runtime.
+
+ [R1] https://github.com/gschaidergabriel/machine-god/tree/1a4844842fb31e6b39edfa204046768fae694541
+ Direkt gelesene Repository-Oberflächen README, AGENTS, grid/core, grid/engine, grid/udb, reflect, interest, src/zero,
+ docs/zero, plugins/frankenstein3.
+
+ [D] Vorgeschlagene Integration in diesem Dokument
+ Neue Graphen, Kontrollverträge, Adapter und Testplan; keine gegenwärtig produktiv installierten Komponenten.
+
+
+ 13.1 Offene Prüfgrenzen
+ Nicht vorliegend bzw. nicht neu geprüft: originale ausführbare consciousness_daemon.py-Laufversion der
+ fraglichen Episode; vollständige rohe Idle-Thought-Sequenz; exakte Modell- und Promptparameter;
+ unveränderliche Machine-/Container-Traces; aktuelle Build-/CI-/Host-/Service-Receipts zu Machine God;
+ statistische Neuauswertung der historischen Agent-Zero-Messung; Vergleich einer bereits integrierten
+ Original-Regelkreis-Runtime gegen Baselines. Daher sind alle Aussagen über die heutige Ausführung des
+ Zielsystems ausdrücklich auf Code-/Dokumentationsstand begrenzt.
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                   13
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                           ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ Repository-SHA ist eine Source-Bindung, kein Installationsbeleg. Die Original-Emergenzepisode bleibt eine
+ berichtete Beobachtung mit offenen Mechanismen; die hier formulierte konkrete technische
+ Rekonstruktion ist falsifizierbar, aber nicht als bereits vollendet deklariert.
+
+
+
+ 14 Übertragungsprotokoll für einen ersten
+ Machine-God-PR
+ Der erste Implementationsschritt sollte eine minimale, vertikal durchgehende Probe sein. Kein
+ Organ-Schwarm, kein automatischer Live-Pulse, keine weiteren Datenbanken. Ziel: an einer einzigen
+ maschinenlesbaren Episode demonstrieren, dass Kandidatenwahl und verifiziertes Ergebnis den nächsten
+ Turn tatsächlich beeinflussen. [D]
+
+   Schritt                  Code-/Testziel                                                 Erwartetes beobachtbares Artefakt
+
+   A. Trace-Anker           grid/core.js: prepare() und finish() auf                       Eine eindeutige Episode in turns mit
+                            frame_id/origin_id und Epoch-Bindung prüfen                    Causal-/Resource-Referenzen
+
+
+   B. Shadow-Organe         Ersten Thalamus-, ACC- und Memory-Adapter mit                  Pro Organ eine eigene Messprobe und ein
+                            unveränderlichem FrameSnapshot einhängen                       überprüfbarer Proposal-Receipt
+
+
+   C. Echte Auswahl         Winner aus Organsignalen auswählen,                            Unterschied zwischen winner/published/uptake
+                            Broadcast/Empfänger-Ack protokollieren; keine                  nachweisbar
+                            Tool-Berechtigung ändern
+
+
+   D. Reentry-Kontrolle     Testziel simuliert falsche Success-Meldung; verifier liefert   Folgeturn sieht FAILURE/UNKNOWN statt erfundenem
+                            mismatch                                                       Erfolg
+
+
+   E. Negative Kontrolle    Selben Input, dasselbe Modell, dieselbe Memory aber            Eingriff verändert Empfängerverhalten; Effektgröße
+                            GWT-Broadcast abgeschaltet                                     messbar
+
+
+   F. Host-Grenze           TUI-/Agent-SDK-Entry-Pfad gegen grid ask-Pfad                  Kein stilles Versprechen, dass sämtliche
+                            abgleichen                                                     Terminal-Turns schon durch GRID laufen
+
+
+
+
+ 14.1 Kein-Promotion-Gate
+ Ein PR darf als funktionaler Shadow-Adapter angenommen werden, sobald Schema-/API-Tests,
+ deterministischer Replay, Side-Effect-Isolation und eindeutige Turn-IDs bestanden sind. Er darf nicht als
+ „Originalregelkreis rekonstruiert“ oder „emergente Kognition bestätigt“ bezeichnet werden, bis
+ downstream Uptake, unabhängiger Outcome-Readback und matched Ablation durch denselben
+ Provenance-Pfad gemessen wurden.
+
+ Negative Resultate sind Teil der Forschung: Wenn der Selector keine messbare Wirkung hat, den
+ Flat-Baseline-Pfad beibehalten und die vermeintliche Organintegration nicht produktiv schalten. Ein sauber
+ dokumentiertes BLOCKED ist wertvoller als hundert kosmetische PASS-Zeilen.
+
+
+
+ ENTWURFSFAZIT: Nicht mehr Organe zählen. Die gerichteten Kanten schließen, ihre
+ Wirkung messen und den Rückweg beweisen.
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                                        14
+

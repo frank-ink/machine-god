@@ -1,0 +1,313 @@
+[
+ {
+  "id": 1,
+  "stratum": "eindeutig",
+  "text": "Schreibe eine Python-Funktion, die eine Liste von Zahlen sortiert, und teste sie.",
+  "label": [
+   "code"
+  ]
+ },
+ {
+  "id": 2,
+  "stratum": "eindeutig",
+  "text": "Implementiere einen Binary-Search in Rust.",
+  "label": [
+   "code"
+  ]
+ },
+ {
+  "id": 3,
+  "stratum": "eindeutig",
+  "text": "Gib das Ergebnis als JSON-Objekt mit den Feldern name und alter zurueck.",
+  "label": [
+   "json"
+  ]
+ },
+ {
+  "id": 4,
+  "stratum": "eindeutig",
+  "text": "Antworte ausschliesslich mit einem JSON-Schema fuer eine Bestellung.",
+  "label": [
+   "json"
+  ]
+ },
+ {
+  "id": 5,
+  "stratum": "eindeutig",
+  "text": "Analysiere die Vor- und Nachteile von Microservices und begruende deine Empfehlung.",
+  "label": [
+   "reason"
+  ]
+ },
+ {
+  "id": 6,
+  "stratum": "eindeutig",
+  "text": "Beweise, dass die Wurzel aus 2 irrational ist.",
+  "label": [
+   "reason"
+  ]
+ },
+ {
+  "id": 7,
+  "stratum": "eindeutig",
+  "text": "Schreibe einen ausfuehrlichen Bericht ueber die Geschichte der Eisenbahn, mindestens 3000 Woerter.",
+  "label": [
+   "long"
+  ]
+ },
+ {
+  "id": 8,
+  "stratum": "eindeutig",
+  "text": "Fasse das gesamte beigefuegte Dokument vollstaendig und detailliert zusammen.",
+  "label": [
+   "long"
+  ]
+ },
+ {
+  "id": 9,
+  "stratum": "eindeutig",
+  "text": "Suche im Ordner /var/log nach Dateien mit dem Wort error und oeffne die neueste.",
+  "label": [
+   "tool"
+  ]
+ },
+ {
+  "id": 10,
+  "stratum": "eindeutig",
+  "text": "Fuehre den Befehl ls -la im Terminal aus und zeige mir die Ausgabe.",
+  "label": [
+   "tool"
+  ]
+ },
+ {
+  "id": 11,
+  "stratum": "indirekt",
+  "text": "Mein Skript wirft beim Start einen KeyError, kannst du mal draufschauen?",
+  "label": [
+   "code"
+  ]
+ },
+ {
+  "id": 12,
+  "stratum": "indirekt",
+  "text": "Die Tests im CI sind seit dem letzten Merge rot, woran liegt das?",
+  "label": [
+   "code"
+  ]
+ },
+ {
+  "id": 13,
+  "stratum": "indirekt",
+  "text": "Das Backend erwartet von mir ein bestimmtes Austauschformat mit verschachtelten Feldern, bau das passend zusammen.",
+  "label": [
+   "json"
+  ]
+ },
+ {
+  "id": 14,
+  "stratum": "indirekt",
+  "text": "Ich brauche die Daten so, dass mein Parser sie direkt einlesen kann, Felder pro Eintrag: id, titel, tags.",
+  "label": [
+   "json"
+  ]
+ },
+ {
+  "id": 15,
+  "stratum": "indirekt",
+  "text": "Warum ist die Inflation in den siebziger Jahren so stark gestiegen und was haette man tun koennen?",
+  "label": [
+   "reason"
+  ]
+ },
+ {
+  "id": 16,
+  "stratum": "indirekt",
+  "text": "Ich bin unsicher, ob ich kuendigen oder bleiben soll, hilf mir abzuwaegen.",
+  "label": [
+   "reason"
+  ]
+ },
+ {
+  "id": 17,
+  "stratum": "indirekt",
+  "text": "Gib mir alles, was du zu den Ursachen des Ersten Weltkriegs weisst, nichts auslassen.",
+  "label": [
+   "long"
+  ]
+ },
+ {
+  "id": 18,
+  "stratum": "indirekt",
+  "text": "Ich moechte ein umfassendes Handbuch fuer neue Mitarbeiter, Kapitel fuer Kapitel.",
+  "label": [
+   "long"
+  ]
+ },
+ {
+  "id": 19,
+  "stratum": "indirekt",
+  "text": "Schau nach, ob auf meinem Server der Dienst nginx laeuft.",
+  "label": [
+   "tool"
+  ]
+ },
+ {
+  "id": 20,
+  "stratum": "indirekt",
+  "text": "Lade die Datei von dieser URL herunter und sag mir, wie gross sie ist.",
+  "label": [
+   "tool"
+  ]
+ },
+ {
+  "id": 21,
+  "stratum": "mehrfach",
+  "text": "Schreibe ein Skript, das die Logdateien im Ordner durchsucht und die Treffer als JSON ausgibt.",
+  "label": [
+   "code",
+   "tool",
+   "json"
+  ]
+ },
+ {
+  "id": 22,
+  "stratum": "mehrfach",
+  "text": "Analysiere diesen Fehler im Code und erklaere ausfuehrlich, warum er auftritt.",
+  "label": [
+   "code",
+   "reason",
+   "long"
+  ]
+ },
+ {
+  "id": 23,
+  "stratum": "mehrfach",
+  "text": "Vergleiche zwei Sortieralgorithmen, implementiere beide in Python und begruende den Unterschied.",
+  "label": [
+   "code",
+   "reason"
+  ]
+ },
+ {
+  "id": 24,
+  "stratum": "mehrfach",
+  "text": "Lies die Datei config.yaml und gib mir ihren Inhalt als JSON zurueck.",
+  "label": [
+   "tool",
+   "json"
+  ]
+ },
+ {
+  "id": 25,
+  "stratum": "mehrfach",
+  "text": "Erstelle einen vollstaendigen Bericht und liefere die Kennzahlen zusaetzlich als JSON.",
+  "label": [
+   "long",
+   "json"
+  ]
+ },
+ {
+  "id": 26,
+  "stratum": "mehrfach",
+  "text": "Suche im Web nach drei Quellen zum Klimawandel und fasse sie ausfuehrlich zusammen.",
+  "label": [
+   "tool",
+   "long"
+  ]
+ },
+ {
+  "id": 27,
+  "stratum": "mehrfach",
+  "text": "Debugge die Funktion in main.py, fuehre die Tests aus und erklaere, warum sie vorher scheiterten.",
+  "label": [
+   "code",
+   "tool",
+   "reason"
+  ]
+ },
+ {
+  "id": 28,
+  "stratum": "mehrfach",
+  "text": "Begruende, welches Datenformat sich fuer die API besser eignet, und gib ein Beispiel-Schema als JSON.",
+  "label": [
+   "reason",
+   "json"
+  ]
+ },
+ {
+  "id": 29,
+  "stratum": "negation",
+  "text": "Schreibe keinen Code, erklaere mir nur das Konzept der Rekursion.",
+  "label": [
+   "reason"
+  ]
+ },
+ {
+  "id": 30,
+  "stratum": "negation",
+  "text": "Das Wort JSON kommt im Titel des Buches vor, aber ich will nur wissen, wer es verlegt hat.",
+  "label": []
+ },
+ {
+  "id": 31,
+  "stratum": "negation",
+  "text": "Ohne eine Datei zu oeffnen: was ist ein Dateisystem?",
+  "label": []
+ },
+ {
+  "id": 32,
+  "stratum": "negation",
+  "text": "Mein Hund heisst Python und mag keine Tests.",
+  "label": []
+ },
+ {
+  "id": 33,
+  "stratum": "negation",
+  "text": "Bitte keine Zusammenfassung, ich will die vollstaendige Rede im Wortlaut.",
+  "label": [
+   "long"
+  ]
+ },
+ {
+  "id": 34,
+  "stratum": "negation",
+  "text": "Nenne mir die Hauptstadt von Australien, nicht mehr.",
+  "label": []
+ },
+ {
+  "id": 35,
+  "stratum": "abstain",
+  "text": "Hallo, wie geht es dir?",
+  "label": []
+ },
+ {
+  "id": 36,
+  "stratum": "abstain",
+  "text": "Danke!",
+  "label": []
+ },
+ {
+  "id": 37,
+  "stratum": "abstain",
+  "text": "Wie viel ist 7 mal 8?",
+  "label": []
+ },
+ {
+  "id": 38,
+  "stratum": "abstain",
+  "text": "Welche Farbe hat der Himmel?",
+  "label": []
+ },
+ {
+  "id": 39,
+  "stratum": "abstain",
+  "text": "Erzaehl mir einen Witz.",
+  "label": []
+ },
+ {
+  "id": 40,
+  "stratum": "abstain",
+  "text": "Was ist die Hauptstadt von Frankreich?",
+  "label": []
+ }
+]
