@@ -17,7 +17,7 @@ fn test_loopback_enforcement() {
 
     // Non-loopback addresses are rejected.
     assert!(OmegaConfig::validate_loopback("http://192.168.1.1:8111/v1/chat/completions").is_err());
-    assert!(OmegaConfig::validate_loopback("http://<ip>:8111/v1/chat/completions").is_err());
+    assert!(OmegaConfig::validate_loopback("http://203.0.113.8:8111/v1/chat/completions").is_err());
     assert!(OmegaConfig::validate_loopback("http://0.0.0.0:8111/v1/chat/completions").is_err());
 
     // The env-derived endpoint always uses 127.0.0.1 regardless of the port.

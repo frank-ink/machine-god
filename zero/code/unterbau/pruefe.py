@@ -164,8 +164,8 @@ def vonwo(argv: list[str]) -> int:
     print(f"  Namensauflösung hier:")
     rc, aus = _lauf(["getent", "hosts", a])
     print(f"    {aus or '(nichts)'}")
-    rc, oeff = _lauf(["dig", "+short", "A", a, "@<ip>"])
-    print(f"    öffentlich (<ip>): {oeff or '(nichts)'}")
+    rc, oeff = _lauf(["dig", "+short", "A", a, "@203.0.113.1"])
+    print(f"    öffentlich (203.0.113.1): {oeff or '(nichts)'}")
     if aus and oeff and oeff.split()[0] not in aus:
         print(f"    ⚠ WEICHT AB — hier zeigt {a} woanders hin als im Netz.")
         print(f"      Ein Befund von diesem Rechner sagt nichts über den Dienst.")
