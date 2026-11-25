@@ -12,7 +12,8 @@ const installerPath = path.join(repoRoot, "scripts", "install", "install.sh");
 const selectedVersion = "9.8.7-preview.1+build.5";
 const selectedTag = `v${selectedVersion}`;
 const platformDir = unixPlatformDir();
-const advisoriesUrl = "https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/release-advisories.json";
+const repoSlug = installerRepoSlug();
+const advisoriesUrl = `https://raw.githubusercontent.com/${repoSlug}/main/scripts/install/release-advisories.json`;
 const skipReason = platformDir ? false : `Unix installer test is not supported on ${process.platform}:${process.arch}`;
 
 test("Unix installer skips a pinned same-version install before release downloads", { skip: skipReason }, () => {
@@ -42,8 +43,8 @@ test("Unix installer --yes explicitly proceeds with a same-version reinstall", {
   assert.doesNotMatch(result.output, /Known issue/, "unavailable release advisories produced a warning");
   assert.deepEqual(result.downloads, [
     advisoriesUrl,
-    `https://github.com/gschaidergabriel/machine-god/releases/download/${selectedTag}/SHA256SUMS`,
-    `https://github.com/gschaidergabriel/machine-god/releases/download/${selectedTag}/machine-god-${selectedVersion}-${platformDir}.tar.gz`,
+    `https://github.com/${repoSlug}/releases/download/${selectedTag}/SHA256SUMS`,
+    `https://github.com/${repoSlug}/releases/download/${selectedTag}/machine-god-${selectedVersion}-${platformDir}.tar.gz`,
   ]);
   assert.equal(result.replacementMarker, true, "approved reinstall did not replace the existing app");
 });
@@ -55,7 +56,7 @@ test("Unix installer resolves latest metadata but skips same-version release pay
   assert.match(result.output, new RegExp(`Release ${escapeRegex(selectedTag)} selected`));
   assert.match(result.output, /already installed; no changes made/);
   assert.deepEqual(result.downloads, [
-    "https://api.github.com/repos/gschaidergabriel/machine-god/releases/latest",
+    `https://api.github.com/repos/${repoSlug}/releases/latest`,
   ]);
 });
 
@@ -67,7 +68,7 @@ test("Unix installer compares release identity exactly", { skip: skipReason }, (
   assert.doesNotMatch(result.output, /already installed; no changes made/);
   assert.deepEqual(result.downloads, [
     advisoriesUrl,
-    `https://github.com/gschaidergabriel/machine-god/releases/download/${differentlyCasedTag}/SHA256SUMS`,
+    `https://github.com/${repoSlug}/releases/download/${differentlyCasedTag}/SHA256SUMS`,
   ]);
 });
 
@@ -116,6 +117,14 @@ test("Unix installer ignores malformed advisories", { skip: skipReason }, () => 
   assert.doesNotMatch(result.output, /Known issue/);
   assert.equal(result.replacementMarker, true);
 });
+
+function installerRepoSlug() {
+  const source = fs.readFileSync(installerPath, "utf8");
+  const owner = /^repo_owner="([^"]+)"$/m.exec(source)?.[1];
+  const name = /^repo_name="([^"]+)"$/m.exec(source)?.[1];
+  assert.ok(owner && name, "install.sh must define repo_owner and repo_name");
+  return `${owner}/${name}`;
+}
 
 function advisory(start, end, summary) {
   return { start, end, summary };

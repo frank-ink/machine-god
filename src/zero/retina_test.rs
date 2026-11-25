@@ -3,7 +3,9 @@ use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
