@@ -1,0 +1,14 @@
+{
+ "legacy_A_OR_p95_ms": 64.6,
+ "legacy_A_OR_p50_ms": 10.1,
+ "legacy_BD_p95_ms": 52.6,
+ "legacy_BD_p50_ms": 7.8,
+ "tail_A_OR_p95_ms": 5.4,
+ "tail_A_OR_p50_ms": 1.6,
+ "tail_BD_p95_ms": 6.3,
+ "tail_BD_p50_ms": 2.2,
+ "ordinary_A_OR_p95_ms": 90.4,
+ "ordinary_A_OR_p50_ms": 11.1,
+ "ordinary_BD_p95_ms": 87.5,
+ "ordinary_BD_p50_ms": 12.1
+}

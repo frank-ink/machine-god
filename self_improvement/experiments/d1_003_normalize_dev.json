@@ -1,0 +1,164 @@
+{
+ "tail_P1": {
+  "n": 85,
+  "BD": 0.8112,
+  "E": 0.8112,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "tail_P2": {
+  "n": 85,
+  "BD": 0.112,
+  "E": 0.112,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "tail_P3": {
+  "n": 85,
+  "BD": 0.0929,
+  "E": 0.751,
+  "E_minus_BD": [
+   0.658,
+   0.5624,
+   0.749
+  ],
+  "better": 63,
+  "worse": 0,
+  "rule": "ci_low>0",
+  "pass": true
+ },
+ "tail_P4": {
+  "n": 85,
+  "BD": 0.0137,
+  "E": 0.0294,
+  "E_minus_BD": [
+   0.0157,
+   0.0,
+   0.0431
+  ],
+  "better": 2,
+  "worse": 0,
+  "rule": "ci_low>0",
+  "pass": false
+ },
+ "ordinary_P1": {
+  "n": 107,
+  "BD": 0.7534,
+  "E": 0.734,
+  "E_minus_BD": [
+   -0.0195,
+   -0.046,
+   -0.0016
+  ],
+  "better": 0,
+  "worse": 4,
+  "rule": "ci_low>=-0.02",
+  "pass": false
+ },
+ "ordinary_P2": {
+  "n": 107,
+  "BD": 0.9058,
+  "E": 0.8762,
+  "E_minus_BD": [
+   -0.0296,
+   -0.0592,
+   -0.0047
+  ],
+  "better": 0,
+  "worse": 5,
+  "rule": "ci_low>=-0.02",
+  "pass": false
+ },
+ "ordinary_P3": {
+  "n": 107,
+  "BD": 0.8064,
+  "E": 0.8715,
+  "E_minus_BD": [
+   0.0651,
+   0.0241,
+   0.1087
+  ],
+  "better": 15,
+  "worse": 2,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P4": {
+  "n": 107,
+  "BD": 0.6178,
+  "E": 0.6192,
+  "E_minus_BD": [
+   0.0014,
+   -0.0159,
+   0.0212
+  ],
+  "better": 3,
+  "worse": 6,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "tail_P0": {
+  "n": 85,
+  "BD": 0.8373,
+  "E": 0.8373,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P0": {
+  "n": 107,
+  "BD": 0.9076,
+  "E": 0.8762,
+  "E_minus_BD": [
+   -0.0315,
+   -0.0611,
+   -0.0084
+  ],
+  "better": 0,
+  "worse": 6,
+  "rule": "ci_low>=-0.02",
+  "pass": false
+ },
+ "legacy_P0": {
+  "n": 200,
+  "BD": 0.6455,
+  "E": 0.643,
+  "E_minus_BD": [
+   -0.0025,
+   -0.0075,
+   0.0
+  ],
+  "better": 0,
+  "worse": 1,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "latency_p95_ms": {
+  "A_OR": 128.7,
+  "B_D": 126.3,
+  "E": 52.1
+ },
+ "latency_ratio_E_over_A": 0.405,
+ "latency_pass": true,
+ "ALL_PASS": false
+}

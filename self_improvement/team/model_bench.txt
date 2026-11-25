@@ -1,0 +1,13 @@
+moonshotai/kimi-k3.1-pro                   ERROR HTTP -1: TimeoutError
+mistralai/mistral-large-4-1t-a52b          ok=False ms=35101 lines=0 err='empty ClayCode'
+    
+nvidia/nemotron-3-ultra-550b-a55b          ok=False ms=6585 lines=12 err="Unexpected token Token('COLON', ':') at line 1, column 38."
+    rule gate_contract_v2 = record(ci_low:Number, ci_high:Number, min_effect:Number, hard_guards:List<Bool>) | rule decision = PASS | FAIL | FAIL_GUARD | INSUFFICIENT_EVIDENCE | rule PASS_condition = ci_low >= min_effect | rule FAIL_condition = ci_high < min_effect | rule FAIL_GUARD_condition = any(hard
+z-ai/glm-5.3-flash                         ok=False ms=53551 lines=0 err='empty ClayCode'
+    
+minimaxai/minimax-m3.1-flash               ok=False ms=15338 lines=0 err='empty ClayCode'
+    
+nvidia/nemotron-3.5-lightning-30b-a3b      ok=False ms=3524 lines=0 err='empty ClayCode'
+    
+stepfun-ai/step-5-preview                  ok=False ms=97455 lines=0 err='empty ClayCode'
+    

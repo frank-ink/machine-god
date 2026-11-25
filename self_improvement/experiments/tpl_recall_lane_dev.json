@@ -1,0 +1,28 @@
+{
+  "PASS": false,
+  "pooled": {
+    "delta": 0.0,
+    "ci_low": 0.0,
+    "ci_high": 0.0,
+    "n_items": 396
+  },
+  "clean": {
+    "delta": 0.0,
+    "ci_low": 0.0,
+    "ci_high": 0.0,
+    "n_items": 198
+  },
+  "P3": {
+    "delta": 0.0,
+    "ci_low": 0.0,
+    "ci_high": 0.0,
+    "n_items": 198
+  },
+  "p95_base": 132.06093599728774,
+  "p95_cand": 129.9320389953209,
+  "params": {
+    "minlen": 4,
+    "and_terms": 6
+  },
+  "fit_accepted": true
+}

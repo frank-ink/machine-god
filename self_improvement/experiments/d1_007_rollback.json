@@ -1,0 +1,59 @@
+{
+ "live_before": [
+  1221455872,
+  1795604229.707607
+ ],
+ "n_queries": 640,
+ "live_readonly_proven": true,
+ "copy_s": 12.4,
+ "integrity_before": "ok",
+ "full_build_s": 14.3,
+ "docsize_trunc": 162733,
+ "docs_full": 162733,
+ "integrity_swapped": "ok",
+ "docsize_swapped": 162733,
+ "sanity_tail_promo_mrr5_swapped_D": 0.795,
+ "integrity_after": "ok",
+ "docsize_after": 162733,
+ "rankings_identical": 640,
+ "rankings_total": 640,
+ "live_after": [
+  1221455872,
+  1795604229.707607
+ ],
+ "rollback_pass": true,
+ "latency_reps": [
+  {
+   "p95_A": 69.4,
+   "p95_F": 64.8,
+   "ratio": 0.933,
+   "load1": 10.80859375
+  },
+  {
+   "p95_A": 63.4,
+   "p95_F": 62.4,
+   "ratio": 0.984,
+   "load1": 9.94091796875
+  },
+  {
+   "p95_A": 70.8,
+   "p95_F": 73.9,
+   "ratio": 1.044,
+   "load1": 9.36083984375
+  },
+  {
+   "p95_A": 71.4,
+   "p95_F": 73.7,
+   "ratio": 1.031,
+   "load1": 8.4052734375
+  },
+  {
+   "p95_A": 76.7,
+   "p95_F": 71.6,
+   "ratio": 0.933,
+   "load1": 8.27880859375
+  }
+ ],
+ "latency_median_ratio": 0.984,
+ "latency_pass": true
+}

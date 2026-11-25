@@ -1,0 +1,56 @@
+{
+ "legacy D_A (AND-first on A)": [
+  "0.6401",
+  "vs A-OR",
+  "(0.0037, -0.0037, 0.015)",
+  "worse",
+  "1",
+  "better",
+  "1"
+ ],
+ "legacy D_B (AND-first on B)": [
+  "0.6455",
+  "vs A-OR",
+  "(0.0092, -0.0008, 0.0229)",
+  "worse",
+  "1",
+  "better",
+  "4"
+ ],
+ "tail D_A (AND-first on A)": [
+  "0.0",
+  "vs A-OR",
+  "(0.0, 0.0, 0.0)",
+  "worse",
+  "0",
+  "better",
+  "0"
+ ],
+ "tail D_B (AND-first on B)": [
+  "0.8373",
+  "vs A-OR",
+  "(0.8373, 0.7608, 0.9059)",
+  "worse",
+  "0",
+  "better",
+  "76"
+ ],
+ "ordinary D_A (AND-first on A)": [
+  "0.9076",
+  "vs A-OR",
+  "(0.0019, 0.0, 0.0056)",
+  "worse",
+  "0",
+  "better",
+  "1"
+ ],
+ "ordinary D_B (AND-first on B)": [
+  "0.9076",
+  "vs A-OR",
+  "(0.0019, 0.0, 0.0056)",
+  "worse",
+  "0",
+  "better",
+  "1"
+ ]
+}

@@ -1,0 +1,11 @@
+moonshotai/kimi-k3.1-pro                   ok=False finish=stop ms=214383 out_tok=3414 lines=0 err='empty ClayCode'
+    
+mistralai/mistral-large-4-1t-a52b          ERROR TimeoutError
+nvidia/nemotron-3-ultra-550b-a55b          ok=False finish=stop ms=17194 out_tok=1265 lines=0 err='empty ClayCode'
+    
+z-ai/glm-5.3-flash                         ERROR TimeoutError
+minimaxai/minimax-m3.1-flash               ok=False finish=stop ms=87301 out_tok=5235 lines=0 err='empty ClayCode'
+    
+nvidia/nemotron-3.5-lightning-30b-a3b      ok=False finish=stop ms=48494 out_tok=11309 lines=0 err='empty ClayCode'
+    
+stepfun-ai/step-5-preview                  ERROR TimeoutError

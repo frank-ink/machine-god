@@ -1,0 +1,8 @@
+{
+ "A_OR": 119.4,
+ "B_OR": 119.7,
+ "B_D": 123.1,
+ "n": 768,
+ "ratio_BD_over_A": 1.031,
+ "guard_pass_1.25xA": true
+}

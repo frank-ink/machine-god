@@ -1,0 +1,6 @@
+[Unit]
+Description=Machine God autonomous improvement cycle (propose -> one gated trial -> ledger)
+[Service]
+Type=oneshot
+ExecStart=%h/repos/github_all/machine-god/mg_cycle.sh
+TimeoutStartSec=7800

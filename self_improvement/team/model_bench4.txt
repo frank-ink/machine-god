@@ -1,0 +1,4 @@
+nvidia/nemotron-3-ultra-550b-a55b        ms=20392 content=484 reasoning=3937 clay=484 blocks=0 ok=False err="No terminal matches ''' in the current parser context, at li" head='needle decide_v2(target, guards, min_effect) -> Decision\n\nrule ci_low = target.c'
+minimaxai/minimax-m3.1-flash             ms=32124 content=334 reasoning=10592 clay=0 blocks=1 ok=False err='empty ClayCode' head='```python\nrule guard_failed = any_of(guards)\nrule pass_if = ci_low >= min_effect'
+nvidia/nemotron-3.5-lightning-30b-a3b    ms=30854 content=466 reasoning=28126 clay=0 blocks=1 ok=False err='empty ClayCode' head='```python\nrule ci_low_ge_min = ci_low >= min_effect\nrule ci_high_lt_min = ci_hig'
+moonshotai/kimi-k3.1-pro                 ms=222262 content=0 reasoning=12153 clay=0 blocks=0 ok=False err='empty ClayCode' head=''

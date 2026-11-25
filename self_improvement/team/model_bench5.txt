@@ -1,0 +1,6 @@
+nvidia/nemotron-3-ultra-550b-a55b        ok=True repaired=False ms=34645 lines=4 err=''
+minimaxai/minimax-m3.1-flash             ok=True repaired=False ms=65352 lines=5 err=''
+nvidia/nemotron-3.5-lightning-30b-a3b    ok=True repaired=False ms=41072 lines=5 err=''
+nvidia/nemotron-3-ultra-550b-a55b        ok=True repaired=False ms=9704 lines=10 err=''
+minimaxai/minimax-m3.1-flash             ok=True repaired=False ms=72897 lines=6 err=''
+nvidia/nemotron-3.5-lightning-30b-a3b    ok=True repaired=False ms=40040 lines=4 err=''
