@@ -3,15 +3,44 @@ Per probe: item_id, rank (1-based, 0 = miss), hit1, hit5, rr, mrr_at_10, ms, dea
 import argparse
 import importlib
 import json
+import os
 import sqlite3
 import sys
 import time
+from urllib.parse import quote
 
 from mg.retrievers import match_expr, words
 
 
+# Write-class actions on "main" are let through on purpose: mode=ro + query_only make SQLite itself refuse them with a
+# plain OperationalError (readonly database). Everything that could re-open a write path (ATTACH, DETACH, any PRAGMA but
+# data_version, temp objects, virtual-table DDL) is denied outright.
+_WRITE_MAIN = {sqlite3.SQLITE_INSERT, sqlite3.SQLITE_UPDATE, sqlite3.SQLITE_DELETE, sqlite3.SQLITE_CREATE_TABLE,
+               sqlite3.SQLITE_CREATE_INDEX, sqlite3.SQLITE_DROP_TABLE, sqlite3.SQLITE_DROP_INDEX}
+
+
+def _authorizer(action, arg1, arg2, dbname, source):
+    if action in (sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_TRANSACTION):
+        return sqlite3.SQLITE_OK
+    if action == sqlite3.SQLITE_PRAGMA and arg1 == "data_version" and arg2 is None:
+        return sqlite3.SQLITE_OK
+    if action in _WRITE_MAIN and dbname in ("main", None):
+        return sqlite3.SQLITE_OK
+    return sqlite3.SQLITE_DENY
+
+
 def open_ro(path):
-    return sqlite3.connect("file:%s?mode=ro" % path, uri=True)
+    """Open database read-only safely.
+    Builds URI with quoted absolute path, enables query_only pragma and authorizer.
+    Missing file raises (mode=ro never creates).
+    Paths with '?', '#', '%', spaces work correctly.
+    """
+    abs_path = os.path.abspath(path)
+    uri = "file:%s?mode=ro" % quote(abs_path)
+    conn = sqlite3.connect(uri, uri=True)
+    conn.execute("pragma query_only=ON")
+    conn.set_authorizer(_authorizer)
+    return conn
 
 
 def load_retriever(spec):

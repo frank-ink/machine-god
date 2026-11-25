@@ -6,7 +6,7 @@ gegen Wegwerf-Datenbanken der Tests.
 
 ```
 research/
-  mg-build/    Messwerkzeug: Gate (gepaarter Bootstrap), Ledger, Retrieval-Benchmark, Schleife  (26 Tests)
+  mg-build/    Messwerkzeug: Gate (gepaarter Bootstrap), Ledger, Retrieval-Benchmark, Schleife  (84 Tests, Stand mg-batch2 nach Team-Review)
   grid10/      Organe E1-E5, Weltmodell WM1/WM2, Selbstmodell, Intent-Cortex, Klassenbedarf V1/V2/V2.1,
                Retina-Thalamus, Zielverfolgung, freellm.py (15 Testdateien, run_tests.py)
   teamkanal/   Referenzskripte der Team-Kanal-Reparatur (bereinigt, nicht lauffähig ohne Kanal-Client)
@@ -35,7 +35,7 @@ Es wird **keine** AGI-, Bewusstseins- oder Emergenz-Behauptung gemacht. Kein AGI
 
 ```bash
 python3 research/grid10/run_tests.py          # 15 Testdateien, laufen als Skripte
-cd research/mg-build && python3 -m pytest -q  # 26 Tests
+cd research/mg-build && python3 -m pytest -q  # 84 Tests
 ```
 
 Nicht enthalten, weil sie private Aufzeichnungen oder die Live-Datenbank brauchen: `test_grid_v2_parity.py`
@@ -55,6 +55,9 @@ export MG_LLM_KEY="<schluessel>"        # optional, nur aus der Umgebung gelesen
 Ohne diese Variablen schlägt ein Modellaufruf laut fehl (Intent-Cortex enthält sich dann: ABSTAIN); die Tests brauchen kein Netz und kein Modell.
 Optional: `MG_LLM_HEALTH_URL` (Gesundheits-URL für die Selbstmodell-Sonde `lokales_llm`), `MG_REAL_DB` und `MG_THALAMUS_VENDOR`
 (nur für zwei optionale Echtdaten-Replays), `MG_TRANSCRIPT_DIR` (nur für die Blindbewertung der Kalibrierung).
+Der gehärtete Live-DB-Guard von mg-build (`mg/ledger.py`: Komponentengrenze, `file:`-URI, Prozent-Kodierung, Sidecars, Hardlinks/Symlinks, Groß/Klein)
+schützt standardmäßig `live/unified.db` und `~/.local/share/machine-god/unified.db`; die eigene Live-Datenbank trägt man über `MG_LIVE_SUFFIX`
+(Endstück `ordner/name`) und `MG_PROTECTED_DB` (echte Dateien, durch `os.pathsep` getrennt) ein.
 Die gemessenen Zahlen oben gelten für das damals genutzte lokale 4B-Modell; für andere Modelle gibt es keine Messung.
 
 ## Unterschiede zu den Originalen

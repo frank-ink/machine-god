@@ -43,8 +43,9 @@ def test_promo_attempts_counted_and_refused_above_limit(synth_db, probes, tmp_pa
     with pytest.raises(loop.Refused):
         go(synth_db, probes, tmp_path, BAD, GOOD, max_promo_attempts=2)
     c = ledger.connect(str(tmp_path / "led.db"))
-    assert ledger.promo_attempts(c, "v0") == 2 and ledger.trials(c)[0]["decision"] == "REFUSED_PROMO_BUDGET"
-    assert ledger.promo_attempts(c, "v1") == 0  # counted per bench_version
+    ver = c.execute("select bench_version from mg_trial limit 1").fetchone()[0]
+    assert ver.startswith("b-") and ledger.promo_attempts(c, ver) == 2  # budget counts per DERIVED bench_version (hash of the probe ids)
+    assert ledger.trials(c)[0]["decision"] == "REFUSED_PROMO_BUDGET"
 
 
 def test_live_db_guard(tmp_path, probes):

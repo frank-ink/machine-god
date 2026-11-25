@@ -3,7 +3,7 @@ import re
 
 _WORD = re.compile(r"\w+", re.UNICODE)
 _FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "Ä": "ae", "Ö": "oe", "Ü": "ue"})
-SQL = "SELECT rowid FROM mem_fts WHERE mem_fts MATCH ? ORDER BY bm25(mem_fts) LIMIT ?"
+SQL = "SELECT rowid FROM mem_fts WHERE mem_fts MATCH ? ORDER BY bm25(mem_fts), rowid LIMIT ?"
 
 
 def words(query):
@@ -21,9 +21,17 @@ def fts_bm25_or(conn, query, k):
 
 
 def fts_bm25_or_folded(conn, query, k):
-    """Example candidate: lowercase and fold ae/oe/ue/ss before matching."""
-    ws = words(query.lower().translate(_FOLD))
-    return [r[0] for r in conn.execute(SQL, (match_expr(ws), k))] if ws else []
+    """Match union of raw query words and folded words (deduplicated, FTS5 OR query)."""
+    raw_ws = words(query)
+    folded_ws = words(query.lower().translate(_FOLD))
+    # Union, deduplicated preserving order (raw first, then folded)
+    seen = set()
+    combined = []
+    for w in raw_ws + folded_ws:
+        if w not in seen:
+            seen.add(w)
+            combined.append(w)
+    return [r[0] for r in conn.execute(SQL, (match_expr(combined), k))] if combined else []
 
 
 def newest_first(conn, query, k):
