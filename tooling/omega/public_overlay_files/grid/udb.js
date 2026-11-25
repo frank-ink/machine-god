@@ -1,6 +1,6 @@
 // Machine God shared memory: ONE unified.db (the frankenstein3 schema) on this computer, used by every connected AI.
 //
-// Tables used (all exist in plugins/frankenstein3/scripts/star/daten/schema_leer.sql; no table is added, none is altered):
+// Tables used (all exist in plugins/frankenstein3/scripts/star/data/schema_empty.sql; no table is added, none is altered):
 //   users            one row 'owner' (the human) and one 'machine-god' (the entity)
 //   sessions         one session per asker ('machine-god:<asker>', e.g. cli, mcp:claude-code, fusion, mailbox:chatgpt, interest)
 //   turns            every request (role 'user') and every answer (role 'assistant'); provenance JSON holds who asked, which AI answered,
@@ -34,11 +34,11 @@ export const dbFile = (env = process.env, platform = process.platform) => path.j
 export function schemaFile(env = process.env) {
   const candidates = [
     env.MG_GRID_SCHEMA,
-    path.join(here, "schema_leer.sql"),
-    path.join(here, "..", "plugins", "frankenstein3", "scripts", "star", "daten", "schema_leer.sql"),
+    path.join(here, "schema_empty.sql"),
+    path.join(here, "..", "plugins", "frankenstein3", "scripts", "star", "data", "schema_empty.sql"),
   ].filter(Boolean);
   for (const c of candidates) if (fs.existsSync(c)) return c;
-  throw new Error(`unified.db schema (schema_leer.sql) not found; looked in: ${candidates.join(", ")}`);
+  throw new Error(`unified.db schema (schema_empty.sql) not found; looked in: ${candidates.join(", ")}`);
 }
 
 export const REQUIRED_TABLES = ["users", "sessions", "turns", "durable_memory", "entityos_profil", "star_konfig", "meta"];

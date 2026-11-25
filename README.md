@@ -135,7 +135,7 @@ fusion tool, every mailbox question and `machine-god interests run --backend gri
 `machine-god grid ask|route|recall|remember|forget|whoami|history|status|persona|caps|sync|fuse|register|snippets`; `machine-god grid repo` is the
 GitHub setup that `machine-god grid` used to be. `ask --all` (and the MCP tool `ask_all`) asks every connected AI and labels each answer.
 
-**What the database is.** The frankenstein3 schema (`plugins/frankenstein3/scripts/star/daten/schema_leer.sql`, 148 tables) is used as it is, nothing added:
+**What the database is.** The frankenstein3 schema (`plugins/frankenstein3/scripts/star/data/schema_empty.sql`, 148 tables) is used as it is, nothing added:
 `turns` (requests and answers, provenance JSON with asker, AI, routing, engine frame), `sessions`, `users`, `durable_memory` (facts, notes, research),
 `entityos_profil` (persona override), `star_konfig` (settings), `meta`. Location: `~/.local/share/machine-god/unified.db`
 (macOS `~/Library/Application Support/machine-god`, Windows `%LOCALAPPDATA%\machine-god`, override with `MG_DATA_DIR`), owner-only.

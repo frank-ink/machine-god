@@ -306,11 +306,11 @@ function copyMachineGodExtras(appRoot) {
     });
   }
   // the GRID creates its unified.db from the frankenstein3 schema; the archive carries no plugins/, so the schema travels next to grid/
-  const schema = path.join(repoRoot, "plugins", "frankenstein3", "scripts", "star", "daten", "schema_leer.sql");
+  const schema = path.join(repoRoot, "plugins", "frankenstein3", "scripts", "star", "data", "schema_empty.sql");
   if (!fs.existsSync(schema)) {
-    throw new Error("Missing plugins/frankenstein3/scripts/star/daten/schema_leer.sql; the GRID memory needs it.");
+    throw new Error("Missing plugins/frankenstein3/scripts/star/data/schema_empty.sql; the GRID memory needs it.");
   }
-  fs.copyFileSync(schema, path.join(appRoot, "grid", "schema_leer.sql"));
+  fs.copyFileSync(schema, path.join(appRoot, "grid", "schema_empty.sql"));
 }
 
 function copyDirectoryFiltered(sourceDir, destinationDir, includePath) {
