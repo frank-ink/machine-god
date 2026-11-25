@@ -1,4 +1,4 @@
-"""Test-Tor Retina-GRID Stueck 1 (shadow). Lauf: python3 -I test_retina_grid.py  (Exit 0 = gruen). Echtdaten-Replay nur lesend."""
+"""Test gate Retina-GRID part 1 (shadow). Run: python3 -I test_retina_grid.py (Exit 0 = green). Real data replay read-only."""
 import json
 import os
 import sqlite3
@@ -29,7 +29,7 @@ def t_mapping():
     assert all(0.0 <= v <= 1.0 for v in s.values())
 
 
-def t_idempotent_und_isolation():
+def t_idempotent_and_isolation():
     now = 1000 * B + 10
     ev = [(996 * B + 5, "person_kommt", 1.5), (997 * B + 5, "fokus_app", 1.6), (998 * B + 1, "objekt_neu", 2.0)]
     c = mem(ev)
@@ -38,7 +38,7 @@ def t_idempotent_und_isolation():
     n2 = rg.step_buckets(c, now)  # gleiches Zeitfenster nochmal
     assert n1 >= 1 and n2 == 0, (n1, n2)
     rows = c.execute("select bucket,n_events from f3_grid_v2r_log order by bucket").fetchall()
-    assert len({r[0] for r in rows}) == len(rows)  # keine doppelten Fenster
+    assert len({r[0] for r in rows}) == len(rows)  # no duplicate windows
     assert c.execute("select count(*) from f3_grid_v2_state").fetchone() == before  # Haupt-State unberuehrt
     c.execute("insert into star_konfig values('frank3.grid_retina.mode','off')")
     assert rg.step_buckets(c, now + 5 * B) == 0  # Schalter off wirkt
@@ -47,14 +47,14 @@ def t_idempotent_und_isolation():
     assert rg.step_buckets(c, now + 5 * B) == 0  # Kill wirkt
 
 
-def t_luecke_gedeckelt():
+def t_gap_capped():
     c = mem([])
     rg.step_buckets(c, 1000 * B + 1)
-    n = rg.step_buckets(c, 1000 * B + 1 + 500 * B)  # lange Luecke: nur MAX_BUCKETS aufholen
+    n = rg.step_buckets(c, 1000 * B + 1 + 500 * B)  # long gap: only catch up MAX_BUCKETS
     assert n == rg.MAX_BUCKETS, n
 
 
-def t_echtdaten_replay():
+def t_real_data_replay():
     if not os.path.exists(REAL):
         print("  (kein Echtdaten-DB, Replay uebersprungen)")
         return

@@ -14,7 +14,7 @@ CLASSES = ("code", "json", "de", "reason", "long", "tool")
 W = {"T": 0.55, "G": 0.20, "Z": 0.15, "R": 0.10}
 THRESH, MAX_CLASSES = 0.50, 4
 
-# (explizit, indirekt) je Klasse, kleingeschrieben, Praefix-/Wortgrenzen-Muster DE+EN
+# (explicit, indirect) per class, lowercase, prefix/word-boundary pattern DE+EN
 _LEX = {
     "code": (r"\b(implementier\w*|debugg?\w*|kompilier\w*|refactor\w*|quellcode|schreib\w* (?:\w+ )?(?:funktion|skript|script|code|programm)|implement\w*|compile\w*|fix(?:e[sn]?)? (?:the |den |das )?bug)\b|```",
              r"\b(code|funktion|function|bug|fehler|traceback|test\w*|regex|skript|script|programm\w*|api)\b"),
@@ -25,7 +25,7 @@ _LEX = {
     "reason": (r"\b(analysier\w*|vergleich\w*|begruend\w*|begründ\w*|beweis\w*|erklaer\w*|erklär\w*|analy[sz]e|compare|prove|justify|warum|why)\b",
                r"\b(wieso|weshalb|unterschied\w*|bewert\w*|pro und contra|abwaeg\w*|abwäg\w*|entscheid\w*|ursache\w*|hypothese\w*)\b"),
     "long": (r"\b(ausfuehrlich\w*|ausführlich\w*|vollstaendig\w*|vollständig\w*|komplett\w*|gesamtdokument|detailed|in depth|full (?:document|report)|bericht|dokument)\b",
-             None),  # indirekt bei langem Text, siehe _words
+             None),  # indirect for long text, see _words
     "tool": (r"\b(such[et]?|suche\w*|fuehr\w* aus|führ\w* aus|ausfuehr\w*|ausführ\w*|oeffne\w*|öffne\w*|bearbeite\w*|lies\w*|run|search|fetch|execute|edit|download\w*|installier\w*)\b",
              r"https?://|[/~][\w.-]+/[\w.-]+|\b(datei|file|ordner|folder|server|dienst|service)\b"),
 }
@@ -36,7 +36,7 @@ _SEE = re.compile(r"person|mensch|objekt|kamera|raum|bild\b|sehen|siehst|room|ca
 
 
 def classify(text):
-    """-> {klasse: 0|0.5|1, ...} (lexikalisch, ohne Negation)."""
+    """-> {klasse: 0|0.5|1, ...} (lexical, without negation)."""
     t, out = text or "", {}
     for c in CLASSES:
         ex, ind = _RX[c]
@@ -71,7 +71,7 @@ def derive(text, goal, grid, relay=(), burst=False):
     rb = retina_boost(text, goal, relay, burst)
     scores = {}
     for c in CLASSES:
-        rc = rb[c] if t[c] > 0 else 0.0  # Retina allein erzeugt nie eine Klasse
+        rc = rb[c] if t[c] > 0 else 0.0  # Retina alone never generates a class
         scores[c] = round(W["T"] * t[c] + W["G"] * g[c] + W["Z"] * z[c] + W["R"] * rc, 4)
     ok = [c for c in CLASSES if scores[c] >= THRESH]
     ok.sort(key=lambda c: (-(t[c] == 1.0), -scores[c], c))  # explizite zuerst, Score absteigend, alphabetisch

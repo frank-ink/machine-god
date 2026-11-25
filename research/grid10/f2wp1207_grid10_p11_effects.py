@@ -168,7 +168,7 @@ class EffectGateBypassError(Grid10P11EffectsError):
     module -- see ``_execute_journal_marker``."""
 
 
-def _jetzt_iso() -> str:
+def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -249,7 +249,7 @@ def build_effect_request(
         winner_cell_id=result.winner_cell_id,
         broadcast_value=result.broadcast_value,
         payload={"marker_text": text},
-        requested_at=_jetzt_iso(),
+        requested_at=_now_iso(),
     )
 
 
@@ -299,7 +299,7 @@ def evaluate_gate(request: EffectRequest, policy: EffectGatePolicy) -> GateDecis
         policy_id=policy.policy_id,
         min_broadcast_value=policy.min_broadcast_value,
         observed_broadcast_value=request.broadcast_value,
-        decided_at=_jetzt_iso(),
+        decided_at=_now_iso(),
     )
 
 
@@ -357,7 +357,7 @@ def _execute_journal_marker(
 
     journal_id = uuid.uuid4().hex
     marker_text = request.payload.get("marker_text")
-    now = _jetzt_iso()
+    now = _now_iso()
     conn.execute("BEGIN")
     try:
         conn.execute(
@@ -415,7 +415,7 @@ def _journal_denial(
     if not isinstance(decision, GateDecision) or decision.allowed:
         raise Grid10P11EffectsError("_journal_denial called with a non-DENY decision")
     journal_id = uuid.uuid4().hex
-    now = _jetzt_iso()
+    now = _now_iso()
     conn.execute("BEGIN")
     try:
         conn.execute(
@@ -492,7 +492,7 @@ def apply_effect_uptake(
     to "next-frame reentry": nothing new to wire, the next
     coordinate_real_turn call for this condition_key picks the change up
     automatically."""
-    ts = _jetzt_iso()
+    ts = _now_iso()
     row = conn.execute(
         "SELECT state_value FROM f2_grid10_p6d_state WHERE condition_key=? AND logical_cell_id=?",
         (condition_key, winner_cell_id),

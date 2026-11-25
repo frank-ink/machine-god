@@ -77,6 +77,6 @@ The measured numbers above hold for the local 4B model used at the time; there i
   they are data or hash-pinned: the German lexicons and regexes of the bilingual classifiers (`class_demand*.py`, `lexical_percept.py`), German
   test inputs, the intent-bench prompts and fixtures (`fixtures/intent-bench`, `fixtures/pilot`), the intent-cortex prompt (the measured
   result belongs to that prompt), the frozen S0 protocol (`fixtures/wm-s0/S0_EVAL_V1.md`, sha256-pinned; English copy `S0_EVAL_V1.en.md`),
-  `class_demand_v2.py` (frozen, hash-pinned) and the original control-loop study text. Database table names with German words
-  (`f3_endo_befund`, `f3_wm_anfrage`, ...) are schema names of the originating project and stay. Test function names and some internal
-  helper names are still German (open item, no behaviour change).
+  `class_demand_v2.py` (frozen, hash-pinned) and the original control-loop study text (English copy: `docs/research/control-loop-study-2026-11-24.en.txt`). Database table names with German words
+  (`f3_endo_befund`, `f3_wm_anfrage`, ...) are schema names of the originating project and stay. Test function names (`t_*`) and the German helper names were renamed to English at the token level (identifier tokens only, never strings); local
+  variable names and a few short identifiers inside the large turn-loop module may still be German (open item, no behaviour change).

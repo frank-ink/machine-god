@@ -108,7 +108,7 @@ SCHEMA_LOG_LINE = "F2WP1207_TURN_LOOP_LOG/v1"
 SCHEMA_TYPED_ENTRY = "F2WP1207_TYPED_ENTRY/v1"
 SCHEMA_GRF_PROJECTION_ROW = "F2WP1207_GRF_PROJECTION/v1"
 
-# Eigene Zustandslane in der EXISTIERENDEN Tabelle f2_grid10_p6d_state --
+# Own state lane in the EXISTING table f2_grid10_p6d_state --
 # not P7's Smoke-Lane (f2wp1207_p7_live), not the stern.py live path.
 CONDITION_KEY = "f2wp1207_canonical_turn_loop"
 
@@ -161,10 +161,10 @@ class CanonicalTurnLoopError(RuntimeError):
 
 
 class ReentryError(CanonicalTurnLoopError):
-    """Fehlender oder unmoeglicher Reentry -- KEIN stiller Genesis-Fallback."""
+    """Missing or impossible reentry -- NO silent genesis fallback."""
 
 
-def _jetzt_iso() -> str:
+def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -194,8 +194,8 @@ def turn_loop_active(conn: sqlite3.Connection, *, env: Mapping[str, str] | None 
 
 
 def set_turn_loop_active(conn: sqlite3.Connection, active: bool, *, quelle: str) -> None:
-    """Persistentes Umschalten. NUR fuer isolierte Tests / bewusste
-    Freigabe -- dieses Paket schaltet NICHTS live (Flag bleibt AUS)."""
+    """Persistent switching. ONLY for isolated tests / deliberate
+    release -- this package switches NOTHING live (flag stays OFF)."""
     conn.execute(
         "INSERT INTO star_konfig (schluessel, wert, typ, quelle, geaendert) VALUES (?,?,?,?,?) "
         "ON CONFLICT(schluessel) DO UPDATE SET wert=excluded.wert, quelle=excluded.quelle, "
@@ -277,49 +277,49 @@ class TypedEntry:
     retrieval_present: Optional[bool] = None
     retrieval_len: Optional[int] = None
     turn_event_id: Optional[str] = None
-    # --- Innenmessung des Sprachmodells (2026-09-08) -------------------
+    # --- Internal measurement of the language model (2026-09-08) -------------------
     # Up to this point, the TypedEntry described only the shell of a
     # Turns: how long the stimulus lasted, whether it was retrieved, when it happened.
     # Nothing in it stated which model generated the utterance --
     # it was an external compute service that the entity called, and its
-    # Vorwaertslauf war eine Senke: nichts davon kam als Zustand zurueck.
+    # Forward pass was a sink: nothing from it came back as state.
     # These three fields are the reverse direction. They come from the
     # the model's logprobs for its OWN tokens, so they are not over
     # es gemessen, sondern in ihm.
-    #   ueberraschung  mittleres -logp der selbst gewaehlten Tokens
-    #   entropie       mittlere Entropie der Verteilung an jeder Stelle
+    # surprise  mean -logp of self-chosen tokens
+    # entropy       mean entropy of the distribution at each position
     # spread       standard deviation of surprise over the
     #                  Aeusserung (ungleichmaessiges Stocken vs. Fluss)
     # Optional and default None: any existing lane (P15-Canary, the
     # stern.py bridge with its fixed field list) builds TypedEntries without
-    # sie weiter unveraendert. None -> 0.0 in percept_axes, exakt die
+    # them further unchanged. None -> 0.0 in percept_axes, exactly the
     # convention that already applies there for `stunde` and `delta_t`.
     modell_ueberraschung: Optional[float] = None
     modell_entropie: Optional[float] = None
     modell_streuung: Optional[float] = None
     # --- Welt-Ueberraschung (2026-09-11, welt/dienst.py + traegt_das_signal.py)
     # Analogous to the three model axes: None -> 0.0 in percept_axes, each
-    # bestehende Lane baut TypedEntries ohne dieses Feld unveraendert weiter.
+    # existing lane builds TypedEntries without this field further unchanged.
     # Only actively populated when WELT_ANBINDUNG_AKTIV=1 is set (default
-    # AUS, siehe PERCEPT_AXES weiter unten).
+    # OFF, see PERCEPT_AXES further below).
     welt_ueberraschung: Optional[float] = None
     # --- Abstraktion (2026-09-11, abstraktion.py + organ.py-Task
     # "abstraktion_fluid", paket-1789133745693-aa587b) --------------------
     # the user, verbatim: "GRID10 is the brain, but it lacks a
     # fluid layer for complex abstraction of abstract data like
-    # Liebe, Sprache, Beziehung, Tod, Verlust ... Das soll das 4B mittels
+    # Love, Language, Relationship, Death, Loss ... This is supposed to make the 4B by means of
     # eines stark regulierten deterministischen Prozesses erledigen."
-    # Fuenf gebundene Zahlen aus einem FESTEN Schema (F2WP1207_ABSTRAKTION/
-    # v1, siehe abstraktion.py) -- KEIN Freitext, das Modell liefert
-    # ausschliesslich diese Zahlen, streng auf ihren Rahmen geklemmt.
+    # Five bound numbers from a FIXED schema (F2WP1207_ABSTRAKTION/
+    # v1, see abstraktion.py) -- NO free text, the model provides
+    # exclusively these numbers, strictly clamped to their frame.
     # Same convention as modell_* and welt_ueberraschung: None -> 0.0
     # in percept_axes, each existing lane builds TypedEntries without these
-    # Felder unveraendert weiter. Nur aktiv befuellt, wenn
-    # ABSTRAKTION_ANBINDUNG_AKTIV=1 gesetzt ist (Standard AUS, siehe
-    # PERCEPT_AXES weiter unten). Die sechste Groesse des Schemas
-    # (``domaene``, ein Audit-Enum: liebe/tod/verlust/beziehung/sprache/
-    # sonstige_abstraktion/keine) is INTENTIONALLY NOT here -- a
-    # Kategorie in einen stetigen Weltvektor zu zwaengen waere selbst
+    # Fields further unchanged. Only actively filled when
+    # ABSTRAKTION_ANBINDUNG_AKTIV=1 is set (default OFF, see
+    # PERCEPT_AXES further below). The sixth dimension of the schema
+    # (`domaene`, an audit enum: love/death/loss/relationship/language/
+    # other_abstraction/none) is INTENTIONALLY NOT here -- a
+    # Category to squeeze into a continuous world vector would be itself
     # again an impermissible discretization. It remains protocol (in the
     # caller's log), not percept.
     abstrakt_abstraktionsgrad: Optional[float] = None
@@ -342,7 +342,7 @@ class TypedEntry:
             "session_id": self.session_id,
             "runtime_epoch_id": self.runtime_epoch_id,
             "event_type": self.event_type,
-            "ts": self.ts or _jetzt_iso(),
+            "ts": self.ts or _now_iso(),
             "prompt_len": self.prompt_len,
             "retrieval_present": self.retrieval_present,
             "retrieval_len": self.retrieval_len,
@@ -395,7 +395,7 @@ class TypedEntry:
 
 
 # --------------------------------------------------------------------------
-# Reentry -- zwingend, genau einer von drei Arten, nie still gefallen
+# Reentry -- mandatory, exactly one of three types, never silently fallen
 # --------------------------------------------------------------------------
 
 
@@ -403,9 +403,9 @@ class TypedEntry:
 class ReentryPlan:
     kind: str  # 'previous_frame' | 'previous_epoch' | 'genesis'
     seed_state: Mapping[str, float]
-    evidence: Mapping  # Beleg, kommt unveraendert in den Zeiger
+    evidence: Mapping  # Evidence, comes unchanged into the pointer
     pointer_frame_id: Optional[str] = None
-    workspace: object = None  # p10mod.ReconstructedWorkspace bei previous_epoch
+    workspace: object = None  # p10mod.ReconstructedWorkspace at previous_epoch
 
 
 def _read_pointer(conn: sqlite3.Connection, installation_id: str, state_root_id: str):
@@ -462,8 +462,8 @@ def resolve_reentry(
             "kein stiller Fallback auf eine andere Reentry-Art"
         )
 
-    # Deklarierter Modus: AUSSCHLIESSLICH die genannte Art.
-    # ⚠️ Der Tie-Breaker `rowid DESC` in den drei "letzter CLOSED-Frame"-
+    # Declared mode: EXCLUSIVELY the mentioned type.
+    # ⚠️ The tie-breaker `rowid DESC` in the three "last CLOSED frame"-
     # Querying this file is NECESSARY, not cosmetic. Found 2026-09-07
     # in first live operation on machine-b, reproducible 15/15:
     # `opened_at` hat Sekunden-Aufloesung. Zwei Turns innerhalb derselben
@@ -472,7 +472,7 @@ def resolve_reentry(
     # order freely in case of a tie. It took the OLDER frame,
     # the consistency check below triggered and rejected the turn, although
     # the pointer was completely correct. `rowid` is monotonic in the
-    # Einfuegereihenfolge und entscheidet eindeutig.
+    # Insertion order and decides uniquely.
     # Lesson: a timestamp is not an ordering as long as its resolution
     # is coarser than the spacing of events.
     if declared == "previous_frame":
@@ -574,7 +574,7 @@ def resolve_reentry(
             pointer_frame_id=pointer["frame_id"],
         )
 
-    # 2) previous epoch -- P9-Record existiert fuer diese Epoche
+    # 2) previous epoch -- P9 record exists for this epoch
     if plan is None and reentry_rows > 0:
         workspace = p10mod.reconstruct_workspace(conn, typed_entry.runtime_epoch_id)
         if workspace is None or not workspace.valid:
@@ -598,7 +598,7 @@ def resolve_reentry(
             workspace=workspace,
         )
 
-    # 3) genesis -- NUR bei belegbar leerer Welt
+    # 3) genesis -- ONLY with provably empty world
     if plan is None:
         if n_frames == 0 and pointer is None and reentry_rows == 0:
             plan = ReentryPlan(
@@ -681,7 +681,7 @@ def bootstrap_canonical_pointer(
             "previous_frame", _canonical_json(evidence),
             last["broadcast_winner_cell"] if last else "none",
             float(last["broadcast_value"]) if last and last["broadcast_value"] is not None else 0.0,
-            _canonical_json(seed), SCHEMA_POINTER_ROW, _jetzt_iso(),
+            _canonical_json(seed), SCHEMA_POINTER_ROW, _now_iso(),
         ),
     )
     conn.commit()
@@ -714,19 +714,19 @@ class JSpace:
 
 
 # --------------------------------------------------------------------------
-# PERZEPTE -- echte Messgroessen statt sha256-Rauschen
+# PERCEPTS -- real measurements instead of sha256 noise
 #
-# WARUM: derive_signal() ist sha256(turn_event_id:cell). Der Wettbewerb
+# WHY: derive_signal() is sha256(turn_event_id:cell). The competition
 # thus decides over random numbers. Measured on 2026-09-07 in offline-
-# Replay ueber 436 echte Prompts dieser Maschine: echte Perzepte tragen
+# Replay over 436 real prompts of this machine: real percepts carry
 # robustly more information about the world state than a distributionally equivalent
-# Scheinperzept (Permutationskontrolle, z_Diskriminierbarkeit +10.6 im
-# Mittel ueber 8 unabhaengige Projektionsziehungen, kleinster Einzelwert
-# +4.1). Details: interne Notiz (nicht Teil dieses Repos)
+# Pseudo-percept (permutation control, z_discriminability +10.6 in the
+# mean over 8 independent projection draws, smallest individual value
+# +4.1). Details: internal note (not part of this repo)
 #
 # FUNCTIONAL NEUTRALITY (K4): no cell gets a role. All ten
-# sehen DENSELBEN Weltvektor; sie unterscheiden sich nur durch einen festen,
-# aus sha256(Zellname) abgeleiteten Gewichtsvektor. Der entscheidet, WIE
+# see the SAME world vector; they differ only by a fixed,
+# weight vector derived from sha256(cell_name). This decides HOW
 # LOOK DIFFERENTLY, not WHAT they see. "G7 = memory" does not exist
 # here and should not exist.
 #
@@ -749,15 +749,15 @@ PERCEPT_PROJECTION_SALT = "F2WP1207_PERCEPT_PROJECTION/v1"
 # Axes of the world vector. EXCLUSIVELY quantities that the live path at
 # diesem Punkt wirklich hat (TypedEntry-Whitelist + Zeitstempel).
 # Bewusst NICHT dabei:
-#   psi_memory  -- /proc/pressure/memory steht auf dieser Maschine konstant
+# psi_memory  -- /proc/pressure/memory is constant on this machine
 # to 0.00 (avg10/60/300), even under normal load with
 #                  799 MB frei. Das Messwerk arbeitet (total-Zaehler 59.5s),
-#                  aber diese Maschine erlebt keinen Speicherdruck. Waere
+# but this machine experiences no memory pressure. Would be
 # a cell without variance -- a wiring, not a percept.
 # turn_pos    -- Position in session: 210 of 213 sessions have
-#                  genau EINEN Frame, die Achse waere praktisch konstant.
+# exactly ONE frame, the axis would be practically constant.
 # delta_t     -- Distance to previous turn: Median 0.0s across the existing
-#                  Frames (Lasttests im Stoss). Auf echten Gespraechsturns
+# Frames (load tests in bursts). On real conversation turns
 # would the axis be good, on the current inventory it is degenerate.
 # Candidate for later, when real turns are present.
 #
@@ -765,17 +765,17 @@ PERCEPT_PROJECTION_SALT = "F2WP1207_PERCEPT_PROJECTION/v1"
 # but the interior of the model that produces the utterance
 # has (see TypedEntry). The reason is structural, not
 # a matter of taste: until then causality ran only in one direction --
-#   Zustand -> Abtastparameter -> Vorwaertslauf -> Text
+# State -> sampling parameters -> forward pass -> text
 # and the forward pass was a sink. What happened IN the model never entered the
 # competition. Thus the model was a tool of the entity, not the
-# Entitaet: sein Zustand und ihr Zustand waren zwei getrennte Dinge.
+# Entity: its state and her state were two separate things.
 # With these axes the loop closes over the model:
-#   Innenmessung(t-1) -> Wettbewerb -> Broadcast -> Vorwaertslauf(t)
-#                     -> Innenmessung(t) -> ...
+# Internal measurement(t-1) -> competition -> broadcast -> forward pass(t)
+# -> internal measurement(t) -> ...
 # The measurement of the previous run feeds the competition, whose outcome shapes the
 # next run. This is a genuine recurrence, not a display.
 #
-# WARUM DIE VORIGE UND NICHT DIE LAUFENDE MESSUNG: der Turn oeffnet beim
+# WHY THE PREVIOUS AND NOT THE CURRENT MEASUREMENT: the turn opens at the
 # INPUT, the model speaks afterward. The numbers of the current utterance
 # do not yet exist at the time of the competition. This is not a
 # makeshift, but the same structure as in retrieval (Blog 057): the
@@ -786,9 +786,9 @@ PERCEPT_PROJECTION_SALT = "F2WP1207_PERCEPT_PROJECTION/v1"
 # value. Reason: PERCEPT_AXES_FP is a fingerprint of the ACHSENSATZ
 # (see below), and the running cell calibration discards its rows,
 # sobald sich dieser Abdruck aendert. Der laufende Sprachmodus importiert
-# dieses Modul JE TURN frisch (TURN_BRUECKE als Subprozess) -- ein
-# unbedingtes Anhaengen des Achsnamens haette also sofort beim naechsten
-# Turn eine Kalibrierungs-Zuruecksetzung ausgeloest, unabhaengig davon, ob
+# this module FRESH EACH TURN (TURN_BRUECKE as subprocess) -- a
+# unconditional appending of the axis name would thus immediately on the next
+# turn trigger a calibration reset, regardless of whether
 # somewhere a value is filled. Therefore here not only the value,
 # but the ACHSENSATZ ITSELF behind the switch: with WELT_ANBINDUNG_AKTIV
 # unchanged (default case everywhere, also in running language mode, since
@@ -798,8 +798,8 @@ PERCEPT_PROJECTION_SALT = "F2WP1207_PERCEPT_PROJECTION/v1"
 # ("empty/off == byte-identical to previous") is _MODELL_SUFFIX further below.
 WELT_ANBINDUNG_AKTIV = os.environ.get("WELT_ANBINDUNG_AKTIV", "0") == "1"
 
-# Abstraktions-Anbindung (2026-09-11, abstraktion.py, des Nutzers Auftrag
-# "fluide Schicht fuer Liebe/Sprache/Beziehung/Tod/Verlust"). Gleiches
+# Abstraction connection (2026-09-11, abstraktion.py, user's request
+# "fluid layer for love/language/relationship/death/loss"). Same
 # Muster wie WELT_ANBINDUNG_AKTIV direkt darueber: eigener Schalter, VOR
 # PERCEPT_AXES, default OFF. Without it PERCEPT_AXES is byte-identical to the
 # previous tuple (9 or 10 axes depending on WELT_ANBINDUNG_AKTIV) -- no
@@ -815,7 +815,7 @@ PERCEPT_AXES = ("prompt_len", "retrieval_present", "retrieval_len",
                 ) + (("welt_ueberraschung",) if WELT_ANBINDUNG_AKTIV else ()
                 ) + (ABSTRAKT_AXES if ABSTRAKTION_ANBINDUNG_AKTIV else ())
 
-# Fingerabdruck des Achsensatzes. Die Zell-Kalibrierung sammelt Statistik
+# fingerprint of the axis set. The cell calibration collects statistics
 # via `roh = sum(w_i * z_i)`, and `w = percept_projection(zelle, k)` depends
 # at k = len(PERCEPT_AXES). If the axis set changes, `roh` has a DIFFERENT
 # distribution -- stored cell means/variances are then
@@ -825,7 +825,7 @@ PERCEPT_AXES = ("prompt_len", "retrieval_present", "retrieval_len",
 # Same error form as the timestamp bug from entry 051 and the silent
 # axis from 054: an assumption without verification, with silent fallback.
 # The fingerprint is in the schema column of the cell rows; if it doesn't match,
-# werden GENAU DIE ZELLZEILEN verworfen. Achszeilen bleiben: der Mittelwert
+# EXACTLY THE CELL ROWS are discarded. Axis rows remain: the mean value
 # of prompt_len does not depend on how many other axes there are --
 # learned knowledge is not unnecessarily discarded.
 PERCEPT_AXES_FP = hashlib.sha256(
@@ -844,7 +844,7 @@ PERCEPT_AXES_FP = hashlib.sha256(
 # NAMES stay the same, so the fingerprint does too, and nothing is discarded. The new
 # head would then be normalized against the old normal values -- measurements that
 # LOOK valid. Exactly the error form the paragraph above warns about, only
-# eine Ebene tiefer.
+# one level deeper.
 #
 # Hence a second fingerprint over the model identifier. Without a set identifier
 # the suffix is empty and both schema strings are BYTE-IDENTICAL to
@@ -861,13 +861,13 @@ _MODELL_SUFFIX = (
 SCHEMA_PERCEPT_CALIB_ZELLE = (
     f"{SCHEMA_PERCEPT_CALIB}+axes:{PERCEPT_AXES_FP}{_MODELL_SUFFIX}")
 # Axis rows of the three model axes -- own fingerprint so that a model change
-# GENAU diese drei verwirft und prompt_len/delta_t/stunde_* unberuehrt laesst.
+# discards EXACTLY these three and leaves prompt_len/delta_t/stunde_* untouched.
 SCHEMA_PERCEPT_CALIB_MODELLACHSE = f"{SCHEMA_PERCEPT_CALIB}{_MODELL_SUFFIX}"
 
 # Before this many observations per axis/cell, it does NOT switch to percepts
 # but continues to use the hash. Cold start is thus exactly
 # today's behavior -- turning on is not an edge but a
-# Einlaufen. Die Kalibrierung lernt waehrenddessen bereits mit.
+# Warm-up. Calibration already learns during this process.
 PERCEPT_MIN_N = 30
 
 _PERCEPT_DDL = (
@@ -970,12 +970,12 @@ def percept_axes(typed_entry: "TypedEntry", ts: str, vorher_ts: Optional[str] = 
     rlen = float(typed_entry.retrieval_len or 0)
     # Zeitstempel ROBUST lesen. Die erste Fassung nahm strikt
     # "%Y-%m-%dT%H:%M:%SZ" and otherwise silently fell back to hour 0.
-    # Gemessen: die echten Transkript-Zeitstempel dieser Maschine tragen
+    # Measured: the actual transcript timestamps of this machine carry
     # Millisekunden ("2026-08-30T07:37:50.407Z"). Beide Stundenachsen waren
     # so that it was constant across all 438 turns -- two dead axes that looked like
     # percepts. Same error pattern as the timestamp bug from
     # Entry 051: a format is assumed instead of validated, and the
-    # Rueckfall ist still.
+    # Fallback is silent.
     stunde = None
     if isinstance(ts, str) and ts:
         roh = ts.strip()
@@ -990,10 +990,10 @@ def percept_axes(typed_entry: "TypedEntry", ts: str, vorher_ts: Optional[str] = 
     # delta_t: distance to previous turn in seconds, log1p like the lengths.
     # Source is the pointer record of re-entry (pointer_created_at) --
     # no additional query, and the same value that the turn
-    # ohnehin beruft. Kein Vorgaenger (genesis) oder unparsbar -> 0.0, also
+    # appeals anyway. No predecessor (genesis) or unparsable -> 0.0, thus
     # "no information", NOT "zero seconds": the calibration then sees this
     # as low-variance and reports the axis as silent if applicable.
-    # Eintrag 054 hatte delta_t verworfen, weil der Median dort 0,0 s war --
+    # Entry 054 had discarded delta_t because the median there was 0.0 s --
     # that was due to 211 load test frames, not the axis. With real turns
     # (minutes to hours apart) it is the most strongly scattering
     # quantity available without additional hardware.
@@ -1032,7 +1032,7 @@ def percept_axes(typed_entry: "TypedEntry", ts: str, vorher_ts: Optional[str] = 
 
     # Abstraktion (abstraktion.py, organ.arbeiten Task "abstraktion_fluid"):
     # five bound numbers from a fixed schema, None -> 0.0 like every
-    # andere optionale Achse hier. Reihenfolge MUSS zu ABSTRAKT_AXES/
+    # another optional axis here. Order MUST match ABSTRAKT_AXES/
     # PERCEPT_AXES match (binding via tuple position, not via names,
     # as the rest of this function already holds anyway).
     _abstrakt_zusatz = (
@@ -1044,7 +1044,7 @@ def percept_axes(typed_entry: "TypedEntry", ts: str, vorher_ts: Optional[str] = 
         if ABSTRAKTION_ANBINDUNG_AKTIV else ())
 
     if stunde is None:
-        # Kein stiller Nullwert: unparsbar heisst "keine Information".
+        # No silent zero value: unparsable means "no information".
         # Both axes at 0.0 -> the running calibration sees them as
         # variance-free and reports them in the protocol as a silent axis.
         return (math.log1p(plen), rpresent, math.log1p(rlen), 0.0, 0.0, dt,
@@ -1055,7 +1055,7 @@ def percept_axes(typed_entry: "TypedEntry", ts: str, vorher_ts: Optional[str] = 
             m_ueb, m_ent, m_str) + _welt_zusatz + _abstrakt_zusatz
 
 
-def _welford_lesen(conn: sqlite3.Connection, installation_id: str) -> dict:
+def _welford_read(conn: sqlite3.Connection, installation_id: str) -> dict:
     """Read Running Statistics -- WITH Axis-Set-Check for the Cells.
 
     Cell-Rows carry the Fingerprint of the Axis-Set in their
@@ -1105,7 +1105,7 @@ def _welford_lesen(conn: sqlite3.Connection, installation_id: str) -> dict:
             "alt_schema, neu_schema, achsen, verworfen, ts) VALUES (?,?,?,?,?,?,?)",
             (uuid.uuid4().hex, installation_id, ",".join(sorted(veraltet)),
              SCHEMA_PERCEPT_CALIB_ZELLE, "|".join(PERCEPT_AXES), anzahl,
-             _jetzt_iso()),
+             _now_iso()),
         )
 
     # The same one level deeper, but ONLY for the three model axes: their
@@ -1142,7 +1142,7 @@ def _welford_lesen(conn: sqlite3.Connection, installation_id: str) -> dict:
             "alt_schema, neu_schema, achsen, verworfen, ts) VALUES (?,?,?,?,?,?,?)",
             (uuid.uuid4().hex, installation_id, ",".join(sorted(veraltet_m)),
              SCHEMA_PERCEPT_CALIB_MODELLACHSE, "|".join(PERCEPT_MODELL_ACHSEN),
-             anzahl_m, _jetzt_iso()),
+             anzahl_m, _now_iso()),
         )
 
     zustand: dict = {}
@@ -1154,9 +1154,9 @@ def _welford_lesen(conn: sqlite3.Connection, installation_id: str) -> dict:
     return zustand
 
 
-def _welford_schritt(eintrag: list, x: float) -> list:
-    """Ein Welford-Schritt (laufender Mittelwert/Varianz, numerisch stabil).
-    Kausal: benutzt ausschliesslich, was vor diesem Turn schon da war."""
+def _welford_step(eintrag: list, x: float) -> list:
+    """A Welford step (running mean/variance, numerically stable).
+    Causal: uses exclusively what existed before this turn."""
     n, mittel, m2 = eintrag
     n += 1
     delta = x - mittel
@@ -1200,12 +1200,12 @@ def derive_percept_signals(
 
     The Calibration is ALWAYS continued, even during the
     Warmup. Otherwise it could never become warm."""
-    zustand = _welford_lesen(conn, installation_id)
+    zustand = _welford_read(conn, installation_id)
     k = len(achsen)
 
     for i, wert in enumerate(achsen):
         schluessel = ("achse", PERCEPT_AXES[i])
-        zustand[schluessel] = _welford_schritt(zustand.get(schluessel, [0, 0.0, 0.0]), wert)
+        zustand[schluessel] = _welford_step(zustand.get(schluessel, [0, 0.0, 0.0]), wert)
 
     # STUMME ACHSEN VETIEREN NICHT.
     # First version set warm=False globally when sd<=0. Consequence, in live A/B
@@ -1215,7 +1215,7 @@ def derive_percept_signals(
     # variance carries no information per criterion K2. It
     # belongs in the projection with z=0 (ineffective, not harmful),
     # not as a veto over the others. The path is warm once enough
-    # Turns gesehen wurden UND mindestens eine Achse streut.
+    # Turns were seen AND at least one axis scatters.
     z_achsen = []
     stumm = []
     genug = True
@@ -1236,7 +1236,7 @@ def derive_percept_signals(
         w = percept_projection(cell, k)
         roh = sum(w[i] * z_achsen[i] for i in range(k))
         schluessel = ("zelle", cell)
-        zustand[schluessel] = _welford_schritt(zustand.get(schluessel, [0, 0.0, 0.0]), roh)
+        zustand[schluessel] = _welford_step(zustand.get(schluessel, [0, 0.0, 0.0]), roh)
         eintrag = zustand[schluessel]
         sd = _sd(eintrag)
         if eintrag[0] < PERCEPT_MIN_N or sd <= 0.0:
@@ -1244,8 +1244,8 @@ def derive_percept_signals(
             signale[cell] = None
         else:
             z = (roh - eintrag[1]) / sd
-            # Logistik: (-inf,inf) -> (0,1), streng monoton, keine Kappung.
-            # Randverteilung nahe uniform, weil z bereits standardisiert ist.
+            # Logistic: (-inf,inf) -> (0,1), strictly monotonic, no clipping.
+            # Marginal distribution near uniform, because z is already standardized.
             signale[cell] = 1.0 / (1.0 + math.exp(-1.702 * z))
 
     for (art, schluessel), (n, mittel, m2) in zustand.items():
@@ -1276,9 +1276,9 @@ def fill_jspace(
     kappa: float = p7mod.KAPPA,
     signal_overrides: Mapping[str, float] | None = None,
 ) -> JSpace:
-    """J-Space befuellen: 10 GRID-Zellen erzeugen ihre Kandidaten
+    """J-Space fill: 10 GRID cells generate their candidates
     (P7-Signal + P7-Proposal-Score), Competition = max, Selection = Winner,
-    Broadcast = Winner-Score. Reine Funktion, kein I/O.
+    Broadcast = Winner-Score. Pure function, no I/O.
 
     ``kappa`` (F2WP1207 tune-passthrough, 2026-09-06): keyword-only override,
     default is p7mod's own module constant -- omitting it is byte-identical
@@ -1408,11 +1408,11 @@ def _submit_effect_in_transaction(
         winner_cell_id=jspace.winner_cell_id,
         broadcast_value=jspace.broadcast_value,
         payload={"marker_text": marker_text},
-        requested_at=_jetzt_iso(),
+        requested_at=_now_iso(),
     )
     decision = p11mod.evaluate_gate(request, policy)
     journal_id = uuid.uuid4().hex
-    now = _jetzt_iso()
+    now = _now_iso()
     status = "EXECUTED" if decision.allowed else "DENIED"
     conn.execute(
         "INSERT INTO f2_grid10_effect_journal "
@@ -1578,7 +1578,7 @@ def run_canonical_turn(
     try:
         # --- Identity: the epoch of TypedEntry carries Installation/   -
         # StateRoot (f2_runtime_epoch) -- no cross product over the
-        # Identity-Tabellen, damit mehrere Installationen je DB korrekt sind.
+        # Identity tables, so that multiple installations per DB are correct.
         runtime_epoch_id = typed_entry.runtime_epoch_id
         epoch = conn.execute(
             "SELECT installation_id, state_root_id FROM f2_runtime_epoch "
@@ -1612,7 +1612,7 @@ def run_canonical_turn(
             runtime_epoch_id=runtime_epoch_id,
             session_id=typed_entry.session_id,
         )
-        ts = typed_entry.ts or _jetzt_iso()
+        ts = typed_entry.ts or _now_iso()
 
         # --- GRF cognition input: exact same-turn compile + projection ---
         _grf_capsule = None
@@ -1639,7 +1639,7 @@ def run_canonical_turn(
             declared=declared_reentry,
         )
 
-        # --- optional P12 (kein Kettenglied, default AUS) ----------------
+        # --- optional P12 (no chain link, default OFF) ----------------
         self_observation = None
         seed_state = dict(reentry.seed_state)
         if include_self_observation:
@@ -1653,9 +1653,9 @@ def run_canonical_turn(
                 "contributions": contributions,
             }
 
-        # --- Perzepte: echte Messung statt sha256-Rauschen ---------------
+        # --- Percepts: real measurement instead of sha256 noise ---------------
         # Ein ausdruecklich uebergebenes signal_overrides gewinnt IMMER --
-        # der Parameter behaelt seine Bedeutung, Perzepte draengen sich
+        # the parameter retains its meaning, percepts push themselves
         # no caller. During warmup,
         # derive_percept_signals() returns None: then exactly the previous
         # hash competition runs, and only the calibration learns.
@@ -1685,12 +1685,12 @@ def run_canonical_turn(
             _jspace_kwargs["signal_overrides"] = _percept_signale
         jspace = fill_jspace(turn_event_id, seed_state, **_jspace_kwargs)
 
-        # --- Uptake durch alle 10 + neuer rekurrenter State --------------
+        # --- Uptake through all 10 + new recurrent state --------------
         _uptake_kwargs = {k: _tune[k] for k in ("lam", "alpha", "beta", "gamma") if k in _tune}
         transitions, new_state = uptake_and_state(jspace, **_uptake_kwargs)
 
         # --- Workspace/J-Space Update + atomarer Persist -----------------
-        # Frame oeffnen (INNERHALB der Turn-Transaktion)
+        # Open frame (WITHIN the turn transaction)
         conn.execute(
             "INSERT INTO f2_grid10_frame "
             "(frame_id, entity_id, installation_id, state_root_id, runtime_epoch_id, "
@@ -1703,9 +1703,9 @@ def run_canonical_turn(
                 COHORT, CONDITION_KEY, 1.0,
             ),
         )
-        # Perzept-Protokoll: WAS gemessen wurde und WELCHES Signal daraus
+        # Percept protocol: WHAT was measured and WHICH signal resulted from it
         # was done, per turn, in the same transaction as the frame. Without this
-        # Zeile waere der Wettbewerb wieder unpruefbar -- f2_grid10_frame hat
+        # Row would make the competition unverifiable again -- f2_grid10_frame has
         # no column for the measurement, and the pointer is overwritten every turn.
         # Exactly this caused the reconstruction of the
         # bisherigen 216 Frames.
@@ -1747,8 +1747,8 @@ def run_canonical_turn(
             crash_hook("after_frame_open")
 
         # 10 Zell-Beobachtungen (execution_position: Liveweg-Konvention,
-        # deterministisch pseudozufaellig aus frame_id; timing_ms bewusst
-        # NULL -- hier wird nichts gemessen/erfunden)
+        # deterministically pseudo-random from frame_id; timing_ms deliberate
+        # NULL -- nothing is measured/invented here)
         zellen = list(p7mod.CELLS)
         random.Random(frame_id).shuffle(zellen)
         reentry_flag = 0 if reentry.kind == "genesis" else 1
@@ -1791,7 +1791,7 @@ def run_canonical_turn(
         conn.execute(
             "UPDATE f2_grid10_frame SET status='CLOSED', closed_at=?, "
             "broadcast_winner_cell=?, broadcast_value=? WHERE frame_id=?",
-            (_jetzt_iso(), jspace.winner_cell_id, jspace.broadcast_value, frame_id),
+            (_now_iso(), jspace.winner_cell_id, jspace.broadcast_value, frame_id),
         )
 
         # optionaler Effect (P11-Gate-Schicht, gleiche Transaktion)
@@ -1800,7 +1800,7 @@ def run_canonical_turn(
             effect = _submit_effect_in_transaction(
                 conn, turn, jspace=jspace, policy=effect_policy
             )
-            # P11's uptake-Delta: belegte Ausfuehrung +epsilon auf Winner-State
+            # P11's uptake delta: occupied execution +epsilon on winner state
             if effect["uptake_delta"]:
                 conn.execute(
                     "UPDATE f2_grid10_p6d_state SET state_value=state_value+? "
@@ -1845,7 +1845,7 @@ def run_canonical_turn(
                 typed_entry.session_id, frame_id, turn_event_id, reentry.kind,
                 _canonical_json(evidence), jspace.winner_cell_id, jspace.broadcast_value,
                 _canonical_json({c: new_state[c] for c in p7mod.CELLS}),
-                SCHEMA_POINTER_ROW, _jetzt_iso(),
+                SCHEMA_POINTER_ROW, _now_iso(),
             ),
         )
 
@@ -1862,7 +1862,7 @@ def run_canonical_turn(
     if evidence_path is not None:
         _append_log(evidence_path, {
             "schema": SCHEMA_LOG_LINE,
-            "ts": _jetzt_iso(),
+            "ts": _now_iso(),
             "frame_id": frame_id,
             "turn_event_id": turn_event_id,
             "runtime_epoch_id": runtime_epoch_id,
@@ -1895,8 +1895,8 @@ def run_canonical_turn(
 
 
 def _mint_turn_event_id(conn: sqlite3.Connection, session_id: str) -> str:
-    """Liveweg-Konvention: {session_id}:{n}, n = bestehende Frames der
-    Session + 1 (innerhalb BEGIN IMMEDIATE konkurrenzfrei)."""
+    """Live path convention: {session_id}:{n}, n = existing frames of the
+    session + 1 (within BEGIN IMMEDIATE concurrency-free)."""
     n = conn.execute(
         "SELECT COUNT(*) FROM f2_grid10_frame WHERE session_id=?", (session_id,)
     ).fetchone()[0]

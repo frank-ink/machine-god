@@ -32,7 +32,7 @@ def win(c, b, p, x, ver=0, ch=None):
               (b, ver, json.dumps(pr), json.dumps(pr), json.dumps(ob), wm.brier(pr, ob), 0.0, "bewertet"))
 
 
-def anlass(c, lo, hi, ver=0):
+def trigger(c, lo, hi, ver=0):
     n = c.execute("select count(*) from f3_wm_pred where bucket>=? and bucket<=? and model_version=?", (lo, hi, ver)).fetchone()[0]
     ref = {"table": "f3_wm_pred", "where": "status='bewertet' and model_version=%d and bucket>=%d and bucket<=%d" % (ver, lo, hi), "params": [], "n": n}
     c.execute("insert into f3_endo_befund(bucket,kind,statement,evidence_ref,key) values(?,?,?,?,?)", (int(NOW // 300), "contradiction", "wm", json.dumps(ref), "wm_prognosefehler"))
@@ -48,42 +48,42 @@ def dump(c, t):
     return hashlib.sha256(json.dumps(c.execute("select * from %s order by rowid" % t).fetchall()).encode()).hexdigest()
 
 
-def t_wm201_ausreisser_rauschen():
+def t_wm201_outlier_noise():
     c = mk()
     for i in range(12):
-        win(c, B0 + i, 0.3, 0.3 if i not in (4, 9) else 1.0)  # zwei Ausreisser, sonst exakt
-    anlass(c, B0, B0 + 11)
+        win(c, B0 + i, 0.3, 0.3 if i not in (4, 9) else 1.0)  # two outliers, otherwise exact
+    trigger(c, B0, B0 + 11)
     assert w2.project(c, NOW) == 3
     s = top(c)
     assert s[0]["name"] == "NOISE" and s[0]["status"] == "leitend" and "conc_n" in s[0]["support"] and abs(sum(h["score"] for h in s) - 1) < 1e-9
 
 
-def t_wm202_regime_gerichtet_und_anhaltend():
+def t_wm202_regime_directed_and_persistent():
     c = mk()
     for i in range(12):
-        win(c, B0 + i, 0.1, 1.0, ch={"fokus_app": 0.5})  # in allen Fenstern zu niedrig vorhergesagt
+        win(c, B0 + i, 0.1, 1.0, ch={"fokus_app": 0.5})  # predicted too low in all windows
     for i in range(12, 16):
         win(c, B0 + i, 0.1, 1.0)  # Error persists after the trigger
-    anlass(c, B0, B0 + 11); w2.project(c, NOW)
+    trigger(c, B0, B0 + 11); w2.project(c, NOW)
     s = top(c)
     assert s[0]["name"] == "REGIME" and "pers" in s[0]["support"] and s[0]["salience"] > 0.5
 
 
-def t_wm203_luecken_stuetzen_sensor():
+def t_wm203_gaps_support_sensor():
     c = mk()
     for i in range(18):
         if i % 3 != 2:
-            win(c, B0 + i, 0.2, 0.2 if i % 2 else 0.6)  # jedes dritte Fenster fehlt (UNBEKANNT), Fehler wechselnd
-    anlass(c, B0, B0 + 17); w2.project(c, NOW)
+            win(c, B0 + i, 0.2, 0.2 if i % 2 else 0.6)  # every third window missing (UNKNOWN), error alternating
+    trigger(c, B0, B0 + 17); w2.project(c, NOW)
     s = {h["name"]: h for h in top(c)}
     assert "gap_n" in s["SENSOR"]["support"] and s["SENSOR"]["score"] > 0.3 and not s["NOISE"]["counter"] == ["pers"] * 5
 
 
-def t_wm204_revisionen_unveraenderlich():
+def t_wm204_revisions_immutable():
     c = mk()
     for i in range(12):
         win(c, B0 + i, 0.3, 0.3 if i != 5 else 1.0)
-    anlass(c, B0, B0 + 11); w2.project(c, NOW)
+    trigger(c, B0, B0 + 11); w2.project(c, NOW)
     for sql in ("update f3_wm2_rev set score=1", "delete from f3_wm2_rev"):
         try:
             c.execute(sql); raise AssertionError("Aenderung erlaubt")
@@ -92,15 +92,15 @@ def t_wm204_revisionen_unveraenderlich():
     assert c.execute("select count(*) from f3_wm2_rev").fetchone()[0] == 3
 
 
-def t_wm205_idempotent_und_neue_evidenz_neue_revision():
+def t_wm205_idempotent_and_new_evidence_new_revision():
     c = mk()
     for i in range(12):
         win(c, B0 + i, 0.3, 0.3 if i not in (2, 8) else 1.0)
-    anlass(c, B0, B0 + 11)
+    trigger(c, B0, B0 + 11)
     assert w2.project(c, NOW) == 3 and w2.project(c, NOW + 1) == 0
     for i in range(12, 16):
         win(c, B0 + i, 0.3, 0.3)  # Fehler klingt ab -> 'trans'
-    assert w2.project(c, NOW + 2) == 3  # neue Evidenz (post) -> je Hypothese Revision 2
+    assert w2.project(c, NOW + 2) == 3  # new evidence (post) -> per hypothesis revision 2
     rows = c.execute("select hyp_id,seq,rev_id,prev_hash from f3_wm2_rev order by hyp_id,seq").fetchall()
     by = {}
     for h, s, r, p in rows:
@@ -109,60 +109,60 @@ def t_wm205_idempotent_und_neue_evidenz_neue_revision():
     assert w2.project(c, NOW + 3) == 0
 
 
-def t_wm206_offener_widerspruch_befund():
+def t_wm206_open_contradiction_finding():
     c = mk()
     for i in range(12):
         win(c, B0 + i, 0.3, 0.3 if i % 4 else 0.9)  # gemischtes Bild
-    anlass(c, B0, B0 + 11); w2.project(c, NOW)
+    trigger(c, B0, B0 + 11); w2.project(c, NOW)
     s = top(c); close = s[0]["score"] - s[1]["score"] < w2.MARGIN
     b = w2.finding(c, NOW)
     assert (len(b) == 1) == close
     if b:
         assert b[0]["kind"] == "contradiction" and b[0]["key"].startswith("wm2_offen:") and endogenous.resolve(c, b[0]["ref"]) == (True, b[0]["ref"]["n"])
-    # eindeutiger Fall -> kein Befund
+    # clear-cut case -> no finding
     c2 = mk()
     for i in range(12):
         win(c2, B0 + i, 0.1, 1.0, ch={"fokus_app": 0.5})
     for i in range(12, 16):
         win(c2, B0 + i, 0.1, 1.0)
-    anlass(c2, B0, B0 + 11); w2.project(c2, NOW)
+    trigger(c2, B0, B0 + 11); w2.project(c2, NOW)
     s2 = top(c2)
     assert (s2[0]["score"] - s2[1]["score"] >= w2.MARGIN) == (w2.finding(c2, NOW) == [])
 
 
-def t_wm207_aus_und_kill():
+def t_wm207_off_and_kill():
     for k, v in (("frank3.wm2.mode", "off"), ("frank3.kill", "1")):
         c = mk()
         for i in range(12):
             win(c, B0 + i, 0.3, 1.0)
-        anlass(c, B0, B0 + 11)
+        trigger(c, B0, B0 + 11)
         c.execute("insert into star_konfig values(?,?)", (k, v)); c.commit()
         assert w2.project(c, NOW) == 0 and not c.execute("select 1 from sqlite_master where name='f3_wm2_rev'").fetchone() and w2.finding(c, NOW) == []
 
 
-def t_wm208_wm1_unberuehrt():
+def t_wm208_wm1_untouched():
     c = mk()
     for i in range(12):
         win(c, B0 + i, 0.3, 1.0 if i % 3 == 0 else 0.3)
-    anlass(c, B0, B0 + 11)
+    trigger(c, B0, B0 + 11)
     before = (dump(c, "f3_wm_pred"), dump(c, "f3_endo_befund"))
     w2.project(c, NOW); w2.finding(c, NOW)
     assert before == (dump(c, "f3_wm_pred"), dump(c, "f3_endo_befund"))
 
 
-def t_wm209_ohne_anlass_oder_fenster_nichts():
+def t_wm209_without_trigger_or_window_nothing():
     c = mk()
     assert w2.project(c, NOW) == 0 and w2.report(c)["anlaesse"] == 0 and w2.report(c)["revisionen"] == 0
-    anlass(c, B0, B0 + 11)  # Befund ohne Fensterzeilen
+    trigger(c, B0, B0 + 11)  # finding without window lines
     assert w2.project(c, NOW) == 0
 
 
-def t_wm210_kette_befund_zu_ziel():
-    """Offener WM2-Widerspruch fliesst durch E2 (Ledger) in E3 (Ziel) ohne Nutzerauftrag."""
+def t_wm210_chain_finding_to_goal():
+    """Open WM2 contradiction flows through E2 (Ledger) into E3 (Target) without user request."""
     c = mk()
     for i in range(12):
         win(c, B0 + i, 0.3, 0.3 if i % 4 else 0.9)
-    anlass(c, B0, B0 + 11); w2.project(c, NOW)
+    trigger(c, B0, B0 + 11); w2.project(c, NOW)
     # Force state: narrow margin, if the rule is unambiguous here, verify result honestly
     b = w2.finding(c, NOW)
     assert len(b) == 1  # deterministische Testdaten: knapper Abstand (REGIME vs NOISE)

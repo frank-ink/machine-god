@@ -12,7 +12,7 @@ import router_shadow as RS
 G0 = {"G6": 0.0, "G9": 0.0, "G10": 0.0, "g9_valid": False}
 
 
-def t_explizit_und_abstain():
+def t_explicit_and_abstain():
     o = cd.derive("Bitte analysiere und vergleiche die beiden Ansaetze", "", G0)
     assert "reason" in o["selected"] and not o["abstain"], o
     o = cd.derive("hallo", "", G0)
@@ -20,28 +20,28 @@ def t_explizit_und_abstain():
     assert cd.derive("", "", G0)["abstain"]
 
 
-def t_retina_allein_nie():
+def t_retina_alone_never():
     o = cd.derive("hallo", "", G0, relay=["person_kommt", "fokus_app"], burst=True)
     assert o["abstain"], o
     o = cd.derive("Warum ist die Person im Raum?", "", G0, relay=["person_kommt"], burst=True)
     assert o["scores"]["reason"] > cd.derive("Warum ist die Person im Raum?", "", G0)["scores"]["reason"]
 
 
-def t_max4_und_ueberlauf():
+def t_max4_and_overflow():
     txt = ("analysiere das ausfuehrlich, schreibe eine funktion in code mit json schema, suche die datei und fuehre aus ```x``` "
            "auf deutsch bitte")
     o = cd.derive(txt, "", {"G6": 1.0, "G9": 1.0, "G10": 1.0, "g9_valid": True})
     assert len(o["selected"]) <= 4 and set(o["selected"]) | set(o["overflow"]) == {c for c, s in o["scores"].items() if s >= cd.THRESH}
 
 
-def t_goal_primaer_ohne_text():
+def t_goal_primary_without_text():
     o = cd.derive("", "implementiere den parser", G0)
     assert "code" in o["selected"] and all(v == 0.0 for v in o["features"]["Z"].values())
 
 
-def t_bekannte_schwaechen_dokumentiert():
-    assert "code" in cd.derive("Schreibe KEINEN code, nur erklaere", "", G0)["selected"]  # keine Negation (Gegenbeispiel 1)
-    o = cd.derive("Das ist nicht so einfach und ich weiss es nicht", "", G0)  # de nur indirekt: 0.275 < 0.5
+def t_known_weaknesses_documented():
+    assert "code" in cd.derive("Schreibe KEINEN code, nur erklaere", "", G0)["selected"]  # no negation (counterexample 1)
+    o = cd.derive("Das ist nicht so einfach und ich weiss es nicht", "", G0)  # de only indirectly: 0.275 < 0.5
     assert "de" not in o["selected"]
     assert cd.derive("```x```", "", {"G6": 0.0, "G9": 0, "G10": 0, "g9_valid": 0})["scores"]["code"] >= 0.5  # explizit reicht allein
 
@@ -55,7 +55,7 @@ def _db():
     return c
 
 
-def t_lane_ledger_isolation_schalter():
+def t_lane_ledger_isolation_switch():
     RS.PATH = "/nonexistent/offer.json"
     c, now = _db(), 1000 * 300 + 40.0
     c.execute("insert into f3_retina_thal_log values(999,'[\"fokus_app\"]','[\"fokus_app\"]')")
@@ -66,12 +66,12 @@ def t_lane_ledger_isolation_schalter():
     row = c.execute("select input_ref,retina_event_ids,burst,router_version,model_id,evaluation_status,rule_version from f3_class_demand_log").fetchone()
     assert p not in row[0] and row[0].endswith(":%d" % len(p)) and row[2] == 1 and row[3] == "none-shadow" and row[4] is None and row[5] == "pending" and row[6] == "CLASS_DEMAND_V1"
     assert c.execute("select count(*) from f3_grid_v2_state").fetchone() == (0,)
-    assert "Datei" not in repr(c.execute("select * from f3_class_demand_log").fetchall())  # nie Klartext
+    assert "Datei" not in repr(c.execute("select * from f3_class_demand_log").fetchall())  # never plaintext
     r2 = c.execute("select selected_classes,fields from f3_class_demand_v2_log").fetchone()
     import json as _j
     f2 = _j.loads(r2[1])
-    assert "tool" in _j.loads(r2[0]) and f2["retina_available"] is True and f2["goal_present"] is False and p not in r2[1]  # V2 mitgeschrieben, nie Klartext
-    L.step(c, "s", "f1", p, {}, now)  # gleicher Zeitpunkt+Frame -> gleiche event_id, nicht doppelt
+    assert "tool" in _j.loads(r2[0]) and f2["retina_available"] is True and f2["goal_present"] is False and p not in r2[1]  # V2 logged, never plaintext
+    L.step(c, "s", "f1", p, {}, now)  # same timestamp+frame -> same event_id, not duplicated
     assert c.execute("select count(*) from f3_class_demand_log").fetchone() == (1,)
     assert c.execute("select count(*) from f3_class_demand_v2_log").fetchone() == (1,)
     c.execute("insert into star_konfig values('frank3.class_demand.mode','off')")
@@ -82,17 +82,17 @@ def t_lane_ledger_isolation_schalter():
     assert c.execute("select count(*) from f3_class_demand_log").fetchone() == (1,)
 
 
-def t_lane_veraltete_retina():
+def t_lane_outdated_retina():
     c = _db()
-    assert L.retina_fresh(c, 1000 * 300 + 1) is False  # kein Fenster: NICHT gemessen
+    assert L.retina_fresh(c, 1000 * 300 + 1) is False  # no window: NOT measured
     c.execute("insert into f3_retina_thal_log values(1000,'[]','[]')")
-    assert L.retina_fresh(c, 1000 * 300 + 1) is True  # leeres, aber frisches Fenster = verfuegbar
+    assert L.retina_fresh(c, 1000 * 300 + 1) is True  # empty but fresh window = available
     c = _db()
     c.execute("insert into f3_retina_thal_log values(900,'[\"fokus_app\"]','[\"fokus_app\"]')")
     assert L.retina_state(c, 1000 * 300 + 1) == ([], False, [])
 
 
-def t_resolve_input_und_alte_tabelle():
+def t_resolve_input_and_old_table():
     import json
     import tempfile
     d = tempfile.mkdtemp()

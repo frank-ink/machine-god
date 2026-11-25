@@ -48,7 +48,7 @@ def observe(conn, now):
         out.extend(world_model.finding(conn, now))
     except Exception:
         pass
-    try:  # WM2 (Runde 10): Hypothesenraum zu wm_prognosefehler projizieren; offener Widerspruch konkurrierender Erklaerungen -> E2-Befund
+    try:  # WM2 (Round 10): Project hypothesis space onto wm_prognosefehler; open contradiction of competing explanations -> E2 finding
         import world_model2
         world_model2.project(conn, now)
         out.extend(world_model2.finding(conn, now))

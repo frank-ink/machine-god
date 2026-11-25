@@ -14,7 +14,7 @@ import time
 from grid_v2 import GridV2Engine
 
 BUCKET_S = 300
-MAX_BUCKETS = 24  # Aufholgrenze je Aufruf (2 h); aeltere Luecken werden uebersprungen, nicht erfunden
+MAX_BUCKETS = 24  # Catch-up limit per call (2 h); older gaps are skipped, not fabricated
 MODE_KEY = "frank3.grid_retina.mode"
 DDL = (
     "create table if not exists f3_grid_v2r_state(singleton integer primary key check(singleton=1), j text not null, updated real not null)",
@@ -78,6 +78,6 @@ def step_buckets(conn, now=None):
                      (b * BUCKET_S, b, len(ev[b]), o["winner"], int(o["abstain"]), o["max_score"], o["thresh"], json.dumps({c: v for c, v in sig.items() if v})))
         n += 1
     conn.execute("insert or replace into f3_grid_v2r_state(singleton,j,updated) values(1,?,?)", (json.dumps({"eng": e.to_json(), "last": cur - 1}), now))
-    conn.execute("delete from f3_grid_v2r_log where bucket < (select max(bucket) from f3_grid_v2r_log) - 5000")  # begrenzt
+    conn.execute("delete from f3_grid_v2r_log where bucket < (select max(bucket) from f3_grid_v2r_log) - 5000")  # limited
     conn.commit()
     return n

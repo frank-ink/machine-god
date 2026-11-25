@@ -13,13 +13,13 @@ global `f2wp1207_p7_live` condition_key -- no explicit, evidenced connection
 to "this new epoch's real predecessor's real last workspace state." That is
 the gap this module closes.
 
-the user's spec (F2-WP-1207 P5-P13 roadmap, P10): "Kernkette: last accepted
+the user's spec (F2-WP-1207 P5-P13 roadmap, P10): "Core chain: last accepted
 workspace state -> persist -> runtime death/restart -> typed reentry record
 -> workspace reconstruction -> new competition -> measurable influence on
-next selection. Nicht einfach alten Kontext blind in den Prompt kippen. Nur
-typisierte, bestaetigte Workspace-Artefakte rehydrieren: letzter Broadcast,
-letzter Winner, relevante Zellzustaende, offene Goals/Tasks, unresolved
-conflicts, last accepted external/world evidence, predecessor frame IDs."
+next selection. Don't just blindly dump old context into the prompt. Only
+rehydrate typed, confirmed workspace artifacts: last broadcast, last winner,
+relevant cell states, open goals/tasks, unresolved conflicts, last accepted
+external/world evidence, predecessor frame IDs."
 
 Field-by-field real-data audit (performed against the live
 the live unified.db schema + row population before writing

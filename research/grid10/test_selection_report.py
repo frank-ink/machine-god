@@ -21,7 +21,7 @@ def _rej(entry):
     return r["rejected"][0]["reason"]
 
 
-def t_gueltig_mention_und_unreported():
+def t_valid_mention_and_unreported():
     r = A.validate([E()], CTX, RESP, {"model_id": "m-x"})
     a = r["accepted"][0]
     assert a["evidence"] == "mention" and r["unreported"] == ["e2", "e3"] and r["runtime"]["model_id"] == "m-x" and len(r["runtime"]["answer_hash"]) == 16
@@ -29,7 +29,7 @@ def t_gueltig_mention_und_unreported():
     assert A.validate([E(answer_span=None)], CTX, RESP)["accepted"][0]["evidence"] == "claimed"
 
 
-def t_erfundene_und_unbekannte():
+def t_fabricated_and_unknown():
     assert _rej(E(event_id="e9")) == "unknown_event"
     assert _rej(E(channel="person_geht")) == "channel_mismatch"
     assert _rej(E(answer_span=[30, 99])) == "invented_span"
@@ -43,14 +43,14 @@ def t_erfundene_und_unbekannte():
     assert _rej(E(reason="x" * 400)) == "reason"
 
 
-def t_modell_darf_keine_laufzeitfelder_setzen():
+def t_model_must_not_set_runtime_fields():
     assert _rej(E(model_id="evil")) == "schema"
     assert _rej({"event_id": "e1"}) == "schema"
     assert {x["reason"] for x in A.validate("kaputt", CTX, RESP)["rejected"]} == {"schema"}
     assert A.validate(None, CTX, RESP)["accepted"] == []
 
 
-def t_widerspruch_wird_uncertain():
+def t_contradiction_becomes_uncertain():
     r = A.validate([E(), E(uptake="unused", answer_span=None)], CTX, RESP)
     assert len(r["accepted"]) == 1 and r["accepted"][0]["uptake"] == "uncertain" and r["accepted"][0]["evidence"] == "none"
     assert A.referenced_channels(r) == []
@@ -58,7 +58,7 @@ def t_widerspruch_wird_uncertain():
     assert len(r["accepted"]) == 1 and not r["rejected"]
 
 
-def t_nur_used_zaehlt_fuer_rueckkanal():
+def t_only_used_counts_for_backchannel():
     es = [E(), E(event_id="e2", channel="person_kommt", uptake="unused", answer_span=None), E(event_id="e3", channel="objekt_neu", uptake="uncertain", answer_span=None)]
     r = A.validate(es, CTX, RESP)
     assert A.referenced_channels(r) == ["fokus_app"] and r["unreported"] == []

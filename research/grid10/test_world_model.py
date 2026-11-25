@@ -1,4 +1,4 @@
-"""Tests WM1.01-WM1.14 (Prognose-Ledger, Konflikt, Revision, Regelkreis), Entwurf ChatGPT Runde 8. Synthetische Wegwerf-DB, keine echte DB."""
+"""Tests WM1.01-WM1.14 (forecast ledger, conflict, revision, control loop), draft ChatGPT round 8. Synthetic throwaway DB, no real DB."""
 import json
 import os
 import sqlite3
@@ -36,7 +36,7 @@ def ev(c, b, arts):
 
 
 def tick(c, b, arts=(), ok=True, with_endo=False):
-    """Fenster b: Ereignisse, Sensor-Stichprobe, Hook-Lauf mitten im Fenster."""
+    """window b: events, sensor sample, hook run in the middle of the window."""
     ev(c, b, arts); alive(c, b, ok)
     n = wm.step(c, b * 300 + 200.0)
     if with_endo:
@@ -65,7 +65,7 @@ def flip(c, start, n_calm=30, n_hot=16, with_endo=False):
     return b
 
 
-def t_wm101_start_und_einfrieren():
+def t_wm101_start_and_freeze():
     c = mk(); tick(c, B0)
     st = state(c)
     r = c.execute("select bucket,model_version,prospective,created_at,frozen_hash,status,state_digest,last_observed_window,horizon_windows from f3_wm_pred").fetchall()
@@ -76,29 +76,29 @@ def t_wm101_start_und_einfrieren():
     assert c.execute("select count(*) from f3_wm_pred").fetchone()[0] == 1 and c.execute("select frozen_hash from f3_wm_pred").fetchone()[0] == h
 
 
-def t_wm102_brier_von_hand():
+def t_wm102_brier_by_hand():
     c = mk(); tick(c, B0); setp(c, 0.2); c.execute("delete from f3_wm_pred"); tick(c, B0)  # refreeze forecast for B0+1 with p=0.2 (cycle in same window)
     tick(c, B0 + 1, ["fokus_app"]); tick(c, B0 + 2)
     r = c.execute("select status,brier,brier_ref,coverage from f3_wm_pred where bucket=?", (B0 + 1,)).fetchone()
     assert r[0] == "bewertet" and abs(r[1] - (0.64 + 4 * 0.04) / 5) < 1e-9 and abs(r[2] - 1 / 5) < 1e-9 and r[3] == "ok"  # Referenz: W0-Basisraten 0 -> fokus_app-Fehler 1
 
 
-def t_wm103_unbekannt_ist_nicht_null():
+def t_wm103_unknown_is_not_null():
     c = mk(); tick(c, B0); setp(c, 0.2); c.execute("delete from f3_wm_pred"); tick(c, B0)
     # window B0+1 without hook run: no sensor sample
     ev(c, B0 + 1, ["fokus_app"]); alive(c, B0 + 2); wm.step(c, (B0 + 2) * 300 + 200.0)
     r = c.execute("select status,brier,obs from f3_wm_pred where bucket=?", (B0 + 1,)).fetchone()
     assert r == ("unbekannt", None, None)
-    assert abs(state(c)["p"]["fokus_app"] - 0.18) < 1e-12  # nur Fenster B0 (ok, x=0) zaehlt; B0+1 (unbekannt) NICHT als 0 gezaehlt
+    assert abs(state(c)["p"]["fokus_app"] - 0.18) < 1e-12  # only window B0 (ok, x=0) counts; B0+1 (unknown) NOT counted as 0
 
 
-def t_wm104_sensor_ausgefallen():
+def t_wm104_sensor_failed():
     c = mk(); tick(c, B0); tick(c, B0 + 1, ok=False); tick(c, B0 + 2)
     r = c.execute("select status,coverage from f3_wm_pred where bucket=?", (B0 + 1,)).fetchone()
     assert r == ("unbekannt", "ausgefallen")
 
 
-def t_wm105_kein_konflikt_bei_ruhe_und_zu_wenig_daten():
+def t_wm105_no_conflict_at_rest_and_insufficient_data():
     c = mk(); b = B0
     for _ in range(40):
         tick(c, b); b += 1
@@ -106,7 +106,7 @@ def t_wm105_kein_konflikt_bei_ruhe_und_zu_wenig_daten():
     c2 = mk(); b = B0
     for _ in range(5):
         tick(c2, b, ALL); b += 1
-    assert wm.finding(c2) == []  # weniger als 12 bewertete Fenster -> Unsicherheit bleibt
+    assert wm.finding(c2) == []  # fewer than 12 evaluated windows -> uncertainty remains
 
 
 def until_conflict(c, start=B0, n_calm=30, with_endo=False):
@@ -122,7 +122,7 @@ def until_conflict(c, start=B0, n_calm=30, with_endo=False):
     raise AssertionError("kein Konflikt")
 
 
-def t_wm106_konflikt_und_unveraenderliche_evidenz():
+def t_wm106_conflict_and_immutable_evidence():
     c = mk(); b, f = until_conflict(c)
     assert len(f) == 1 and f[0]["kind"] == "contradiction" and f[0]["key"] == "wm_prognosefehler" and f[0]["ref"]["n"] == 12
     ok, n = endogenous.resolve(c, f[0]["ref"]); assert ok and n == 12
@@ -131,7 +131,7 @@ def t_wm106_konflikt_und_unveraenderliche_evidenz():
     assert endogenous.resolve(c, f[0]["ref"])[0]  # later windows do not invalidate the evidence
 
 
-def t_wm107_revision_persistent_und_naechste_prognose():
+def t_wm107_revision_persistent_and_next_forecast():
     c = mk(); b, f = until_conflict(c)
     ref = f[0]["ref"]
     old = c.execute("select bucket,model_version,alpha from f3_wm_pred where status='bewertet'").fetchall()
@@ -141,11 +141,11 @@ def t_wm107_revision_persistent_und_naechste_prognose():
     rev = c.execute("select decision,alpha_from,alpha_to,brier_before,brier_after,from_version,to_version from f3_wm_rev").fetchall()
     assert v == 1 and st["version"] == 1 and st["alpha"] > 0.10 and rev[0][0] == "revidiert" and rev[0][4] < 0.9 * rev[0][3] and rev[0][5:] == (0, 1)
     assert nxt == [(1, st["alpha"], "offen")]  # the next not yet started forecast uses W1
-    assert old == c.execute("select bucket,model_version,alpha from f3_wm_pred where status='bewertet'").fetchall()  # Vergangenes bleibt unveraendert
+    assert old == c.execute("select bucket,model_version,alpha from f3_wm_pred where status='bewertet'").fetchall()  # the past remains unchanged
     assert wm.finding(c) == []  # conflict counts only windows under current version (12 new needed)
 
 
-def t_wm108_keine_aenderung_ohne_nachweis():
+def t_wm108_no_change_without_proof():
     c = mk(); b = B0
     for _ in range(30):
         tick(c, b); b += 1
@@ -161,7 +161,7 @@ def t_wm109_revision_idempotent():
     assert c.execute("select count(*) from f3_wm_rev").fetchone()[0] == 1 and state(c)["version"] == 1
 
 
-def t_wm110_neustart():
+def t_wm110_restart():
     p = tempfile.mktemp(suffix=".db")
     try:
         c = mk(p); b, f = until_conflict(c); wm.revise(c, f[0]["ref"], "a1", b * 300 + 220.0); c.close()
@@ -172,14 +172,14 @@ def t_wm110_neustart():
         os.path.exists(p) and os.remove(p)
 
 
-def t_wm111_kill_und_schalter():
+def t_wm111_kill_and_switch():
     c = mk(); c.execute("insert into star_konfig values('frank3.kill','1')"); c.commit()
     assert wm.step(c, B0 * 300 + 10.0) == 0 and not c.execute("select 1 from sqlite_master where name like 'f3_wm_%'").fetchone()
     c2 = mk(); c2.execute("insert into star_konfig values(?,?)", (wm.MODE_KEY, "off")); c2.commit()
     assert wm.step(c2, B0 * 300 + 10.0) == 0 and not c2.execute("select 1 from sqlite_master where name like 'f3_wm_%'").fetchone()
 
 
-def t_wm112_schreibt_nur_eigene_tabellen():
+def t_wm112_writes_only_own_tables():
     c = mk(); ev(c, B0, ["fokus_app"]); c.commit()
     tabs = [r[0] for r in c.execute("select name from sqlite_master where type='table' and name not like 'f3_wm_%' and name<>'sqlite_sequence'")]
     snap = lambda: {t: c.execute("select * from %s" % t).fetchall() for t in tabs}
@@ -190,7 +190,7 @@ def t_wm112_schreibt_nur_eigene_tabellen():
     assert c.execute("select count(*) from f3_endo_befund").fetchone()[0] == 0 and not c.execute("select 1 from sqlite_master where name='f3_goal'").fetchone()
 
 
-def t_wm113_baseline_aus_historie():
+def t_wm113_baseline_from_history():
     c = mk()
     for b in range(B0 - 100, B0 - 50):
         ev(c, b, ["person_kommt"] if b % 2 == 0 else [])
@@ -200,14 +200,14 @@ def t_wm113_baseline_aus_historie():
     assert abs(p0["person_kommt"] - 25 / span) < 1e-3 and p0["fokus_app"] == 0
 
 
-def t_wm115_pflichtfelder_horizont_persistenz():
+def t_wm115_mandatory_fields_horizon_persistence():
     c = mk(); tick(c, B0, ["fokus_app"]); tick(c, B0 + 1, ["person_kommt"]); tick(c, B0 + 2)
     r = c.execute("select last_observed_window,horizon_windows,created_at,pers_pred,state_digest,model_version from f3_wm_pred where bucket=?", (B0 + 3,)).fetchone()
     assert r[0] == B0 + 1 and r[1] == 2 and r[2] < (B0 + 3) * 300 and r[4] and r[5] == 0
     assert json.loads(r[3]) == {"fokus_app": 0, "objekt_neu": 0, "objekt_weg": 0, "person_geht": 0, "person_kommt": 1}  # persistence = last evaluated window, same state as model and reference
 
 
-def t_wm116_revision_ueberschreibt_nicht():
+def t_wm116_revision_does_not_overwrite():
     c = mk(); b, f = until_conflict(c)
     tick(c, b)  # in the current window, the v0 forecast for b+1 is created
     old = c.execute("select * from f3_wm_pred where bucket=? and model_version=0", (b + 1,)).fetchone()
@@ -222,41 +222,41 @@ def t_wm116_revision_ueberschreibt_nicht():
     assert wm.report(c, 1)["n"] == 1 and wm.report(c)["n"] == wm.report(c, 0)["n"] + 1
 
 
-def t_wm117_persistenz_brier_von_hand():
+def t_wm117_persistence_brier_by_hand():
     c = mk(); tick(c, B0); tick(c, B0 + 1, ["fokus_app"]); tick(c, B0 + 2, ["fokus_app"]); tick(c, B0 + 3)
     tick(c, B0 + 4)
     r = c.execute("select brier_pers,pers_pred,obs from f3_wm_pred where bucket=?", (B0 + 3,)).fetchone()
     assert r and json.loads(r[1])["fokus_app"] == 1 and json.loads(r[2])["fokus_app"] == 0 and abs(r[0] - 1 / 5) < 1e-12  # persistence predicted fokus_app, it did not occur
 
 
-def t_wm118_sensorabdeckung_befund():
+def t_wm118_sensor_coverage_finding():
     c = mk(); tick(c, B0)
     for b in range(B0 + 1, B0 + 120):
         tick(c, b) if b % 3 == 0 else None
     now = (B0 + 120) * 300 + 10.0
-    assert wm.sensor_befund(c, now) == []  # Anlauf: weniger als 288 Fenster seit Start -> kein Befund
+    assert wm.sensor_finding(c, now) == []  # startup: fewer than 288 windows since start -> no finding
     for b in range(B0 + 120, B0 + 330):
         tick(c, b) if b % 3 == 0 else None
     now = (B0 + 330) * 300 + 10.0
-    f = wm.sensor_befund(c, now)
+    f = wm.sensor_finding(c, now)
     cv = wm.coverage(c, now)
     assert len(f) == 1 and f[0]["key"] == "wm_sensorabdeckung" and f[0]["kind"] == "gap" and f[0]["ref"]["cause"] == "SCHEDULER_INACTIVE" and 0.30 < cv["C"] < 0.36 and not cv["anlauf"]
     assert endogenous.resolve(c, f[0]["ref"])[0] and cv["keine_zeile"] > cv["ausgefallen"] == 0
 
 
-def t_wm119_abdeckung_gut_oder_ausgefallen():
+def t_wm119_coverage_good_or_failed():
     c = mk(); tick(c, B0)
     for b in range(B0 + 1, B0 + 330):
         tick(c, b)
-    assert wm.sensor_befund(c, (B0 + 330) * 300 + 10.0) == []  # Abdeckung 100 % -> kein Befund
+    assert wm.sensor_finding(c, (B0 + 330) * 300 + 10.0) == []  # coverage 100% -> no finding
     c2 = mk(); tick(c2, B0)
     for b in range(B0 + 1, B0 + 330):
         tick(c2, b, ok=(b % 5 == 0))
-    f = wm.sensor_befund(c2, (B0 + 330) * 300 + 10.0)
+    f = wm.sensor_finding(c2, (B0 + 330) * 300 + 10.0)
     assert f and f[0]["ref"]["cause"] == "SENSOR_UNAVAILABLE"
 
 
-def t_wm120_mindestabstand_24h_und_anfrage():
+def t_wm120_minimum_distance_24h_and_request():
     c = mk(); tick(c, B0)
     for b in range(B0 + 1, B0 + 330):
         tick(c, b) if b % 3 == 0 else None
@@ -264,7 +264,7 @@ def t_wm120_mindestabstand_24h_und_anfrage():
     endogenous.step(c, now); endogenous.step(c, now + 600)
     n1 = c.execute("select count(*) from f3_endo_befund where key='wm_sensorabdeckung'").fetchone()[0]
     endogenous.step(c, now + 3000)
-    assert n1 == 1 and c.execute("select count(*) from f3_endo_befund where key='wm_sensorabdeckung'").fetchone()[0] == 1  # innerhalb 24 h kein zweiter identischer Befund
+    assert n1 == 1 and c.execute("select count(*) from f3_endo_befund where key='wm_sensorabdeckung'").fetchone()[0] == 1  # within 24 h no second identical finding
     made = gg.genesis(c, now + 700)
     assert len(made) == 1 and c.execute("select goal_statement from f3_goal").fetchone()[0].startswith("Resolve knowledge gap: Sensor coverage")
     pick, _ = gc.compete(c, now + 701); a = gp.pursue(c, pick, now + 702)
@@ -273,8 +273,8 @@ def t_wm120_mindestabstand_24h_und_anfrage():
     assert r[0] == 1 and r[1] == "sensor" and "SCHEDULER_INACTIVE" in r[2] and "systemd user timer" in r[2] and "NOT executed" in r[2] and r[3] == "offen"
 
 
-def t_wm114_regelkreis_ohne_nutzerauftrag():
-    """W0 -> P0 -> E1 -> unabhaengiger Fehler -> E2-Befund -> E3-Ziel -> E4-Auswahl -> E5-Untersuchung -> W1 -> naechste Prognose nutzt W1 -> Neustart."""
+def t_wm114_control_loop_without_user_request():
+    """W0 -> P0 -> E1 -> independent error -> E2 finding -> E3 target -> E4 selection -> E5 investigation -> W1 -> next prognosis uses W1 -> restart."""
     p = tempfile.mktemp(suffix=".db")
     try:
         c = mk(p); b, _f = until_conflict(c, with_endo=True)

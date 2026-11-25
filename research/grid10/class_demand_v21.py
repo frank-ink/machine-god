@@ -22,7 +22,7 @@ CLASSES = ("code", "json", "reason", "long", "tool")
 E = {0: 0.0, 1: 0.25, 2: 0.65, 3: 1.0}
 WG, WR, THETA, MAX_CLASSES = 0.15, 0.10, 0.65, 4
 _NEG = re.compile(r"\b(kein\w*|nicht|ohne|nie|niemals|no|not|don'?t|without|never|statt|anstatt)\b", re.I)
-# je Klasse: (E3, E2, E1) Muster, kleingeschrieben-unabhaengig
+# per class: (E3, E2, E1) pattern, case-insensitive
 _P = {
     "code": (r"```|\b(implementier\w*|debugg?\w*|kompilier\w*|refactor\w*|quellcode|implement\w*|compile\w*|traceback|stack ?trace)\b|\bschreib\w* (?:\w+ ){0,2}(?:funktion|skript|script|code|programm|test)\b",
              r"\b(fix\w*|repar\w+|patch\w*|bau\w*|aender\w*|änder\w*|erweiter\w*|port\w*)\b(?:\W+\w+){0,6}?\W+(code|skript|script|modul|funktion|klasse|test\w*|\.py|\.rs|\.go|\.js|bug|fehler)\b|\bexit code\b|\bsyntax ?error\b",

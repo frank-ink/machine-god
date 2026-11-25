@@ -11,7 +11,7 @@ MAX_AGE_S = 86400
 
 
 def decide(selected, path=None, now=None):
-    """-> (router_version, {klasse: {"model","score"}}) ; kein Schnappschuss -> ('none-shadow', {})."""
+    """-> (router_version, {klasse: {"model","score"}}) ; no snapshot -> ('none-shadow', {})."""
     try:
         d = json.load(open(path or PATH))
         age = (time.time() if now is None else now) - float(d["fetched"])

@@ -38,7 +38,7 @@ def load(conn, version):
 
 
 def segments(rows):
-    """Zusammenhaengende Abschnitte (Bucket-Differenz 1); nie ueber Luecken verbunden."""
+    """Contiguous sections (bucket difference 1); never connected across gaps."""
     seg, cur = [], []
     for r in rows:
         if cur and r[0] != cur[-1][0] + 1:
@@ -50,7 +50,7 @@ def segments(rows):
 
 
 def blocks(rows, length):
-    """Feste, ueberlappungsfreie Bloecke je Abschnitt; Restblock am Abschnittsende bleibt erhalten."""
+    """Fixed, non-overlapping blocks per section; remainder block at section end remains preserved."""
     out = []
     for s in segments(rows):
         for i in range(0, len(s), length):

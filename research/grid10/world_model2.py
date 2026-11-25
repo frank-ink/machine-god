@@ -94,7 +94,7 @@ def _revise(conn, aid, ver, lo, hi, now):
         last = conn.execute("select seq,indicators,prev_hash,rev_id from f3_wm2_rev where hyp_id=? order by seq desc limit 1", (hid,)).fetchone()
         key = json.dumps({"i": i, "rule": RULE_VERSION}, sort_keys=True)
         if last and last[1] == key:
-            continue  # Evidenz unveraendert: keine neue Revision
+            continue  # Evidence unchanged: no new revision
         seq = (last[0] + 1) if last else 1
         score = w[h][0] / z
         rank = ranked.index(h) + 1
@@ -131,7 +131,7 @@ def project(conn, now=None):
 
 
 def stand(conn, aid):
-    """Aktueller Stand eines Anlasses: je Hypothese die letzte Revision."""
+    """Current status of a case: the latest revision per hypothesis"""
     rows = conn.execute("select h.name,r.seq,r.score,r.rank,r.salience,r.status,r.support,r.counter from f3_wm2_rev r join f3_wm2_hyp h on h.hyp_id=r.hyp_id where r.anlass_id=? and r.seq=(select max(seq) from f3_wm2_rev x where x.hyp_id=r.hyp_id) order by r.rank", (aid,)).fetchall()
     return [{"name": n, "seq": s, "score": sc, "rank": rk, "salience": sl, "status": st, "support": json.loads(su)["ind"], "counter": json.loads(co)["ind"]} for n, s, sc, rk, sl, st, su, co in rows]
 

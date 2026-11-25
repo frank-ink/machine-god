@@ -32,7 +32,7 @@ def off(conn):
 
 
 def genesis(conn, now=None, requested_scope=None):
-    """-> Liste neu angelegter goal_id (leer = ABSTAIN / nichts Neues)."""
+    """-> List of newly created goal_id (empty = ABSTAIN / nothing new)."""
     now = time.time() if now is None else now
     if off(conn):
         return []

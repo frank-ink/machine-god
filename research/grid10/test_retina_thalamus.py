@@ -12,7 +12,7 @@ VENDOR = os.environ.get("MG_THALAMUS_VENDOR", "/nonexistent")
 W = 300.0
 
 
-def t_a_formel_handwerte():
+def t_a_formula_hand_values():
     g = rt.final_gain(0.5, 0.0, 1.0, 0.0, 0.0, False, 0.0, 0.0)
     assert abs(g - 0.5) < 1e-12
     g = rt.final_gain(0.5, 1.0, 1.0, 0.0, 0.0, False, 0.0, 0.0)  # voll habituiert: 0.5*0.2
@@ -20,7 +20,7 @@ def t_a_formel_handwerte():
     assert abs(rt.final_gain(0.1, 0.0, 1.0, 0.0, 0.0, True, 0.0, 0.0) - 0.2) < 1e-12  # Burst x2
 
 
-def t_a_gegen_original():
+def t_a_against_original():
     if not os.path.exists(os.path.join(VENDOR, "thalamus.py")):
         print("  (Original nicht vorhanden, Vergleich uebersprungen)")
         return
@@ -41,13 +41,13 @@ def t_a_gegen_original():
     print("  (a) gegen Original: %d Faelle gleich" % n)
 
 
-def t_b_erholung():
+def t_b_recovery():
     for n, c in rt.CHANNELS.items():
         t = rt.RetinaThalamus()
         t.s[n]["h"], t.s[n]["last_ts"] = 1.0, 0.0
-        t.gate({}, 3 * c["tau"])  # Pause > 3*tau, kein Inhalt
+        t.gate({}, 3 * c["tau"])  # Pause > 3*tau, no content
         assert t.s[n]["h"] < 0.5, (n, t.s[n]["h"])
-    # Gegenprobe Original-Defekt: gleicher Inhalt immer wieder -> H waechst (gewollt), erst Stille erholt
+    # Counter-test original defect: same content repeatedly -> H grows (intended), only silence recovers
     t = rt.RetinaThalamus()
     for i in range(40):
         t.gate({"fokus_app": 3}, i * W)
@@ -70,7 +70,7 @@ def _sim(seed, n=1000):
     return rows
 
 
-def t_c_kein_fixpunkt_keine_zwei_haufen():
+def t_c_no_fixed_point_no_two_heaps():
     rows = _sim(1)
     for n in rt.CHANNELS:
         hs = [r["hab"][n] for _, r in rows]
@@ -84,14 +84,14 @@ def t_c_kein_fixpunkt_keine_zwei_haufen():
     assert 0 < rel < tot, "alles oder nichts"
 
 
-def t_d_burst_anteil():
+def t_d_burst_share():
     rows = _sim(2)
     b = sum(1 for _, r in rows if r["burst"])
     s = sum(1 for _, r in rows if r["relay"] or r["burst"])
     share = b / max(1, s)
     print("  (d) Burst-Tore %d von %d aktiven (%.1f %%)" % (b, s, 100 * share))
     assert b > 0 and share <= 0.5
-    t = rt.RetinaThalamus()  # B: nur echte Signale, nie Dauerstatus
+    t = rt.RetinaThalamus()  # B: only real signals, never steady state
     for i in range(50):
         assert not t.gate({"fokus_app": 2}, i * W)["burst"]
     r = t.gate({"person_kommt": 1}, 60 * W)  # Return: first person after long absence without predecessor -> no burst
@@ -99,7 +99,7 @@ def t_d_burst_anteil():
     assert t.gate({"person_kommt": 1}, 61 * W + rt.RETURN_ABSENCE_S + 1)["burst"] == ["person_kommt"]
 
 
-def t_e_rueckkanal():
+def t_e_backchannel():
     def gain(fb_ref):
         t = rt.RetinaThalamus()
         t.gate({"objekt_neu": 1, "fokus_app": 1}, 0.0)
@@ -115,7 +115,7 @@ def t_e_rueckkanal():
     assert 0 < t.s["fokus_app"]["fb"] < fb0 * 0.3  # klingt ab
 
 
-def t_lane_idempotent_isolation_schalter():
+def t_lane_idempotent_isolation_switch():
     import sqlite3
     import retina_thalamus_lane as L
     B = L.BUCKET_S
@@ -138,7 +138,7 @@ def t_lane_idempotent_isolation_schalter():
     assert L.step_buckets(c, now + 5 * B) == 0
 
 
-def t_lane_echtdaten_replay():
+def t_lane_real_data_replay():
     import sqlite3
     import retina_thalamus_lane as L
     real = os.environ.get("MG_REAL_DB", "")
@@ -152,7 +152,7 @@ def t_lane_echtdaten_replay():
     bur = sum(1 for o in out if o[0]["burst"])
     print("  replay: Ereignisse roh=%d relayt=%d (%.1f %%) Burst-Fenster=%d" % (raw, kept, 100.0 * kept / max(1, raw), bur))
     assert kept > 0 and bur > 0
-    assert max(s for o in out for s in o[0]["hab"].values()) < 0.99  # kein Fixpunkt 1.0 (Originaldefekt)
+    assert max(s for o in out for s in o[0]["hab"].values()) < 0.99  # no fixed point 1.0 (original defect)
 
 
 if __name__ == "__main__":

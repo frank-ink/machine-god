@@ -132,7 +132,7 @@ def t_e402():
 def t_e403():
     c = mk(); finding(c, "a"); gg.genesis(c, NOW)
     c.execute("update f3_goal set fatigue=0.8, fatigue_ts=?", (NOW,)); c.commit()
-    gc.compete(c, NOW + 3 * gc.TAU)  # wird dabei einmal ausgewaehlt: f' = f + 0.25(1-f) -> Zerfallswert zurueckrechnen
+    gc.compete(c, NOW + 3 * gc.TAU)  # is selected once in the process: f' = f + 0.25(1-f) -> back-calculate decay value
     pre = (c.execute("select fatigue from f3_goal").fetchone()[0] - 0.25) / 0.75
     assert abs(pre / 0.8 - math.exp(-3)) < 1e-6 and 0.049 < pre / 0.8 < 0.051
 
@@ -165,7 +165,7 @@ def t_e406():
 def t_e407():
     c = mk(); finding(c, "a", n=5); gg.genesis(c, NOW)
     gc.complete(c, goals(c)[0][0], NOW)
-    assert gc.compete(c, NOW + 60)[0] is None and gg.genesis(c, NOW + 400) == []  # gleicher Befund, gleiche Evidenz -> kein neues Ziel
+    assert gc.compete(c, NOW + 60)[0] is None and gg.genesis(c, NOW + 400) == []  # same finding, same evidence -> no new target
     c.execute("delete from f3_endo_befund"); finding(c, "a", ref=evid(c, "a", 8))
     assert len(gg.genesis(c, NOW + 800)) == 1  # neue Evidenz -> neues Ziel erlaubt
 
@@ -199,7 +199,7 @@ def t_e410():
     assert isinstance(pick, str) and changed <= {"f3_goal_comp_log"} and not hasattr(gc, "execute") and not hasattr(gc, "run")
 
 
-def t_e402b_selbstbegrenzung():
+def t_e402b_self_limitation():
     """Finding (honestly noted): with low evidence, fatigue + novelty loss limit the selection automatically (2 hits, then ABSTAIN)."""
     c = mk(); finding(c, "a", n=5); gg.genesis(c, NOW)
     picks = [gc.compete(c, NOW)[0] for _ in range(4)]

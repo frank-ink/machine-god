@@ -85,7 +85,7 @@ def t_e507():
 
 def t_e508():
     c, g = one()
-    evid(c, "a", 8); c.commit()  # Ausgangsreferenz (n=5) ist beim Binden schon veraltet
+    evid(c, "a", 8); c.commit()  # Initial reference (n=5) is already obsolete when binding
     a = gp.pursue(c, g, NOW)
     r = ROW(c, a)
     assert json.loads(r["state_before_ref"])["stale"] is True and r["evaluation_status"] == "PARTIAL" and c.execute("select status from f3_goal").fetchone()[0] == "offen"
@@ -137,7 +137,7 @@ def t_e512():
     tag = json.loads(c.execute("select evidence_refs from f3_goal where goal_id=?", (pick,)).fetchone()[0])[0]["params"][0]
     evid(c, tag, 80); c.commit()  # World changes after the prediction -> prediction error
     gp.process(c, a, NOW)
-    made = gg.genesis(c, NOW + 600)  # E3 liest den Reentry-Befund
+    made = gg.genesis(c, NOW + 600)  # E3 reads the reentry finding
     pick2, sc2 = gc.compete(c, NOW + 600)
     follow = c.execute("select goal_id,origin_event_id,evidence_refs,goal_statement from f3_goal where goal_id=?", (made[0],)).fetchone()
     bid = int(follow[1].split(":")[1])
@@ -145,7 +145,7 @@ def t_e512():
     ref = json.loads(follow[2])[0]
     chain = c.execute("select attempt_id from %s where %s" % (ref["table"], ref["where"]), tuple(ref["params"])).fetchone()[0]
     assert len(made) == 1 and made[0] in sc2 and made[0] != pick and key == "versuch:" + pick and chain == a and "PARTIAL" in follow[3]
-    assert pick not in sc2 and c.execute("select count(*) from f3_goal_log where goal_id=? and event='kandidat_verworfen'", (pick,)).fetchone()[0] >= 1  # veraltetes Ursprungsziel scheidet aus
+    assert pick not in sc2 and c.execute("select count(*) from f3_goal_log where goal_id=? and event='kandidat_verworfen'", (pick,)).fetchone()[0] >= 1  # Outdated original target is excluded
 
 
 def t_e512b_gain():

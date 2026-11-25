@@ -45,7 +45,7 @@ def _check(e, ctx, resp):
 
 def validate(entries, ctx, response_text, runtime=None):
     """ctx: {"frame_id","response_id","passed": {event_id: channel}}. -> {"accepted","rejected","unreported","runtime"}.
-    runtime: vom Aufrufer gesetzt (model_id, ...); model_id etc. werden NIE aus entries uebernommen."""
+    runtime: set by the caller (model_id, ...); model_id etc. are NEVER taken from entries."""
     resp, acc, rej = response_text or "", {}, []
     for e in entries or []:
         err = _check(e, ctx, resp)

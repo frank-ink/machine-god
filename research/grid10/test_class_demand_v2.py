@@ -23,7 +23,7 @@ def t_stufen_und_schwelle():
     o = v.derive("Das json format ist interessant", "", G0)  # Mere mention = E1 (0.25) < 0.65, even with maximum GRID/Retina assistance
     assert o["evidence_level_by_class"]["json"] == "E1" and o["abstain"]
     o = v.derive("Ich habe ein Problem mit dem Server", "", {"G9": 1, "G10": 1, "g9_valid": True}, relay=["fokus_app"], burst=True, retina_available=True)
-    assert o["scores_by_class"]["tool"] == 0.25 and o["abstain"]  # E1 + max. Verstaerkung: nicht einmal Verstaerkung greift
+    assert o["scores_by_class"]["tool"] == 0.25 and o["abstain"]  # E1 + max. gain: not even gain applies
 
 
 def t_lange_eingabe_allein_ist_e0():
@@ -48,7 +48,7 @@ def t_grid_und_retina_verstaerken_nur_semantik():
     assert abs(boosted["scores_by_class"]["reason"] - min(1.0, base + 0.15 + 0.10)) < 1e-9
     nob = v.derive("Warum ist die Person im Raum?", "", G0, relay=["person_kommt"], burst=False, retina_available=True)
     assert nob["retina_contribution_by_class"]["reason"] == 0.0
-    assert v.derive("hallo", "", G0, relay=["person_kommt"], burst=True, retina_available=True)["abstain"]  # Retina allein nie
+    assert v.derive("hallo", "", G0, relay=["person_kommt"], burst=True, retina_available=True)["abstain"]  # Retina alone never
 
 
 def t_max4_ueberlauf_und_reihenfolge():
@@ -60,7 +60,7 @@ def t_max4_ueberlauf_und_reihenfolge():
 def t_endogen_ohne_nutzertext():
     o = v.derive("", "implementiere den parser", G0, goal_id="g1")
     assert o["turn_origin"] == "endogenous" and o["selected_classes"] == ["code"] and o["goal_present"] and o["goal_id"] == "g1"
-    o = v.derive("hallo", "implementiere den parser", G0)  # Nutzertext primaer, Ziel nur als Z-Evidenz
+    o = v.derive("hallo", "implementiere den parser", G0)  # User text primary, target only as Z-evidence
     assert o["turn_origin"] == "user" and o["abstain"] and o["goal_evidence_by_class"]["code"] == "E3"
 
 
@@ -68,7 +68,7 @@ def t_zielsprache():
     assert v.target_language("antworte auf englisch bitte")[:2] == ("en", "explicit")
     assert v.target_language("das ist nicht so einfach wie ich dachte")[:2] == ("de", "inferred")
     assert v.target_language("ok") == (None, "unknown", 0.0)
-    assert "de" not in v.CLASSES  # kein Wettbewerber
+    assert "de" not in v.CLASSES  # no competitor
 
 
 if __name__ == "__main__":

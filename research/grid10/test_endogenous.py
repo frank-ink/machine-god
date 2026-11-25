@@ -21,7 +21,7 @@ def _db(goal_open=False):
     return c
 
 
-def t_puls_100_takte_keine_doppelverarbeitung():
+def t_pulse_100_cycles_no_double_processing():
     c, total = _db(), 0
     for i in range(100):
         now = (1000 + i) * B + 10
@@ -31,13 +31,13 @@ def t_puls_100_takte_keine_doppelverarbeitung():
     assert rows[0] == rows[1] == rows[2] and total == rows[0] and 90 <= rows[0] <= 100, (rows, total)
 
 
-def t_nachholen_gedeckelt():
+def t_catch_up_capped():
     c = _db()
     E.step(c, 1000 * B + 1)
-    assert E.step(c, 5000 * B + 1) == E.MAX_CATCHUP  # lange Pause: nur begrenzt nachgeholt
+    assert E.step(c, 5000 * B + 1) == E.MAX_CATCHUP  # long pause: only limited catch-up
 
 
-def t_kill_und_schalter():
+def t_kill_and_switch():
     c = _db()
     c.execute("insert into star_konfig values('frank3.endo.mode','off')")
     assert E.step(c, 1000 * B) == 0
@@ -47,7 +47,7 @@ def t_kill_und_schalter():
     assert c.execute("select count(*) from sqlite_master where name='f3_endo_puls_log'").fetchone() == (0,)
 
 
-def t_befunde_haben_aufloesbare_evidenz_und_zustaende_unterscheiden_sich():
+def t_findings_have_resolvable_evidence_and_states_differ():
     c = _db()
     c.execute("insert into f3_class_demand_log values(1, 1.0, 'pending')")  # uralt, unbewertet
     c.execute("insert into f3_class_demand_v2_log values(1,1)")
@@ -60,7 +60,7 @@ def t_befunde_haben_aufloesbare_evidenz_und_zustaende_unterscheiden_sich():
     for kind, ref in c.execute("select kind, evidence_ref from f3_endo_befund"):
         ok, n = E.resolve(c, json.loads(ref))
         assert ok and n >= 0 and kind in ("gap", "contradiction")
-    c2 = _db(goal_open=True)  # anderer Zustand -> anderer Befundsatz
+    c2 = _db(goal_open=True)  # different state -> different finding statement
     E.step(c2, now)
     E.step(c2, now + B)
     assert {r[0] for r in c2.execute("select key from f3_endo_befund")} == set()
@@ -69,7 +69,7 @@ def t_befunde_haben_aufloesbare_evidenz_und_zustaende_unterscheiden_sich():
     assert E.resolve(c, ref)[0] is False
 
 
-def t_gate_durchsichtig_nur_mit_genug_daten():
+def t_gate_transparent_only_with_enough_data():
     c = _db(goal_open=True)
     for b in range(20):
         c.execute("insert into f3_retina_thal_log values(?,?,?,?)", (b, 3, '["fokus_app"]', "[]"))
@@ -79,7 +79,7 @@ def t_gate_durchsichtig_nur_mit_genug_daten():
     assert "gate_transparent" not in {f["key"] for f in E.observe(c, 1e9)}
 
 
-def t_schreibt_keine_fremden_tabellen():
+def t_writes_no_foreign_tables():
     c = _db()
     before = {r[0] for r in c.execute("select name from sqlite_master where type='table'")}
     E.step(c, 1000 * B + 5)
@@ -88,7 +88,7 @@ def t_schreibt_keine_fremden_tabellen():
     assert new <= {"f3_endo_puls_log", "f3_endo_befund", "sqlite_sequence"} and {"f3_endo_puls_log", "f3_endo_befund"} <= new, new
 
 
-def t_evidenz_ist_unveraenderlicher_schnappschuss():
+def t_evidence_is_immutable_snapshot():
     """Append-only ledger: new lines must not invalidate an earlier finding (otherwise goals die on every addition)."""
     c = _db()
     c.execute("create table if not exists f3_class_demand_v2_log(id integer primary key, abstain integer)")

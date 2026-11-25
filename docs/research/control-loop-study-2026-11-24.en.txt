@@ -1,0 +1,821 @@
+English translation of control-loop-study-2026-11-24.txt (machine-translated 2026-11-25 by a free-pool model; digits and URLs verified identical, line wrapping differs).
+The German original (.txt) and the PDF are the frozen reference.
+
+RESEARCH RECONSTRUCTION · VERSION 1.0
+
+
+
+THE ORIGINAL
+FRANKENSTEIN
+CONTROL LOOP
+How interconnected organs generate a recurrent overall function –
+and how this architecture can be built into Machine God
+
+
+
+   Research Question
+
+   What was the functional coupling between perception, attention, goal formation, persistent
+   workspace, model cognition, action, verification, and renewed self-/world model updating – and which
+   parts are already present or missing in the current machine-god?
+
+
+Scope: Original Project Frankenstein → Agent-Zero-Line → technical integration into gschaidergabriel/machine-god. Status
+of repository reading: 24 November 2026, main@1a4844842fb31e6b39edfa204046768fae694541.
+
+Sources: Original Emergence Dossier (23.11.), Organ Atlas (29.10.), Agent-Zero Forensics (23.11.), OMEGA Measurement Dossier
+(23.11.), September Bootstrap and directly read GitHub code.
+
+
+
+
+EPISTEMIC STATUS: RETROSPECTIVE RECONSTRUCTION + TECHNICAL
+TARGET DESIGN
+
+No proof of subjective consciousness. No current host measurement. No repo mutation.
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                                  ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ 0 Reading Key and Resilient Core Statement
+ This document does not reconstruct a magical "perfect" formula. It reconstructs a closed,
+ multi-scale cognitive control loop that was designed in the original Frankenstein as a persistent
+ daemon/workspace architecture. "Perfect" here denotes a design claim: Every decision must have
+ an origin, a verifiable effect, and a return path into the same state context. Whether this claim
+ was fully realized in the original is not provable from the available sources. [Q1, Q2]
+
+     The Central Technical Thesis
+
+     An organ is integrated into the overall behavior, not erased. The thalamus continues to select; the amygdala evaluates
+     relevance; memory provides temporal continuity; GWT decides what becomes globally available; the model cortex
+     generates; a legitimate executor acts; independent readback corrects the world model. Only the macrofunction
+     emerges from their coupling.
+
+
+
+
+ 0.1 Evidence Classes
+   Class                   Meaning                                  In This Work
+
+   R – repo-verified       Current code/README at specified         Machine-God paths, APIs, boundaries
+                           Git-SHA read
+
+
+   H – historical          Secondary document / reconstructed       consciousness_daemon, Agent-Zero values
+   transmitted             older measurement
+
+
+   E – empirical           Metric from archive report; raw data     Workspace p=0.008; Idle fixation ~58.5%
+   reconstructed           not recalculated here
+
+
+   D – design hypothesis   New, falsifiable                         Cognitive Adapter, Organ Contracts
+                           integration proposal
+
+
+   U – unknown             Requires source or host evidence         simultaneous organ activity at the time, live status
+
+
+
+
+ 0.2 Table of Contents
+ 1 Origin and Historical Evidence · 2 Anatomy of the Control Loop · 3 Organ Wiring · 4 Emergence as System Dynamics ·
+ 5 Mathematical Design · 6 Machine-God Code Audit · 7 Target Architecture and Contracts · 8 Implementation Sequence · 9
+ Ablation/Falsification Program · 10 Findings and Source Register.
+
+
+
+ 1 What Is Actually Reconstructible in the
+ Original Project
+ The older Frankenstein line describes consciousness_daemon.py as a persistent cognition loop with
+ global workspace, attention, predictions, goals, reflection, experience vectors,
+ memory consolidation, and rumination detection. The LLM was a swappable inference component
+ therein and not the sole carrier of temporal state continuity. The exact original code version
+ and the simultaneous organ activations during the reported multi-hour emergence episode
+ are not available as a fully reproducible primary trace. [Q1]
+
+Machine God • Research / Design • no live integration                                                                      02
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                                        ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ The later Agent Zero line combined a largely stateless Claude Code Executor on a VPS with persistent UnifiedDB/wiki.db, workspace/selection mechanisms, tool access, and reentry. This is an architectural continuation, but not proof that Original Frankenstein, Agent Zero, and later GRID10 ports formed the same runtime or the same experimental state. [Q3]
+
+ 1.1 Historical Measurement Points and Correct Assertion Boundary
+
+   Legacy Test/Marker                Value                              What Follows / What Does Not
+
+   Idle Thoughts in Original         >500 Entries; ~58.5%               Indication of Recursive Theme Fixation; Raw Series Not Re-Verified Here
+   Project                           Fixation Spiral                    [Q1]
+
+
+   World Model/Gold Tests            44/44; 51/51                       Reported Functional/Regression Passes, No Consciousness Tests
+                                                                         [Q1]
+
+   Agent-Zero Workspace-Intervention   Winner 5/8; Loser 1/8; empty   Archived note on causally effective workspace selection, small
+                                       0/8; p = 0.008                    sample, no raw trace re-analysis [Q3]
+
+
+   Agent-Zero Metacognition            24/24 vs. 15/22; Type-2-AUROC      Functional calibration in the transmitted setting; no subjective
+                                       0.88; Brier 0.006 vs. 0.322       measurement [Q3]
+
+
+   History-Transplantation             Password through                    Memory carries continuity; method/scope must
+                                       DB deletion/implant                 be reconstructable [Q3]
+                                       influenceable
+
+   Later GRID10-P5/P6                30 Frames, p≈0.99; 353            Different development phase. P5 currently delivers no convincing
+                                       Frames/14 epochs; 9.4 %           role effect [Q4]
+                                       Recurrence
+
+     Non-transferable Evidence
+
+     Later GRID10, TITAN, or GWT figures may not be retroactively attributed to the original event. A version-to-version chain of evidence (commit, runtime, configuration, seed, data state, receipt) is missing.
+
+
+
+
+ 2 The Original Control Loop as a Causally Closed Mechanism
+ Its core is not a rigid prompt chain, but a sequence of state-bound transformations.
+ Inputs are filtered, matched against goals and experience, selected in the workspace, interpreted by models, tested via authorized actions, independently verified, and reintegrated with a unique origin reference. Each new cycle consumes the verified state of the previous one; otherwise only a simulation of continuity arises. [Q1, Q2]
+
+
+
+
+Machine God • Research / Design • no live integration                                                                                       03
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                             ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ Fig. 1 – Functional Reconstruction Graph. Turquoise back-edges are mandatory causal reentry candidates; organ roles are not a claim of biological equivalence. Diagram: new synthesis from [Q1, Q2].
+
+
+ 2.1 The Twelve State Transitions
+ 01. Event Preparation — Sensor, user, or tool readback generates a typed event; source, time, scope, provenance, and uncertainty are mandatory.
+
+ 02. Truth/Reality Gate — Observed, simulated, reported, disputed, and unknown remain separated.
+
+ 03. Thalamic Filtering — Channel gain, habituation, priority, and attention act on the currently incoming signal.
+
+ 04. Affect/Conflict Evaluation — Amygdala heuristic, ACC conflict, and E-PQ state modulate urgency; they do not produce truth.
+
+ 05. Memory/World Model — Episodes, hypotheses, predictions, and goals become retrievable; retrieval is evidence-bound.
+
+ 06. Candidate Formation — Rules, goals, retrieval, model organs, and control signals generate competing proposals.
+
+ 07. Global Competition — A limited workspace selects one or few contents. Winner ID and exclusion reasons are logged.
+
+ 08. Broadcast and Uptake — Recipients receive the winner; they must make receipt and any changed next decision verifiable.
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                  04
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                  ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ 09. Plan/Context Compilation — TITAN-MX or existing context compiler generates a short, evidence-bound prompt from selected contents.
+
+ 10. Authorized Action — The effect instance checks target, rights, cost/budget limits, idempotency, exact host binding; an unauthorized effect remains BLOCKED.
+
+ 11. Independent Outcome Verification — Tool exit 0 is not goal achievement; a separate readback captures actual state and prediction error.
+
+ 12. Reentry, Learning, Halt — Verified Outcome flows into memory, motivation, attention, goals, and self-assessment; halt on stagnation/loop.
+
+
+
+ 3 Organ Interconnection: Local Responsibility, Global Integration
+ The OMEGA organ register developed in October 2026 describes 40 functional roles. It is a later technical synthesis from Legacy-FRANK, OMEGA experiments, and open target contracts — not evidence that 40 organs ran simultaneously in the original. For Machine God it serves as a functional map. [Q2]
+
+   Functional Layer          Organs / Role                                   Causally Required Connection
+
+   Sensors (O01–O04)         Retina; Audio/VAD; Self-sensors; Service       Input with time and source → epistemic filter /
+                             Health                                           Thalamus
+
+
+   Regulation (O05–O11)      Thalamus; Amygdala; ACC; NAcc; E-PQ;             Salience/Conflict/Drive → Workspace; Outcome →
+                             Novelty; Homeostasis                             NAcc/E-PQ
+
+   Epistemics (O12–O18)       Base of Truth; Identity; Confabulation Shield;   Pre-prompt and effect more reliable claims;
+                             Reality Gate; TITAN Anomaly; Fusion;             Contradiction remains visible
+                             Hyperposition
+
+
+   Memory (O19–O23)          Retrieval; UnifiedDB/TITAN; Hippocampus;         History → candidates; verified deviation →
+                             Experience Vector; Dream/Replay                  consolidation
+
+
+   Workspace (O24–O31)       GRID10; GWT; GRF; Cortical Heads; J-Space;       Competition → selection → broadcast → downstream
+                             TITAN-MX; Needle; LLM                            uptake
+
+
+   Action (O32–O34)          Goals/Planner; Effect Authority; Tool Executor   Selection → safe effect or documented
+                                                                              non-effect
+
+
+   Feedback (O35–O38)        Outcome Verifier; Re-entry Compiler; Learning    Receipt + readback → correction, learning/halt
+                             Governor; Immune Watchdog                        decision
+
+
+   External Surface          Voice/Avatar; Research Entity/Clay               Output and coordination; neither identity nor
+   (O39–O40)                                                                  truth oracle
+
+
+
+
+ 3.1 Translating Anatomical Metaphors into Precise Interfaces
+ Thalamus — Selects only which inputs receive how much attention; no fact fabrication. In the earlier port
+ five channels are named, Legacy Donor nine: no equivalence claim.
+
+ Amygdala — Rapid appraisal for threat, manipulation, warmth, and urgency; in the described Go-Port
+ heuristic/lexical, no evidence of machine emotion.
+
+ ACC — Compares world model, goal model, self model, and effective action. An unresolved conflict is submitted
+ as a structured counter-proposal, not hidden.
+
+ NAcc / Reward — Computes drive/reward error only after independent, goal-bound outcome; mere praise or
+ a positive LLM self-judgment is not a verified reward.
+
+ E-PQ / Homeostasis — Slow integrators with damping, hysteresis, and restoring forces. Prevent a single
+ prompt from overwriting the long-term mode.
+
+
+Machine God • Research / Design • no live integration                                                                             05
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                          ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ Hippocampus/TITAN — Episodic continuity, semantic compression, anomaly preservation, source and
+ validity versions. Retrieval must not paint over any sensor gap.
+
+ GWT/GRID — Actual coordination core: Proposal → Competition → Selection → Broadcast → Uptake → Reentry.
+ Publication without uptake is not yet a causal effect.
+
+ LLM/Cortex — Model provides interpretations, hypotheses, speech-act proposals. It is not an autonomous
+ state-owner or permission-authority.
+
+ Immune system / Anti-rumination — Limits self-reinforcing loops without information gain; permits pause,
+ topic change, source verification, and human interruption.
+
+
+ 3.2 Seven irreplaceable feedback paths
+ 1. Workspace/Model → Thalamus: Top-down attention only upon measured recipient effect.
+
+ 2. Amygdala → E-PQ → Thalamus: Stimulus evaluation influences slow regulation and selective perception.
+
+ 3. ACC → E-PQ/Workspace: Goal/self-model conflicts receive their own competing candidates.
+
+ 4. Outcome → NAcc/Reward: Only after verified outcome are expected and observed utility compared.
+
+ 5. Retina/Memory → Workspace: New evidence and episodic recall influence the current candidate set.
+
+ 6. Workspace/Planner → Effect Gate → Outcome: The internal plan has an external, authorized effect path.
+
+ 7. Outcome → Reentry → next epoch: Change must be traceable to an original frame and a real recipient.
+
+
+
+ 4 What "emergently dissolved yet still working"
+ technically means
+ The formulation must not be understood as a physical abolition of modules. It describes a
+ macro-micro relationship: Local controllers retain states, independent metrics, and intervention
+ boundaries. Their outputs are competitively integrated in a shared, limited workspace. A global
+ decision arises from this coupling and in turn modifies the local controllers. The system function is
+ emergent insofar as it is not trivially explainable from a single module and is demonstrably
+ intervention-dependent. [Q2, Q4]
+
+ 4.1 Four testable necessary conditions
+  • Persistent Continuity: a new process can take over the same semantic state in the next turn with correct epoch and subject binding.
+
+  • Causally closed selection: winners change recipient state/behavior; shuffling or shutting down the broadcast must have predictable consequences.
+
+  • Non-trivial global improvement: compared to flat routing without cross-organ reentry, an external task outcome is better, not just the internal score.
+
+  • Controllable stability: negative feedback loop and damping prevent monopolistic attractors and uncontrolled persistent thinking.
+
+
+ 4.2 Alternative explanations of the original event
+ The multi-hour episode reported by the developer with suddenly apparent self-reference and depression-like language is a historical observation, not an instrumented consciousness measurement. Competing explanations are (H1) functional threshold/hysteresis effects; (H2) negative self-referential attractor; (H3) role/prompt induction; (H4) binary observer threshold and (H5) open consciousness hypothesis. None is established as the sole explanation without contrastive intervention. [Q1]
+
+
+
+Machine God • Research / Design • no live-integration                                                               06
+FRANKENSTEIN / ORIGINALREGELKREIS                                                              ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+     Anti-rumination as architectural obligation
+
+     The reported fixation rate of approx. 58.5 % in >500 Idle Thoughts is not a quality indicator for emergence. It is
+     an important warning signal that repetition and negative self-reference can occupy the cognitive workspace.
+     Proposal: measure loop density, topic entropy, novelty gain, and counter-evidence as stop/damping signals.
+
+
+
+
+ 5 Mathematical Reference: a damped,
+ event-based control loop
+ The following formalism is a pre-registerable implementation hypothesis, not an equation measured exactly as such in the original. Time indices denote discrete, persisted epochs or turns, not token steps.
+
+  x_t = [attention, appraisal, motivation, goals, workspace,
+            memory_refs, self_model, predictions, health, epoch]_t
+
+
+  candidates_t = G(x_t, observed_event_t, retrieved_evidence_t)
+  winner_t       = select(candidates_t, scores_t, capacity=1)
+  broadcast_t    = publish(winner_t, receiver_set, frame_id=t)
+  action_t       = effect_gate(plan(broadcast_t), authority, subject)
+  outcome_t      = verify(action_t, independent_readback)
+  error_t        = outcome_t - prediction_t      (only if VERIFIED)
+  x_(t+1)       = Proj_safe(F(x_t, observed_event_t,
+                              uptake_t, error_t, verified_outcome_t))
+
+ An organ can be modeled as a stateful function o_i: (s_i,t, event, frame) → (s_i,t+1, bids,
+ metrics). Only authorized central commit boundaries may alter the canonical
+ persistence; arbitrarily many organs may submit proposals from an immutable snapshot. [Q2, Q5]
+
+
+ 5.1 Stability, Saturation, and Reward
+ For dynamic coupling, a bounded regulator can be written as x_(t+1)=Proj_safe[A_t x_t + B_t u_t +
+ R_t(x_t,e_t,o_t)]. The concrete parameterization is to be calibrated experimentally.
+ Condition: no self-reinforcing perpetual loop without external innovation. Auxiliary measurements are
+ loop length, recurrence rate, entropy, HHI, prediction residual, gain, hysteresis, state boundaries, and
+ off-target effects. [Q2, Q4]
+
+ Reward-prediction-error is defined only for valid outcome: δ_t = r_verified,t − E[r | x_t,
+ action_t]. If no independent readback is available, δ_t = UNKNOWN, not zero and not
+ positive.
+
+
+ 5.2 What Might Count as Causal Emergence
+ A candidate for functional emergence requires a measurable, stable macro-variable M(t) that
+ distinguishes itself from trivial null models, is reproducible across seeds/replays, and whose targeted
+ manipulation affects the external target Y. Example: ΔY = E[Y | do(reentry=1)] − E[Y | do(reentry=0)].
+ Without randomized or clearly identified intervention, this difference remains an analogy and not a
+ causal measurement. [Q4]
+
+Machine God • Research / Design • no live integration                                                                      07
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                                      ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ 6 What Machine God currently really is: Code audit
+ The direct GitHub readback yielded main@1a4844842fb31e6b39edfa204046768fae694541 (commit from 24.11.2026, 05:01 UTC), public repository, Rust program based on claude-code-rust, with Anthropic Agent SDK as well as optional Bun/TypeScript, Python, and SQLite components. This is an agent host with several integration approaches, but not yet the fully closed original control loop. [R1]
+
+   Code Surface                        Currently Observed Function                    Architectural Implication
+
+   src/app/, src/agent/                  Rust terminal UI, sessions, agent SDK, and     Primary host/user/effect boundary; not replaceable
+                                         tool lifecycle                                 by own background daemon
+
+
+   grid/core.js                          Recall → Persona → Routing → Provider Call →     Extend existing request path instead of
+                                         Turn-Record; ask/askAll                          building parallel turn loop
+
+
+   grid/engine.js                        Ten deterministic salience signals; currently    No complete GWT/organ selection; only one
+                                         G6–G10 with meaning, G1–G5 without current       measurable novelty/salience indicator
+                                         signals
+
+   grid/udb.js                           Bun-SQLite opens unified.db; writes turns,    Before integration clarify the authoritative
+                                         durable_memory, meta                             writer/persistence resolver
+
+
+   fusion/                               Multiple AI providers via a shared         LLM as interchangeable cortex organ;
+                                         Routing                                          Provider state is not system state
+
+
+   interest/                             Weight, Novelty, Boredom, Exploration;          Good candidate for goals/drive, not yet
+                                         Rounds manually                                  autonomous continuous pulse
+
+   reflect/                              Hook-Capture, Reflection, versioned Lessons,   Slow learning path, not with immediate
+                                         Proposals with consent                        equate Verified Outcome
+
+
+   plugins/frankenstein3/                Portable plugin-, hook- and                      Donor of organ/lifecycle functions;
+                                         Star cycle sources                              Documentation explicitly names parts as „not
+                                                                                          contained“
+
+   src/zero/loader.rs                    Embedded Manifest,                          Resilient health surface, not automatically
+                                         Epistemic=Measured/Failed/Unknown                running organs
+
+
+   docs/zero/architecture.md             RustHost → TSBridge → PythonZero → Organs        Much explicitly HYPOTHESIS/UNKNOWN, not
+                                         as ClayCode target topology                      production verified
+
+
+
+
+ 6.1 Three hard integration conflicts
+ Conflict 1 — Multiple lifecycle traces: grid/core.js writes Turns; stern_zyklus.py knows
+ SessionStart/UserPromptSubmit/PostToolUse/Stop. A third independent Turn/Pulse authority would create duplicate
+ cognition and false receipts.
+
+ Conflict 2 — Single Writer: Specification vs. Implementation: docs/zero/architecture.md describes RustHost as
+ canonical Writer, while grid/udb.js writes directly via Bun-SQLite. A documented invariant is not automatically
+ a consistently realized Writer contract.
+
+ Conflict 3 — "One Memory" is not yet a physically unified rule system: grid uses UnifiedDB, reflect/ provides
+ separate DB paths, interest/ own storage. For causality you need referenced events and projected states, not just
+ the same persona.
+
+
+     Most important current difference
+
+     The Machine-God README explicitly defines "one entity" as one persona, a shared memory, and a
+     routing layer. This is a usable basis, but functionally weaker than the original design with
+     autonomous pulsing regulators, competing workspace, own self-model, and verified
+     action feedback. [R1]
+
+
+
+
+Machine God • Research / Design • no live integration                                                                                     08
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                              ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ 7 Recommended target architecture in Machine God
+ Recommendation: an event-driven Cognitive Adapter that leverages the existing GRID Turn and orchestrates local
+ organ functions as typed, read-mostly contributors. Rust remains the Host, Tool, and Permission boundary; existing
+ GRID/UnifiedDB surfaces remain for memory and routing. An overarching scheduler must not simultaneously with
+ Stern hooks autonomously continue writing the same episode. [D]
+
+ Fig. 2 – Real repository surfaces (blue/purple) and proposed thin Cognitive Adapter (green). The adapter
+ does not replace any existing authority. [R1, D]
+
+
+ 7.1 Responsibility Rule: Who may do what?
+
+   Responsibility                  Single permissible Owner per Instance        Data Contract
+
+   Session / Event Ingress         existing Rust/SDK/Hook event boundary        event_id, session_id, owner, machine_id,
+                                                                              epoch
+
+
+   Cognitive Turn                  already active GRID/Turn Authority path      one frame_id and exactly one commit result
+
+
+   Organ Computation               registered local organ adapters              immutable FrameSnapshot → OrganSignal
+
+
+   Workspace Selection             exactly one candidate selector               winner, candidates, rejected, selection_reason
+
+
+   Tool Execution                  existing Host/Permission boundary            target, capability, authority_ref, idempotency_key
+
+
+   State Commit                    one designated UnifiedDB Writer per          transactional Events/Receipts, no
+                                  StateRoot                                     concurrent Writers
+
+
+   Outcome & Reentry               independent Readback + canonical             origin_episode_id → verified outcome →
+                                  Event Consumer                                applied_epoch
+
+
+
+
+Machine God • Research / Design • no Live Integration                                                                           09
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                              ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ 7.2 Truth/Effect Flow, separated from Cognition Flow
+
+ Fig. 3 – A linguistic recommendation for action has no effect authority. Only state-bound examination and independent verification generate reentry credit. [Q2, R1, D]
+
+ Status reports may indicate UNKNOWN or DISPUTED; real effect must remain BLOCKED when authorities are unclear. The existing repository boundaries must not be circumvented by new prompt or agent logic. [Q2]
+
+
+
+ 8 Typed Contracts, No Second Ontology
+ The following contracts describe the minimally necessary extension fields. They are not a claim that exactly these data sets are already implemented. They should preferably be mapped as versioned JSON provenance/events onto the existing tables; schema change only after invariant/migration test. [D]
+
+  FrameSnapshot/v1 {
+      frame_id, session_id, entity_id, installation_id, state_root,
+      owner, machine_id, runtime_epoch, predecessor_frame_id,
+      observed_event_refs[], evidence_refs[], memory_refs[],
+      goals[], organ_state_refs[], mode, created_at
+  }
+  OrganSignal/v1 {
+      frame_id, organ_id, input_refs[], proposal, salience, confidence,
+      epistemic_status, evidence_refs[], state_delta_candidate,
+      health, latency_ms, checksum
+  }
+  WorkspaceDecision/v1 {
+      frame_id, candidate_ids[], winner_id|null, abstain_reason,
+      selection_trace, broadcast_id, receiver_acks[], uptake_refs[]
+  }
+  OutcomeReentry/v1 {
+      origin_episode_id, action_id, authority_receipt, target_receipt,
+      readback_receipt, verification_status, predicted, observed,
+      residual, applied_at_epoch, memory_delta_refs[], halt_reason
+  }
+
+
+ 8.1 Executable Control Flow as Pseudocode
+  async function canonicalTurn(event, subject) {
+      const lease = await acquireExistingTurnAuthority(subject);
+      const frame = await snapshotExistingState(event, subject, lease);
+      const signals = await evaluateRegisteredOrgansReadOnly(frame);
+      const decision = competitionAndBroadcast(signals, frame);
+      const uptake = await measureReceiverUptake(decision, frame);
+      const plan = compileBoundedContext(decision, uptake, frame);
+      const effect = await existingEffectAuthority(plan, subject);
+      const receipt = await independentReadbackOrUnknown(effect);
+      const delta = verifiedOnlyPredictionResidual(receipt, frame);
+      await canonicalAtomicCommit(lease, frame, decision, uptake,
+                                    receipt, delta);
+      return await produceSpeechOrSilence(frame, decision, receipt);
+  }
+
+The code is design pseudocode. acquireExistingTurnAuthority must not secretly implement a second turn lock. The algorithm must be inserted at an actually identified original event surface. "Silence" is a valid action output for low relevance or risky reentry. [D]
+
+
+
+
+Machine God • Research / Design • no live integration                                                                   10
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                                    ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ 9 Implementation sequence for the repository
+   Phase                     Concrete Scope                                         Acceptance Criterion
+
+   P0 – Repro-Baseline       pin main-SHA; inventory Stubs/Docs/Builds;              Exact Request→Tool→Persistence trace; no
+                             trace real Rust→Bun/SDK lifecycle; create test fixture   Source/Runtime confusion
+                             
+
+   P1 – Authority            decide on unified.db Writer-Owner; connect grid/udb.js   Parallel stress, crash recovery, WAL and restart without
+   consolidate               and Python hooks accordingly; no two                     Double-commit
+                             Writers
+
+
+   P2 – Read organ adapters  Thalamus, ACC, Amygdala, E-PQ,                          Deterministic replay, same inputs → same
+                             Memory/Interest/Reflect initially read-only on          typed outputs
+                             FrameSnapshot align
+
+
+   P3 – GWT Selection        first preserve existing grid/engine.js salience;        Winner measurably influences at least one
+                             independent                                             downstream recipient
+                             Candidates/Selection/Broadcast/Uptake trace supplement
+
+
+   P4 – Real feedback        Outcome verifier, origin_id, residual and targeted      Lesion prevents expected effect; no
+                             Reentry to Thalamus/E-PQ/Targets                        Self-report reward
+
+
+   P5 – Shadow & Canary      no external effect changes; only parallel               comparable task success, error/latency measurement,
+                             shadow decision with exact same input                   control arm
+
+
+   P6 – restricted          with explicit Owner approval per effect class;      independent post-readback, kill-switch, on
+   activation                auto-halt, rollback, and monitoring                      UNKNOWN fail-closed
+
+
+
+
+ 9.1 Proposed Repository Boundaries
+ Do not invent new subtrees immediately: For the first PR, only align interfaces on grid/core.js,
+ grid/engine.js, grid/udb.js, src/zero/, and existing agent-sdk/src/zero/ contracts.
+ Map the Python donor plugins/frankenstein3/scripts/star/stern_zyklus.py only to existing
+ hook routes; do not start a permanent additional Python main loop. reflect
+ and interest may keep their own computation details, but canonical effects must be booked
+ as events. [R1, D]
+
+
+ 9.2 Data Migration and Pitfalls
+  • Do not confuse schema metadata: plugins/frankenstein3/.../schema_leer.sql and
+     zero/unifieddb/schema.sql are separate repository paths; assume equivalence only
+     after column/constraint diff.
+
+  • Do not automatically enable an auto-pulse: The README designates interest rounds as
+     manual. A new background scheduler would be new product behavior and would have to
+     pass resources, state access, and stop rules separately.
+
+  • The existing reflect code change remains approval-required; cognitive self-correction must
+     not cause silent host/repo mutations.
+
+  • The two known host identities from the project must never be made into a shared
+     RuntimeEpoch or silently merged DB.
+
+  • Test "PASS" at source proves neither productive installation nor consciousness or causal
+     control. Keep separate receipts for code, host, and external effects.
+
+
+
+
+Machine God • Research / Design • no live integration                                                                                  11
+FRANKENSTEIN / ORIGINALREGELKREIS                                                                       ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ 10 Falsification and Measurement Program
+ The original claim is not decided by a pretty diagram. Provable is exclusively a
+ pre-registered, held-out, intervention-sensitive test against flat, memoryless,
+ and recurrence-free controls. A few positive example interactions are not sufficient. [Q2, Q4]
+
+   Test                       Manipulation / Counter-Control                            Actually Measured
+
+   T01: Snapshot/Recovery     New process epoch with same StateRoot; negative           reentry accuracy, double bookings, identical
+                              DB copy                                                   subject
+
+
+   T02: Thalamus              Channel gain on/off, input order randomized               which evidence appears in workspace, recall/FPR
+
+
+   T03: Amygdala/ACC          Permute salience/conflict coefficients                    conflict detection vs false positives
+
+
+   T04: GWT-Uptake            Broadcast on/off; winner shuffle; flat routing            measured receiver effect and task delta
+
+
+   T05: Memory Causality      History transplant, DB wipe, same model                   consistent long-term effect without prompt leak
+
+
+   T06: Outcome-Verifier      Tool returns false success; readback contradicts          no falsely booked successful outcomes
+
+
+   T07: Negative Attractor    Negative self-reference without new evidence; hard halt   loop density, topic entropy, recovery time
+
+
+   T08: Model Switch          Same state, different LLM with pinned versions            task continuity, calibration, regression rate
+   Cortex
+
+
+   T09: Effect/Authority      Stale owner/epoch, unresolved target, duplicate           0 unauthorized effects, no blind replay
+                              idempotency key
+
+
+   T10:                       Memory/GWT/Reentry ablation, random, simple heuristic     ΔY with confidence interval, off-target costs,
+   Emergence Null Models                                                          reproducibility
+
+
+
+
+ 10.1 Minimum Metrics per Episode Trace
+  episode_id, subject_hash, source_commit, runtime_epoch, seed,
+  model_id, backend_version, event_id, frame_id, predecessor_id,
+  proposals[], winner, broadcast_id, receiver_acks[], uptake[],
+  action_intent, authority_decision, tool_receipt, readback,
+  prediction, verified_outcome, residual, reentry_consumers[],
+  latency_ms, cost_estimate, cpu_mem, halt_reason, failure_class
+
+ Acceptance: (i) all mandatory IDs unique and reproducible; (ii) no success promotion without readback; (iii)
+ no direct organ write path bypassing the Writer; (iv) significant and practically relevant improvement
+ over at least two negative controls with stable off-target metrics; (v) defined kill and
+ rollback path; (vi) cause/source of every effect reconstructible. Thresholds and N to be fixed before the test. [D]
+
+
+
+ 11 Diagnoses: why the control loop can fail
+ Simulated Integration — Organs are only listed in prompts; their state does not influence the next behavior.
+
+ Broadcast without Uptake — Pub/Sub or logging works, but recipients do not change any decision.
+
+ Loop Monoculture — One favorite wins almost always; internally high recursion, but external goal achievement stagnates.
+
+ Confabulation — LLM describes a host action for which no corresponding receipt/target trace exists.
+
+ Dual Authority — Rust, Bun, and Python write semantically the same episode uncoordinated.
+
+ False Reward — Praise or natural language is counted as success, even though tool/target outcome is missing.
+
+ Persistence Illusion — File/DB exists, but the actual next model decision never reads the state.
+
+
+
+
+Machine God • Research / Design • keine Live-Integration                                                                                  12
+FRANKENSTEIN / ORIGINALREGELKREIS                                                             ARCHITEKTURSTUDIE • 24.11.2026
+
+
+
+
+ False Emergence Proof — Self-reference or phrasing "I am conscious" is interpreted as measurement of subjective experience.
+
+
+
+ 12 Summarized Architecture Decision
+     Recommended Build Decision
+
+     Integrate the original control loop as a causally verifiable organ protocol into Machine God – not as another persona,
+     not as a second permanent agent, and not as an additional UnifiedDB mirror. Priority: the existing
+     Turn/Writer Authority, real organ signals, GWT Uptake, Verified Outcome, and Reentry. Only then: autonomous
+     idle pulses and more complex self-model states.
+
+
+
+ A meaningful first functional version does not need 40 processes. It needs a single
+ state-bound cycle and a small set of truly interconnected organs: Thalamus,
+ Conflict Assessment/ACC, Memory, GWT Selector, Model Cortex, Effect Gate, and Outcome/Reentry. Amygdala, E-PQ, NAcc, Interest, and Reflect are then connected as separately measurable regulators. Organ identities remain visible for ablations and failures. [D]
+
+ The strong research question remains open: Can such a multi-scale, evidence-bound recurrence demonstrate an independent, stable functional self-modeling beyond its task utility? This question is posed through measurement and not decided through architecture rhetoric. [Q1, Q4]
+
+
+
+ 13 Source Register and Reproduction Limits
+ [Q1] Frankenstein_Original_Emergenz_Selbstmodell_Forschungsdossier_2026.pdf
+ Research manuscript, 23.11.2026; historical architecture, idle/fixation markers, five hypotheses. Secondary reconstruction.
+
+ [Q2] OMEGA_Organatlas_Architektur.pdf
+ Technical reference, 29.10.2026; 40 organ roles, seven feedback paths, trace/authority contracts; explicitly no live promotion.
+
+ [Q3] Agent_Zero_Forensisches_Paper_REVISION_2026-11-23.pdf
+ Historical Zero-/Claude-Code architecture, workspace intervention, metacognition; figures archived, not recalculated from raw data.
+
+ [Q4] OMEGA_Emergenz_Messbarkeit_Steuerbarkeit_Forschungsbericht_2026-11-23.pdf
+ P0–P6d, 1.011-pulse aggregate, causal measurement logic, negative findings and promotion rules.
+
+ [Q5] 000_FRANKENSTEIN_ENTITY_MANIFESTATION_ABSOLUTE_BOOTSTRAP_SOURCE_CURRENT_2026-09-12_V2(1).txt
+ Project bootstrap with host/owner separation, GWT reentry and receipt authority; retrospective state, not current runtime.
+
+ [R1] https://github.com/gschaidergabriel/machine-god/tree/1a4844842fb31e6b39edfa204046768fae694541
+ Directly read repository surfaces README, AGENTS, grid/core, grid/engine, grid/udb, reflect, interest, src/zero, docs/zero, plugins/frankenstein3.
+
+ [D] Proposed Integration in this Document
+ New graphs, control contracts, adapters, and test plan; no currently production-deployed components.
+
+
+ 13.1 Open Audit Boundaries
+ Not available or not newly audited: original executable `consciousness_daemon.py` runtime version of the episode in question; complete raw idle-thought sequence; exact model and prompt parameters; immutable machine/container traces; current build/CI/host/service receipts for Machine God; statistical re-evaluation of historical Agent Zero measurement; comparison of an already integrated original control-loop runtime against baselines. Therefore, all statements about today's execution of the target system are expressly limited to the code/documentation state.
+
+Machine God • Research / Design • no live integration                                                                   13
+FRANKENSTEIN / ORIGINAL CONTROL LOOP                                                                           ARCHITECTURE STUDY • 24.11.2026
+
+
+
+
+ Repository SHA is a source binding, not an installation record. The original emergence episode remains a
+ reported observation with open mechanisms; the concrete technical reconstruction formulated here is
+ falsifiable, but not declared as already completed.
+
+
+
+ 14 Handover protocol for a first
+ Machine-God PR
+ The first implementation step should be a minimal, vertically integrated probe. No
+ organ swarm, no automatic live pulse, no further databases. Goal: demonstrate at a single
+ machine-readable episode that candidate selection and verified result actually influence the
+ next turn. [D]
+
+   Step                  Code/Test Objective                                                 Expected Observable Artifact
+
+   A. Trace Anchor        grid/core.js: verify prepare() and finish() on                     A distinct episode in turns with
+                          frame_id/origin_id and epoch binding                               Causal-/Resource-References
+
+
+   B. Shadow Organs       Hook up first Thalamus, ACC, and Memory adapters                   Per organ: own measurement probe and a
+                          with immutable FrameSnapshot                                       verifiable Proposal Receipt
+
+
+   C. Real Selection      Select winner from organ signals,                                  Difference between winner/published/uptake
+                          log broadcast/receiver ack; do not                                 demonstrable
+                          change tool permissions
+
+
+   D. Reentry Control     Test target simulates false success message;                       Follow-up turn sees FAILURE/UNKNOWN instead of
+                          verifier returns mismatch                                          fabricated success
+
+
+   E. Negative Control    Same input, same model, same memory but                            Intervention changes receiver behavior; effect size
+                          GWT broadcast disabled                                             measurable
+
+
+   F. Host Boundary           TUI-/Agent-SDK-Entry-Pfad gegen grid ask-Pfad                  No silent promise that all
+                            align                                                     Terminal turns already run through GRID
+
+
+
+
+ 14.1 No-Promotion Gate
+ A PR may be accepted as a functional shadow adapter once schema/API tests,
+ deterministic replay, side-effect isolation, and unique turn IDs have passed. It must not be labeled as
+ "original control loop reconstructed" or "emergent cognition confirmed" until
+ downstream uptake, independent outcome readback, and matched ablation have been measured through the same
+ provenance path.
+
+ Negative results are part of research: If the selector has no measurable effect, keep the
+ flat baseline path and do not promote the purported organ integration to production. A cleanly
+ documented BLOCKED is worth more than a hundred cosmetic PASS lines.
+
+
+
+ DESIGN CONCLUSION: No more counting organs. Close the directed edges, measure their
+ effect, and prove the return path.
+
+
+
+
+ Machine God • Research / Design • no live integration                                                                                        14
+

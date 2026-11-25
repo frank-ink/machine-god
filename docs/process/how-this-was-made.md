@@ -45,6 +45,9 @@ had to be repaired first (a drop-in fix, reference scripts included).
    never saw code; an AST-equality check per file and the full test suites (84 + 15 files) verified the result. Hash-pinned frozen
    artifacts were kept byte-identical (the tests caught two translations of pinned files; both were reverted). File, module and role names
    were renamed mechanically (e.g. `weltmodell` -> `world_model`, `team-pruefer` -> `team-reviewer`, `teamkanal` -> `team_channel`).
+9. **Second English pass.** 110 German test/helper names (`t_*`, `_anfrage`, `sensor_befund`, ...) were mapped by a free-pool model (collision-checked) and
+   renamed on identifier tokens only; 112 short German comments were found with a broader detector and translated; the control-loop study got an
+   English copy (`docs/research/control-loop-study-2026-11-24.en.txt`, digits and URLs verified identical). Suites after the pass: 84 + 15 files green. **[measured]**
 
 ## Incidents (kept visible on purpose)
 
@@ -65,4 +68,4 @@ had to be repaired first (a drop-in fix, reference scripts included).
 ## What is still open
 
 Shadow experiment for the pulse (throwaway database, D1-D4 as stated hypotheses); S0 prospective collection (0 windows);
-intent cortex below target (0.615 vs 0.80); WM1 advantage only retrospective; German identifiers still to be migrated.
+intent cortex below target (0.615 vs 0.80); WM1 advantage only retrospective; remaining German local variable names (turn-loop module).

@@ -44,7 +44,7 @@ def _count(conn, ref, ids=False):
 
 
 def bind(conn, goal_id, now=None):
-    """E5a-c. -> attempt_id oder None (Kill/ABSTAIN/unbekanntes Ziel). Idempotent je Auswahl."""
+    """E5a-c. -> attempt_id or None (Kill/ABSTAIN/unknown target). Idempotent per selection."""
     now = time.time() if now is None else now
     if gg.off(conn) or not goal_id:
         return None
@@ -83,7 +83,7 @@ def bind(conn, goal_id, now=None):
 
 
 def process(conn, aid, now=None):
-    """E5d-f. Idempotent: fertige Versuche bleiben unveraendert (kein doppelter Reentry)."""
+    """E5d-f. Idempotent: completed attempts remain unchanged (no duplicate reentry)."""
     now = time.time() if now is None else now
     if gg.off(conn):
         return None

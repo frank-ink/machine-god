@@ -21,7 +21,7 @@ def caps(state):
     return {"a": ("Faehigkeit A", lambda conn, now: (state["a"], {"x": state.get("x", 1)}))}
 
 
-def t_sm01_revision_nur_bei_aenderung():
+def t_sm01_revision_only_on_change():
     c = mk(); st = {"a": "VERIFIED"}
     assert sm.project(c, NOW, caps(st)) == 1 and sm.project(c, NOW + 1, caps(st)) == 0
     st["a"] = "FAILED"
@@ -30,7 +30,7 @@ def t_sm01_revision_nur_bei_aenderung():
     assert sm.project(c, NOW + 3, caps(st)) == 1  # gleiche Statusart, neue Evidenz
 
 
-def t_sm02_unveraenderlich_und_kette():
+def t_sm02_immutable_and_chain():
     c = mk(); st = {"a": "VERIFIED"}; sm.project(c, NOW, caps(st)); st["a"] = "FAILED"; sm.project(c, NOW, caps(st))
     for sql in ("update f3_self_rev set status='VERIFIED'", "delete from f3_self_rev"):
         try:
@@ -41,7 +41,7 @@ def t_sm02_unveraenderlich_und_kette():
     assert r[0][2] == "" and r[1][2] == r[0][1]
 
 
-def t_sm03_widerspruch_nur_nach_verifiziert():
+def t_sm03_contradiction_only_after_verified():
     c = mk(); st = {"a": "FAILED"}; sm.project(c, NOW, caps(st))
     assert sm.finding(c) == []  # never verified: no contradiction, only deficiency
     st["a"] = "VERIFIED"; sm.project(c, NOW + 1, caps(st)); assert sm.finding(c) == []
@@ -50,17 +50,17 @@ def t_sm03_widerspruch_nur_nach_verifiziert():
     assert len(b) == 1 and b[0]["key"] == "self_lost:a" and b[0]["ref"]["n"] == 3
     import endogenous
     assert endogenous.resolve(c, b[0]["ref"]) == (True, 3)
-    st["a"] = "VERIFIED"; sm.project(c, NOW + 3, caps(st)); assert sm.finding(c) == []  # erholt -> Befund erlischt
+    st["a"] = "VERIFIED"; sm.project(c, NOW + 3, caps(st)); assert sm.finding(c) == []  # recovers -> finding resolves
 
 
-def t_sm04_sonde_wirft_wird_unknown():
+def t_sm04_probe_throws_becomes_unknown():
     c = mk()
     def boom(conn, now): raise RuntimeError("x")
     sm.project(c, NOW, {"b": ("B", boom)})
     assert sm.history(c, "b")[0][1] == "UNKNOWN"
 
 
-def t_sm05_retina_sonde():
+def t_sm05_retina_probe():
     c = mk()
     assert sm.p_retina(c, NOW)[0] == "UNKNOWN"
     c.execute("create table f2_retina_sinne(organ_id text primary key, status text, ts real)")
@@ -72,7 +72,7 @@ def t_sm05_retina_sonde():
     assert sm.p_retina(c, NOW)[0] == "FAILED"
 
 
-def t_sm06_takt_und_prognose_und_s0():
+def t_sm06_tick_and_forecast_and_s0():
     c = mk()
     assert sm.p_takt(c, NOW)[0] == "UNKNOWN" and sm.p_prognose(c, NOW)[0] == "UNKNOWN" and sm.p_s0(c, NOW)[0] == "UNKNOWN"
     for d in wm.DDL:
@@ -91,7 +91,7 @@ def t_sm06_takt_und_prognose_und_s0():
     assert sm.p_takt(c2, NOW)[0] == "FAILED"
 
 
-def t_sm07_intent_sonde(tmp=None):
+def t_sm07_intent_probe(tmp=None):
     import tempfile
     c = mk(); p = tempfile.mktemp(suffix=".json")
     assert sm.p_intent(c, NOW, p)[0] == "UNKNOWN"
@@ -102,19 +102,19 @@ def t_sm07_intent_sonde(tmp=None):
     os.remove(p)
 
 
-def t_sm08_lokales_llm_sonde():
+def t_sm08_local_llm_probe():
     c = mk()
     assert sm.p_lokales_llm(c, NOW, "http://127.0.0.1:9/health")[0] == "FAILED"  # nichts hoert dort
 
 
-def t_sm09_selbstbild_nur_belegtes():
+def t_sm09_self_image_only_evidenced():
     c = mk(); st = {"a": "UNKNOWN"}; sm.project(c, NOW, caps(st))
     b = sm.self_image(c)
     assert len(b) == 1 and "not testable" in b[0]["statement_text"] and "measurement" in b[0]["statement_text"]
     assert sm.self_image(mk()) == []
 
 
-def t_sm10_aus_und_kill_und_echte_sonden_laufen():
+def t_sm10_off_and_kill_and_real_probes_run():
     for k, v in (("frank3.self.mode", "off"), ("frank3.kill", "1")):
         c = mk(); c.execute("insert into star_konfig values(?,?)", (k, v)); c.commit()
         assert sm.project(c, NOW) == 0 and sm.finding(c) == []

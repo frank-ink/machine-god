@@ -114,7 +114,7 @@ def _freeze(conn, st, b, now):
 
 
 def step(conn, now=None):
-    """-> Anzahl bewerteter Prognosen. Idempotent; schreibt nur f3_wm_*."""
+    """-> Number of evaluated prognoses. Idempotent; writes only f3_wm_*."""
     now = time.time() if now is None else now
     if off(conn):
         return 0
@@ -155,10 +155,10 @@ def finding(conn, now=None):
     """For endogenous.observe: -> list of E2 findings (forecast conflict and/or sensor coverage). Uncertain/insufficient data -> none."""
     if not _tbl(conn, "f3_wm_pred") or not _tbl(conn, "f3_wm_state"):
         return []
-    return _konflikt(conn) + sensor_befund(conn, time.time() if now is None else now)
+    return _conflict(conn) + sensor_finding(conn, time.time() if now is None else now)
 
 
-def _konflikt(conn):
+def _conflict(conn):
     rows = _window_rows(conn)
     if len(rows) < WINDOW_N:
         return []
@@ -200,8 +200,8 @@ def cause(c):
     return "UNKNOWN_CAUSE"
 
 
-def sensor_befund(conn, now):
-    """E2-Befund 'wm_sensorabdeckung' (Luecke), hoechstens einer je 24 h; erst nach vollem Beobachtungszeitraum (Anlauf getrennt)."""
+def sensor_finding(conn, now):
+    """E2 finding 'wm_sensorabdeckung' (gap), at most one per 24 h; only after full observation period (ramp-up separate)."""
     if not _tbl(conn, "f3_wm_cover") or not _tbl(conn, "f3_wm_state"):
         return []
     c = coverage(conn, now)
@@ -226,7 +226,7 @@ OPTIONS = {
 }
 
 
-def _anfrage(conn, ref, attempt_id, now):
+def _request(conn, ref, attempt_id, now):
     for d in DDL:
         conn.execute(d)
     if conn.execute("select 1 from f3_wm_anfrage where attempt_id=?", (attempt_id,)).fetchone():
@@ -252,7 +252,7 @@ def _replay(rows, alpha):
 
 
 def revise(conn, ref, attempt_id, now=None):
-    """E5-Untersuchung eines wm_prognosefehler-Ziels -> persistente Revision W(n+1) oder dokumentierte Nicht-Aenderung. Idempotent je attempt_id."""
+    """E5 investigation of a wm_prognosefehler target -> persistent revision W(n+1) or documented non-change. Idempotent per attempt_id."""
     now = time.time() if now is None else now
     if off(conn) or not _tbl(conn, "f3_wm_state"):
         return None
@@ -295,7 +295,7 @@ def on_pursuit(conn, goal_id, attempt_id, now=None):
     if not refs:
         return None
     if refs[0].get("table") == "f3_wm_cover":
-        return _anfrage(conn, refs[0], attempt_id, time.time() if now is None else now)
+        return _request(conn, refs[0], attempt_id, time.time() if now is None else now)
     if refs[0].get("table") != "f3_wm_pred":
         return None
     return revise(conn, refs[0], attempt_id, now)

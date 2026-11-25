@@ -12,11 +12,11 @@ import math
 
 RELAY_THRESHOLD = 0.25
 RETURN_ABSENCE_S = 900.0
-CHANNELS = {  # art im Ereignisstrom -> base, tau (s)
+CHANNELS = {  # type in event stream -> base, tau (s)
     "person_kommt": {"base": 0.9, "tau": 900.0}, "person_geht": {"base": 0.9, "tau": 900.0},
     "fokus_app": {"base": 0.6, "tau": 1500.0}, "objekt_neu": {"base": 0.6, "tau": 900.0}, "objekt_weg": {"base": 0.5, "tau": 900.0},
 }
-ATTENTION = {  # kognitiver Modus -> Gewicht je Kanal
+ATTENTION = {  # cognitive mode -> weight per channel
     "chat_active": {"person_kommt": 1.2, "person_geht": 1.2, "fokus_app": 0.8, "objekt_neu": 0.6, "objekt_weg": 0.5},
     "idle_focus": {"person_kommt": 1.0, "person_geht": 1.0, "fokus_app": 1.0, "objekt_neu": 0.8, "objekt_weg": 0.6},
 }
@@ -50,7 +50,7 @@ class RetinaThalamus:
         return t
 
     def gate(self, counts, ts, mode="idle_focus", vig=0.0, real=()):
-        """counts: {kanal: Anzahl Ereignisse im Fenster}, ts: Fensterende (s). -> {"gains","relay","burst","hab"}."""
+        """counts: {channel: number of events in window}, ts: window end (s). -> {"gains","relay","burst","hab"}."""
         att = ATTENTION.get(mode, ATTENTION["idle_focus"])
         person = counts.get("person_kommt", 0) + counts.get("person_geht", 0) > 0
         back = (counts.get("person_kommt", 0) > 0 and self.last_person_ts is not None and ts - self.last_person_ts >= RETURN_ABSENCE_S)
@@ -86,7 +86,7 @@ class RetinaThalamus:
                 st["last_relay_val"] = val
         if person:
             self.last_person_ts = ts
-        for st in self.s.values():  # Rueckkanal klingt je Gate ab
+        for st in self.s.values():  # feedback channel decays per gate
             st["fb"] *= FB_DECAY
         return {"gains": gains, "relay": relay, "burst": burst, "hab": {n: s["h"] for n, s in self.s.items()}}
 

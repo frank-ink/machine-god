@@ -94,7 +94,7 @@ class Grid10P7CoordinationError(RuntimeError):
     """Fail-closed P7 coordination error."""
 
 
-def _jetzt_iso() -> str:
+def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -296,7 +296,7 @@ def persist_coordination_result(conn: sqlite3.Connection, result: P7Coordination
     """Single transaction, one UPSERT per cell into the existing
     f2_grid10_p6d_state table (PK condition_key/logical_cell_id) -- same
     upsert shape stern.py already uses for f2_grid10_cell_state."""
-    ts = _jetzt_iso()
+    ts = _now_iso()
     conn.execute("BEGIN")
     try:
         for transition in result.transitions:
@@ -336,7 +336,7 @@ def append_transition_log(evidence_path: Path, result: P7CoordinationResult) -> 
     repository and is out of this task's scope)."""
     line = {
         "schema": P7_TRANSITION_LOG_SCHEMA,
-        "ts": _jetzt_iso(),
+        "ts": _now_iso(),
         "frame_id": result.turn.frame_id,
         "turn_event_id": result.turn.turn_event_id,
         "runtime_epoch_id": result.turn.runtime_epoch_id,
