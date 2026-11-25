@@ -7,8 +7,8 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use std::path::{Path, PathBuf};
 
 async fn child(name: &str) -> Option<PathBuf> {
-    if std::env::var("CLAUDE_RS_AUDIT_CASE").ok().as_deref() == Some(name) {
-        return Some(std::env::var_os("CLAUDE_RS_AUDIT_ROOT").unwrap().into());
+    if std::env::var("MACHINE_GOD_AUDIT_CASE").ok().as_deref() == Some(name) {
+        return Some(std::env::var_os("MACHINE_GOD_AUDIT_ROOT").unwrap().into());
     }
     let root = tempfile::tempdir().unwrap();
     let mut command = crate::diagnostics_test_support::command(
@@ -463,7 +463,7 @@ async fn denied_transcript_traversal_disables_confirmation_and_displays_the_caus
     match std::fs::metadata(&file) {
         Ok(_) => {
             assert!(
-                std::env::var_os("CLAUDE_RS_REQUIRE_PERMISSION_DENIAL").is_none(),
+                std::env::var_os("MACHINE_GOD_REQUIRE_PERMISSION_DENIAL").is_none(),
                 "the required permission-denial fixture was not exercised"
             );
             eprintln!("permission restriction unavailable for this user; run as non-root");

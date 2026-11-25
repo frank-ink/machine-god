@@ -1,0 +1,194 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FranKenstein 3.0 Environment Contract Schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "description",
+    "precedence",
+    "data_dir_precedence",
+    "hook_env_writes",
+    "ambient_passthrough",
+    "admissibility_space",
+    "sources"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "precedence": {
+      "type": "array",
+      "description": "Path resolution precedence order (highest to lowest). Must match f3_pfade.py get_data_dir() order exactly. F3_DB_PATH is a file path whose parent directory is used as data root.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "FRANK3_DATA",
+          "FRANKENSTEIN3_ROOT",
+          "F3_DB_PATH",
+          "CLAUDE_PLUGIN_DATA",
+          "XDG_DATA_HOME",
+          "HOME",
+          "USERPROFILE"
+        ]
+      },
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true
+    },
+    "data_dir_precedence": {
+      "type": "array",
+      "description": "Data directory resolution precedence (highest to lowest). Must match f3_pfade.py get_data_dir() order exactly for directory-root variables. F3_DB_PATH is a path variable with a resolution rule (its parent directory is used as data root), not a separate directory-root precedence entry.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "FRANK3_DATA",
+          "FRANKENSTEIN3_ROOT",
+          "CLAUDE_PLUGIN_DATA",
+          "XDG_DATA_HOME",
+          "HOME",
+          "USERPROFILE"
+        ]
+      },
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true
+    },
+    "hook_env_writes": {
+      "type": "array",
+      "description": "Environment variables that hooks write for downstream consumers. Must match f3_pfade.py HOOK_ENV_WRITES.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "FRANK3_DATA",
+          "FRANKENSTEIN3_ROOT",
+          "F3_DB_PATH",
+          "CLAUDE_PLUGIN_DATA",
+          "XDG_DATA_HOME",
+          "HOME",
+          "USERPROFILE"
+        ]
+      },
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true
+    },
+    "ambient_passthrough": {
+      "type": "array",
+      "description": "Environment variables passed through from ambient environment (read-only for resolver). Must match f3_pfade.py AMBIENT_PASSTHROUGH.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "F3_DRY_RUN",
+          "XDG_DATA_HOME",
+          "HOME"
+        ]
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true
+    },
+    "admissibility_space": {
+      "type": "object",
+      "description": "M — the explicit possibility/admissibility space as one typed structure (GRF invariant).",
+      "required": [
+        "kind",
+        "path_variables",
+        "mode_flags",
+        "resolution_rules",
+        "invariants"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "AdmissibilitySpace"
+        },
+        "path_variables": {
+          "type": "array",
+          "description": "Variables that participate in path resolution. F3_DB_PATH is a path variable (file path whose parent directory is used as data root) with a resolution_rules entry.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "F3_DB_PATH",
+              "FRANK3_DATA",
+              "FRANKENSTEIN3_ROOT",
+              "CLAUDE_PLUGIN_DATA",
+              "XDG_DATA_HOME",
+              "HOME",
+              "USERPROFILE"
+            ]
+          },
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true
+        },
+        "mode_flags": {
+          "type": "array",
+          "description": "Variables that are mode flags, NOT path variables.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "F3_DRY_RUN"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true
+        },
+        "resolution_rules": {
+          "type": "object",
+          "description": "Per-variable resolution semantics.",
+          "required": [
+            "F3_DB_PATH",
+            "FRANK3_DATA",
+            "FRANKENSTEIN3_ROOT",
+            "CLAUDE_PLUGIN_DATA",
+            "XDG_DATA_HOME",
+            "HOME",
+            "USERPROFILE"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "F3_DB_PATH": { "type": "string", "minLength": 1 },
+            "FRANK3_DATA": { "type": "string", "minLength": 1 },
+            "FRANKENSTEIN3_ROOT": { "type": "string", "minLength": 1 },
+            "CLAUDE_PLUGIN_DATA": { "type": "string", "minLength": 1 },
+            "XDG_DATA_HOME": { "type": "string", "minLength": 1 },
+            "HOME": { "type": "string", "minLength": 1 },
+            "USERPROFILE": { "type": "string", "minLength": 1 }
+          }
+        },
+        "invariants": {
+          "type": "array",
+          "description": "Hard invariants that must never be violated.",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 3,
+          "uniqueItems": true
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "description": "Evidence sources, all relative to the plugin root (plugins/frankenstein3). Repository paths (rust, typescript) are optional and, when present, must stay inside the repository as plugin-relative paths; the bundled contract omits them so a copied plugin stays portable.",
+      "required": [
+        "install_sh",
+        "status_py",
+        "path_resolution"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "install_sh": { "type": "string", "pattern": "^install\\.sh$" },
+        "status_py": { "type": "string", "pattern": "^tests/status\\.py$" },
+        "path_resolution": { "type": "string", "pattern": "^scripts/star/f3_pfade\\.py$" },
+        "rust": { "type": "string", "pattern": "^\\.\\./\\.\\./src/zero$" },
+        "typescript": { "type": "string", "pattern": "^\\.\\./\\.\\./agent-sdk/src/zero$" }
+      }
+    }
+  }
+}

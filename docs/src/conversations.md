@@ -4,11 +4,11 @@ Use these tasks after [your first session](usage.md). Shell commands start or re
 
 ## Continue from the shell
 
-Run `claude-rs --continue` in the project directory to continue its most recent session, including sessions from its Git worktrees. If none exists, it starts a new session. To choose a conversation instead, run `claude-rs --resume`. See [resume syntax](cli.md#resume-or-continue) for IDs and initial prompts.
+Run `machine-god --continue` in the project directory to continue its most recent session, including sessions from its Git worktrees. If none exists, it starts a new session. To choose a conversation instead, run `machine-god --resume`. See [resume syntax](cli.md#resume-or-continue) for IDs and initial prompts.
 
 ## Resuming sessions
 
-1. Enter `/resume` in the composer, or run `claude-rs resume` from your shell.
+1. Enter `/resume` in the composer, or run `machine-god resume` from your shell.
 2. Type part of a session name, ID or branch to filter the list. Search ignores case; pasted text also searches, and Backspace edits the query.
 3. Use Up/Down to select a session. Check its title, last activity, branch and ID before opening it; the current session has a marker.
 4. Press Enter to resume, or Escape to return without switching. The resumed conversation displays its saved history.

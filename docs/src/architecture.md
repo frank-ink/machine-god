@@ -1,6 +1,6 @@
 # Architecture
 
-Claude Code Rust is a terminal application with two local components: a Rust process owns the interface and application state; a TypeScript bridge translates between the app and Anthropic's Agent SDK. Read [Development](development.md) to run a checkout and [Testing](testing.md) to validate a change.
+Machine God is a terminal application with two local components: a Rust process owns the interface and application state; a TypeScript bridge translates between the app and Anthropic's Agent SDK. Read [Development](development.md) to run a checkout and [Testing](testing.md) to validate a change.
 
 ## Runtime Shape
 
@@ -86,7 +86,7 @@ Each link below owns the detailed rules for that concern.
 
 ## Boundaries
 
-Claude Code Rust owns the terminal UI, local settings surface, bridge process management and event rendering. Anthropic owns the SDK, authentication and service behavior, billing, models and upstream Claude Code semantics.
+Machine God owns the terminal UI, local settings surface, bridge process management and event rendering. Anthropic owns the SDK, authentication and service behavior, billing, models and upstream Claude Code semantics.
 
 The application uses its local TypeScript bridge as the SDK integration point. SDK package subpath exports such as `/browser`, `/bridge` and `/assistant` are not the application's runtime entry point.
 

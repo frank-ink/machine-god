@@ -1,0 +1,9 @@
+# Independent Verification Receipt
+# Schema: zero.gate_receipt.v1
+capability: unified_db_single_writer
+verifier: zero40/swarm-round-40
+method: cargo test -p machine_god zero::unified_db_test::test_single_writer_invariant
+result: passed
+commit: bc2c876
+receipt_id: bc2c876-unified-db-single-writer-001
+evidence_type: independent_verification

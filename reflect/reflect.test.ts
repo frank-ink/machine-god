@@ -339,12 +339,12 @@ describe("hook registration in Claude Code settings", () => {
     const d = tmp(), f = path.join(d, "settings.json");
     const foreign = { model: "x", hooks: { Stop: [{ hooks: [{ type: "command", command: "other-tool stop" }] }] } };
     fs.writeFileSync(f, JSON.stringify(foreign));
-    expect(installHooks(f, "/opt/mg/claude-rs-bridge-bun", "/opt/mg")).toBe(4);
-    installHooks(f, "/opt/mg/claude-rs-bridge-bun", "/opt/mg2"); // second run (moved install) replaces, never duplicates
+    expect(installHooks(f, "/opt/mg/machine-god-bridge-bun", "/opt/mg")).toBe(4);
+    installHooks(f, "/opt/mg/machine-god-bridge-bun", "/opt/mg2"); // second run (moved install) replaces, never duplicates
     const j = JSON.parse(fs.readFileSync(f, "utf8"));
     expect(j.model).toBe("x");
     expect(j.hooks.Stop.length).toBe(2); expect(j.hooks.Stop[0].hooks[0].command).toBe("other-tool stop");
-    expect(j.hooks.Stop[1].hooks[0].command).toBe(`"/opt/mg/claude-rs-bridge-bun" "${path.join("/opt/mg2", "reflect", "hook.ts")}" stop`);
+    expect(j.hooks.Stop[1].hooks[0].command).toBe(`"/opt/mg/machine-god-bridge-bun" "${path.join("/opt/mg2", "reflect", "hook.ts")}" stop`);
     expect(j.hooks.PostToolUse[0].matcher).toBe("*"); expect(j.hooks.UserPromptSubmit[0].hooks[0].command).toMatch(/ prompt$/);
     expect(fs.readdirSync(d).filter((x) => x.includes(".machine-god-") && x.endsWith(".bak")).length).toBeGreaterThanOrEqual(2);
     expect(removeHooks(f)).toBe(4);

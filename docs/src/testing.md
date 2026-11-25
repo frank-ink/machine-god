@@ -125,7 +125,7 @@ That test checks documented long-option membership and duplicates. It does not v
 | First completed conversation | [Your first session](usage.md) |
 | Conversation tasks | [Work with conversations](conversations.md) |
 | Launch syntax and option lifetime | [CLI reference](cli.md) |
-| Configuration editing | [Configure claude-rs](configure.md) |
+| Configuration editing | [Configure machine-god](configure.md) |
 | Keys, scopes and persistence | [Settings reference](settings.md) |
 | MCP and plugin procedures | [Integrations](integrations.md) |
 | Logs and diagnostic bundles | [Diagnostics](diagnostics.md) |

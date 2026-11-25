@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn initial_prompt_waits_for_session_selection_and_preserves_a_typed_draft() {
         use clap::Parser;
-        let cli = crate::Cli::try_parse_from(["claude-rs", "--resume", "--", "initial prompt"])
+        let cli = crate::Cli::try_parse_from(["machine-god", "--resume", "--", "initial prompt"])
             .expect("CLI");
         let (mut app, mut rx) = app_with_connection();
         app.startup = crate::app::state::StartupState::from_cli(&cli);
@@ -1439,7 +1439,7 @@ mod tests {
                 .map(|m| m.id)
                 .collect();
             let cli =
-                crate::Cli::try_parse_from(["claude-rs", "--", "launch request\nwith details"])
+                crate::Cli::try_parse_from(["machine-god", "--", "launch request\nwith details"])
                     .unwrap();
             app.startup = crate::app::state::StartupState::from_cli(&cli);
             app.startup.complete_launch();

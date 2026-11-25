@@ -45,7 +45,7 @@ class SpawnedBridge {
       env: {
         ...inherited,
         CLAUDE_CONFIG_DIR: join(this.directory, "profile"),
-        CLAUDE_RS_BRIDGE_DIAGNOSTICS: "1",
+        MACHINE_GOD_BRIDGE_DIAGNOSTICS: "1",
         ...env,
       },
       stdio: controlPipes ? ["pipe", "pipe", "pipe", "pipe", "pipe"] : "pipe",
@@ -880,7 +880,7 @@ test("one prompt can deliver a separately activated autonomous response for its 
 });
 
 test("saved background identities settle once from live outcomes without altering their completed sibling or transcript", async () => {
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "claude-rs-background-resume-")));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "machine-god-background-resume-")));
   const cwd = join(directory, "project");
   mkdirSync(cwd);
   const configDir = join(directory, "config");
@@ -1146,7 +1146,7 @@ test("ingress refusals preserve correlation and default privacy while detailed p
     "x".repeat(300) +
     '"}';
   for (const detailed of [false, true]) {
-    const bridge = new SpawnedBridge({ CLAUDE_RS_BRIDGE_DIAGNOSTICS: detailed ? "1" : "0" });
+    const bridge = new SpawnedBridge({ MACHINE_GOD_BRIDGE_DIAGNOSTICS: detailed ? "1" : "0" });
     try {
       bridge.writeRaw(`${privateLine}\n`);
       const malformed = await nextMatching(
@@ -1235,7 +1235,7 @@ test("initialization exposes consumed capabilities and a correlated empty isolat
         (event) => event.event === "initialized" && event.request_id === "req-init",
       ),
       result = initialized.result as BridgeEnvelope;
-    assert.equal(result.agent_name, "claude-rs-agent-bridge");
+    assert.equal(result.agent_name, "machine-god-agent-bridge");
     const capabilities = result.capabilities as BridgeEnvelope;
     for (const feature of [
       "prompt_image",
@@ -1303,7 +1303,7 @@ test("explicit shutdown closes idle and active queries only after owned consumer
 });
 
 test("bridge process reports actionable session initialization failure", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-missing-executable-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-missing-executable-"));
   const missingClaudeExecutable = join(directory, "missing-claude-code");
   const bridge = new SpawnedBridge({
     CLAUDE_CONFIG_DIR: directory,
@@ -1336,7 +1336,7 @@ test("bridge process reports actionable session initialization failure", async (
 });
 
 test("real SDK transports one correlated startup failure from a controlled CLI child", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-startup-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-startup-"));
   const receipt = join(directory, "startup-receipt.json");
   const cliPath = join(directory, "startup-cli.js");
   writeFileSync(
@@ -1409,7 +1409,7 @@ function ultracodeFixtureBridge(env: NodeJS.ProcessEnv = {}): {
   bridge: SpawnedBridge;
   cleanup: () => Promise<void>;
 } {
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "claude-rs-ultracode-")));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "machine-god-ultracode-")));
   const sdkPath = import.meta.resolve("@anthropic-ai/claude-agent-sdk");
   const sdkPackage = join(dirname(fileURLToPath(sdkPath)), "package.json");
   writeFileSync(
@@ -1815,7 +1815,7 @@ for (const scenario of ["allow", "deny", "cancel-before-answer", "answer-before-
 }
 
 test("resume command restores the screenshot conversation without internal task XML", async () => {
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "claude-rs-resume-")));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "machine-god-resume-")));
   const cwd = process.cwd();
   const configDir = join(directory, "config");
   const projectDir = join(configDir, "projects", cwd.replace(/[^a-zA-Z0-9]/g, "-"));
@@ -2951,7 +2951,7 @@ test("Ultracode wire failures distinguish rejected mutation from accepted unknow
 });
 
 test("real SDK resolution and host checkpoint options remain associated with each query lifecycle phase", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-settings-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-settings-"));
   const profile = join(directory, "profile");
   const cwd = join(directory, "project");
   mkdirSync(profile);
@@ -3074,7 +3074,7 @@ test("real SDK resolution and host checkpoint options remain associated with eac
 });
 
 test("scoped settings results correlate with exact saved, refused and inherited disk outcomes", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-config-flow-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-config-flow-"));
   const profile = join(directory, "profile");
   const cwd = join(directory, "project");
   mkdirSync(profile);
@@ -3228,7 +3228,7 @@ test("scoped settings results correlate with exact saved, refused and inherited 
 });
 
 test("managed policy refuses otherwise-valid scoped writes while unrelated settings remain editable", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-policy-flow-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-policy-flow-"));
   const profile = join(directory, "profile");
   const cwd = join(directory, "project");
   mkdirSync(profile);
@@ -3758,7 +3758,7 @@ test("acknowledged session controls publish native outcomes without rewriting sa
 });
 
 test("subagent wire commands target exact transcripts and settle stops only from native lifecycle outcomes", async () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-subagents-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-subagents-"));
   const journal = join(directory, "sdk.jsonl");
   const started = (taskId: string, taskType: string) => ({
     type: "system",

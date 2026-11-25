@@ -1086,7 +1086,7 @@ fn picker_list_and_reader_activation_carry_the_selected_user_and_launch_options(
     for reading in [false, true] {
         let (mut app, mut rx) = app_with_connection();
         let cli = crate::Cli::try_parse_from([
-            "claude-rs",
+            "machine-god",
             "--resume",
             "--model",
             "haiku",

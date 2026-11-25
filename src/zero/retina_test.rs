@@ -1,11 +1,5 @@
-//! src/zero/retina_test.rs
-//! Tests for zero::retina. Every external effect is mocked:
-//! * retina-frage  -> local temp shell script (unix) or trait mock
-//! * GRID          -> trait mock + real loopback TCP listener
-//! * unified.db    -> trait mock (+ real sqlite3 when the binary exists)
-//!
-//! No live network, no host paths, no secrets.
-
+use crate::zero::retina::*;
+use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
@@ -17,8 +11,6 @@ use std::time::Instant;
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-
-use crate::zero::retina::*;
 
 // ---------------------------------------------------------------- mocks
 
@@ -540,4 +532,103 @@ fn test_sqlite_db_inserts_retina_row() {
     assert!(out.status.success(), "sqlite query failed");
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("retina"), "expected kind='retina' row, got: {text}");
+}
+
+// ================================================================
+// ACCEPTANCE TESTS - exact names required by the task
+// ================================================================
+
+/// test_retina_cli_one_line_state: verifies the CLI --zeile output is parsed as a one-line state
+#[test]
+fn test_retina_cli_one_line_state() {
+    let mut cli = MockCli::line("retina-one-line-state\n");
+    let mut grid = MockGrid::default();
+    let mut db = MockDb::default();
+    let target = GridTarget {
+        host: "127.0.0.1".to_string(),
+        port: 8490,
+    };
+    let mut rt = RetinaRuntime {
+        target,
+        cli: &mut cli,
+        grid: &mut grid,
+        db: &mut db,
+    };
+
+    let reading = read_and_push_with(&mut rt).expect("pipeline must succeed");
+    match reading {
+        RetinaReading::Zeile { line, raw, ts_ms } => {
+            assert_eq!(line, "retina-one-line-state");
+            assert_eq!(raw, "retina-one-line-state");
+            assert!(ts_ms > 0);
+        }
+        RetinaReading::Unavailable { .. } => panic!("expected Zeile reading"),
+    }
+}
+
+/// test_push_to_grid_loopback: verifies a perception event is pushed to loopback GRID
+#[test]
+fn test_push_to_grid_loopback() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback listener");
+    let port = listener.local_addr().expect("local addr").port();
+
+    let handle = thread::spawn(move || {
+        let (stream, _) = listener.accept().expect("accept");
+        let mut reader = BufReader::new(stream);
+        let mut line = String::new();
+        reader.read_line(&mut line).expect("read event");
+        line
+    });
+
+    let cfg = RetinaConfig {
+        cli_path: PathBuf::from(RETINA_CLI),
+        grid_host: "127.0.0.1".to_string(),
+        grid_port: port,
+        db_path: PathBuf::from("unified.db"),
+    };
+    let reading = RetinaReading::Zeile {
+        line: "loopback-test-zeile".to_string(),
+        raw: "loopback-test-zeile\n".to_string(),
+        ts_ms: 1700000000003,
+    };
+    let event = build_grid_event(&reading, &cfg);
+    push_grid_event(&event, &cfg).expect("push to loopback GRID");
+
+    let received = handle.join().expect("join listener");
+    let value: Value = serde_json::from_str(received.trim()).expect("json event");
+    assert_eq!(value["kind"].as_str(), Some("perception"));
+    assert_eq!(value["source"].as_str(), Some("retina"));
+    assert_eq!(value["type"].as_str(), Some("retina_reading"));
+    assert_eq!(value["payload"]["zeile"].as_str(), Some("loopback-test-zeile"));
+    assert_eq!(value["host"].as_str(), Some("127.0.0.1"));
+    assert_eq!(value["port"].as_u64(), Some(port as u64));
+}
+
+/// test_push_to_entityos_unified_db: verifies a retina reading is written to unified.db with kind='retina'
+#[test]
+fn test_push_to_entityos_unified_db() {
+    if !sqlite_available() {
+        // UNKNOWN: no local sqlite3 binary -> the real DB write cannot be measured here.
+        return;
+    }
+    let dir = unique_dir("entityos");
+    let db_path = dir.join("unified.db");
+    let reading = RetinaReading::Zeile {
+        line: "entityos-test-zeile".to_string(),
+        raw: "entityos-test-zeile\n".to_string(),
+        ts_ms: 1700000000004,
+    };
+    let insert = build_db_insert(&reading);
+    let mut db = SqliteDb::with_binary(db_path.clone(), PathBuf::from("sqlite3"));
+    db.insert(&insert).expect("sqlite insert");
+
+    let out = Command::new("sqlite3")
+        .arg(&db_path)
+        .arg("SELECT kind, payload FROM memory;")
+        .output()
+        .expect("query");
+    assert!(out.status.success(), "sqlite query failed");
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(text.contains("retina"), "expected kind='retina' row, got: {text}");
+    assert!(text.contains("entityos-test-zeile"), "payload not found: {text}");
 }

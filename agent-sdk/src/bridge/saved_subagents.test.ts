@@ -230,7 +230,7 @@ test("incomplete saved evidence publishes interrupted then recovered state witho
 });
 
 test("real SDK discovery restores nested saved tasks without leaking private conversations", () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-saved-agents-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-saved-agents-"));
   const profile = join(directory, "profile");
   const projectName = "saved-agent-fixture";
   const project = join(profile, "projects", projectName);
@@ -579,7 +579,7 @@ test("real SDK discovery restores nested saved tasks without leaking private con
 });
 
 test("partial saved-agent reads recover through request-correlated listings without discarding available work", () => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-saved-partial-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-saved-partial-"));
   try {
     const cwd = join(directory, "selected"),
       otherCwd = join(directory, "main-failure");

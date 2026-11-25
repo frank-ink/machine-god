@@ -9,7 +9,7 @@ use tokio::process::Command;
 
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 async fn run(root: &Path, args: &[&str]) -> std::process::Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
     command
         .current_dir(root.join("project"))
         .arg("--bridge-script")
@@ -19,9 +19,9 @@ async fn run(root: &Path, args: &[&str]) -> std::process::Output {
         .stdin(std::process::Stdio::null())
         .kill_on_drop(true)
         .env("CLAUDE_CONFIG_DIR", root.join("profile"))
-        .env("CLAUDE_RS_CONFIG_DIR", root.join("app-profile"))
-        .env("CLAUDE_RS_AGENT_BRIDGE_RUNTIME", root.join("runtime probe.sh"))
-        .env_remove("CLAUDE_RS_AGENT_BRIDGE")
+        .env("MACHINE_GOD_CONFIG_DIR", root.join("app-profile"))
+        .env("MACHINE_GOD_AGENT_BRIDGE_RUNTIME", root.join("runtime probe.sh"))
+        .env_remove("MACHINE_GOD_AGENT_BRIDGE")
         .env("HOME", root.join("home"))
         .env("XDG_DATA_HOME", root.join("data"))
         .env("XDG_CACHE_HOME", root.join("cache"))
@@ -62,14 +62,14 @@ async fn logs_dispatch_selects_redacted_tail_and_publishes_only_with_consent() {
         r#"{"accessToken":"forbidden-credential-content"}"#,
     )
     .unwrap();
-    let runtime_dir = root.join("data/claude-code-rust/logs/runtime");
+    let runtime_dir = root.join("data/machine-god/logs/runtime");
     let path = run(root, &["--path"]).await;
     assert_eq!(path.status.code(), Some(0));
     assert!(path.stderr.is_empty());
     assert_eq!(path.stdout, format!("{}\n", runtime_dir.display()).as_bytes());
     // Seed only after verifying that the process actually resolved the isolated data root.
     std::fs::create_dir_all(&runtime_dir).unwrap();
-    let log = runtime_dir.join("claude-rs-20250101T000000Z-p1-rabc.log");
+    let log = runtime_dir.join("machine-god-20250101T000000Z-p1-rabc.log");
     let source = "excluded first\nselected token=cli-secret safe\nlast selected\n";
     std::fs::write(&log, source).unwrap();
     let summary = run(root, &[]).await;
@@ -137,7 +137,7 @@ fn assert_bundle(bytes: &[u8], root: &Path, runtime: &Path) {
         entries.insert(name, value);
     }
     assert_eq!(
-        entries["logs/runtime/claude-rs-20250101T000000Z-p1-rabc.log"],
+        entries["logs/runtime/machine-god-20250101T000000Z-p1-rabc.log"],
         "excluded first\nselected token=[redacted] safe\nlast selected"
     );
     let doctor: serde_json::Value = serde_json::from_str(&entries["doctor.json"]).unwrap();

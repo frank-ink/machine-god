@@ -211,7 +211,7 @@ mod tests {
         base: &std::path::Path,
         flags: &[&str],
     ) -> Result<crate::agent::wire::SessionConfig, String> {
-        let command_line = std::iter::once("claude-rs").chain(flags.iter().copied());
+        let command_line = std::iter::once("machine-god").chain(flags.iter().copied());
         Cli::try_parse_from(command_line).expect("parse").session_config.resolve(base)
     }
 
@@ -418,7 +418,7 @@ mod tests {
         for flag in ["--system-prompt", "--append-system-prompt"] {
             for blank in ["", "  ", "\n\t\u{2003}"] {
                 let error =
-                    Cli::try_parse_from(["claude-rs", flag, blank]).expect_err("blank prompt");
+                    Cli::try_parse_from(["machine-god", flag, blank]).expect_err("blank prompt");
                 assert_eq!(error.kind(), clap::error::ErrorKind::ValueValidation);
                 assert!(error.to_string().contains(flag), "{error}");
             }

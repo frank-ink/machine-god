@@ -21,12 +21,12 @@ Tests (`interest/interest.test.ts`) stay in the repo and need not ship.
 
 ```sh
 # POSIX launcher
-exec "$MG_HOME/bin/claude-rs-bridge-bun" "$MG_HOME/interest/cli.ts" "$@"
+exec "$MG_HOME/bin/machine-god-bridge-bun" "$MG_HOME/interest/cli.ts" "$@"
 ```
 
 ```bat
 :: Windows launcher
-"%MG_HOME%\bin\claude-rs-bridge-bun.exe" "%MG_HOME%\interest\cli.ts" %*
+"%MG_HOME%\bin\machine-god-bridge-bun.exe" "%MG_HOME%\interest\cli.ts" %*
 ```
 
 In the launcher's dispatch: `interests) shift; <the line above> ;;`. Exit code is passed through

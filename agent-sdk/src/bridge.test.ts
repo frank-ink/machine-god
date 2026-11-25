@@ -181,7 +181,7 @@ test("startup dispatch emits useful bounded redacted details on the wire and in 
       input: `import {handleSdkMessage} from ${JSON.stringify(new URL("./bridge/message_handlers.js", import.meta.url).href)};const cases=${JSON.stringify(cases)};cases[1]=undefined;for(const [index,errors] of cases.entries()){const session={sessionId:'privacy-session-'+index,connected:false,connectRequestId:'privacy-request-'+index};handleSdkMessage(session,{type:'result',subtype:'error_during_execution',startup_failure_reason:${JSON.stringify(reason)},errors});}`,
       env: {
         ...process.env,
-        CLAUDE_RS_BRIDGE_DIAGNOSTICS: "1",
+        MACHINE_GOD_BRIDGE_DIAGNOSTICS: "1",
         CLAUDE_CONFIG_DIR: profile,
         HOME: profile,
         USERPROFILE: profile,
@@ -6965,7 +6965,7 @@ test("actual SDK diagnostics retain lifecycle identifiers and supported tokens w
     encoding: "utf8",
     windowsHide: true,
     timeout: 15000,
-    env: { ...process.env, CLAUDE_RS_BRIDGE_DIAGNOSTICS: "1" },
+    env: { ...process.env, MACHINE_GOD_BRIDGE_DIAGNOSTICS: "1" },
   });
   assert.equal(child.error, undefined);
   assert.equal(child.status, 0, child.stderr);
@@ -6986,7 +6986,7 @@ test("actual SDK diagnostics retain lifecycle identifiers and supported tokens w
     (record) => record.event_name === "sdk_command_lifecycle_start_invalid",
   );
   assert.ok(lifecycle);
-  assert.equal(lifecycle.schema, "claude-rs-log/v1");
+  assert.equal(lifecycle.schema, "machine-god-log/v1");
   assert.equal(lifecycle.session_id, "diagnostic-owner");
   assert.equal(lifecycle.fields.sdk_type, "command_lifecycle");
   assert.equal(lifecycle.fields.sdk_uuid, "diagnostic-frame");
@@ -11411,7 +11411,7 @@ test("diagnostic-only SDK messages retain attributed real logs without user outp
     encoding: "utf8",
     windowsHide: true,
     timeout: 15000,
-    env: { ...process.env, CLAUDE_RS_BRIDGE_DIAGNOSTICS: "1" },
+    env: { ...process.env, MACHINE_GOD_BRIDGE_DIAGNOSTICS: "1" },
   });
   assert.equal(child.error, undefined);
   assert.equal(child.status, 0, child.stderr);
@@ -11448,7 +11448,7 @@ test("diagnostic-only SDK messages retain attributed real logs without user outp
   const record = (event: string, sessionId: string) => {
     const row = logs.find((log) => log.event_name === event && log.session_id === sessionId);
     assert.ok(row, `${sessionId}:${event}`);
-    assert.equal(row.schema, "claude-rs-log/v1");
+    assert.equal(row.schema, "machine-god-log/v1");
     return row;
   };
   const plugin = record("sdk_plugin_install_received", "log-only-plugin");
@@ -17343,7 +17343,7 @@ test("invalid JSON elicitation answer values cancel without partial acceptance a
     logger = new URL("./bridge/logger.js", import.meta.url).href;
   const script = `const {sessions,handleElicitationResponse}=await import(${JSON.stringify(lifecycle)});const {logBridgeCommandReceived}=await import(${JSON.stringify(logger)});const command={command:"elicitation_response",session_id:"invalid-private-session",elicitation_request_id:"invalid-private-request",action:"accept",content:{password:{nested:"INVALID-DO-NOT-LOG"},valid_secret:"VALID-DO-NOT-LOG"}};sessions.set(command.session_id,{pendingElicitations:new Map([[command.elicitation_request_id,{serverName:"privacy-test",resolve(value){process.stdout.write(JSON.stringify(value));}}]])});logBridgeCommandReceived(command);handleElicitationResponse(command);`;
   const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
-    env: { ...process.env, CLAUDE_RS_BRIDGE_DIAGNOSTICS: "1" },
+    env: { ...process.env, MACHINE_GOD_BRIDGE_DIAGNOSTICS: "1" },
     encoding: "utf8",
   });
   assert.equal(result.status, 0, result.stderr);
@@ -17371,7 +17371,7 @@ test("elicitation answer values never enter detailed bridge diagnostics", async 
     logBridgeCommandReceived(command);
     handleElicitationResponse(command);
   `;
-  const result = spawnSync(process.execPath,["--input-type=module","-e",script],{env:{...process.env,CLAUDE_RS_BRIDGE_DIAGNOSTICS:"1"},encoding:"utf8"});
+  const result = spawnSync(process.execPath,["--input-type=module","-e",script],{env:{...process.env,MACHINE_GOD_BRIDGE_DIAGNOSTICS:"1"},encoding:"utf8"});
   assert.equal(result.status,0,result.stderr);
   assert.ok(result.stderr.includes("elicitation_response_applied"));
   assert.ok(!result.stderr.includes("DO-NOT-LOG-THIS"));

@@ -23,7 +23,7 @@ impl Fixture {
     }
 
     fn cli(&self) -> Cli {
-        let mut cli = Cli::try_parse_from(["claude-rs"]).unwrap();
+        let mut cli = Cli::try_parse_from(["machine-god"]).unwrap();
         cli.dir = Some(self.project.clone());
         cli
     }
@@ -140,8 +140,8 @@ fn locations_associate_each_scope_with_its_path_and_state() {
         assert!(region.contains(&format!("Scope: {scope}")));
         assert!(region.contains(&format!("Path: {}", path.display())));
     }
-    assert!(output.contains("claude-rs config show"));
-    assert!(output.contains("claude-rs config export --output"));
+    assert!(output.contains("machine-god config show"));
+    assert!(output.contains("machine-god config export --output"));
     assert_eq!(f.snapshot(), before);
 }
 
@@ -229,7 +229,7 @@ fn human_show_keeps_small_content_with_its_file_and_large_content_in_json_only()
     let global = block(&human, "Global settings");
     assert!(global.contains("small-global-model") && global.contains("[redacted]"));
     let local = block(&human, "Local settings");
-    assert!(local.contains("items") && local.contains("claude-rs config show --json"));
+    assert!(local.contains("items") && local.contains("machine-god config show --json"));
     assert!(!local.contains("small-global-model"));
     for value in &values {
         assert!(!human.contains(value));
@@ -340,7 +340,7 @@ fn export_preflight_rejects_failures_before_creating_output_but_allows_missing_f
     );
     assert!(err.is_empty());
     let report: Value = serde_json::from_slice(&out).unwrap();
-    assert_eq!(report["schema"], "claude-rs-config-export/v1");
+    assert_eq!(report["schema"], "machine-god-config-export/v1");
     for (_, kind, _, path) in f.paths() {
         assert_eq!(record(&report, kind)["status"], "missing");
         assert_eq!(record(&report, kind)["path"], path.to_str().unwrap());
@@ -387,7 +387,7 @@ fn partial_export_failure_cleans_owned_target_and_retry_writes_redacted_scopes()
     assert!(bytes.ends_with(b"\n"));
     assert!(!String::from_utf8_lossy(&bytes).contains("private-config-token"));
     let report: Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(report["schema"], "claude-rs-config-export/v1");
+    assert_eq!(report["schema"], "machine-god-config-export/v1");
     for (_, kind, scope, path) in f.paths() {
         let file = record(&report, kind);
         assert_eq!(file["path"], path.to_str().unwrap());

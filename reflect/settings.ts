@@ -1,4 +1,4 @@
-// Registers the reflection hooks in the user's Claude Code settings (claude-rs loads user settings, the install archive carries no plugins/).
+// Registers the reflection hooks in the user's Claude Code settings (Machine God loads user settings, the install archive carries no plugins/).
 // Only called by `improve enable` / `improve disable`, i.e. after the user's yes. A backup is written before every change.
 import fs from "node:fs";
 import os from "node:os";

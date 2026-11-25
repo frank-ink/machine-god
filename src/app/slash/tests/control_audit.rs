@@ -510,7 +510,7 @@ fn rewind_submissions_use_the_session_owned_target_restore_mode_and_launch_setti
             resume_anchor_uuid: Some("other-anchor".into()),
         }];
         let cli = crate::Cli::try_parse_from([
-            "claude-rs",
+            "machine-god",
             "--model",
             "haiku",
             "--name",

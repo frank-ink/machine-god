@@ -46,7 +46,7 @@ if (!fs.existsSync(archivePath)) {
   throw new Error(`Missing install archive: ${path.relative(repoRoot, archivePath)}`);
 }
 
-const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-install-smoke-"));
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-install-smoke-"));
 try {
   const extractDir = path.join(tempDir, "extract");
   extractArchive({ archivePath, destinationDir: extractDir });
@@ -93,13 +93,13 @@ function smokeExtractedApp(appRoot, platformPackage) {
   const helpOutput = runCommand(commandState, ["--help"]);
 
   if (!options.realBinary) {
-    assertMockOutput(versionOutput.stdout, "claude-rs --version");
-    assertMockOutput(helpOutput.stdout, "claude-rs --help");
+    assertMockOutput(versionOutput.stdout, "machine-god-core --version");
+    assertMockOutput(helpOutput.stdout, "machine-god-core --help");
     return;
   }
 
-  printCommandOutput("claude-rs --version", versionOutput);
-  printCommandOutput("claude-rs --help", helpOutput);
+  printCommandOutput("machine-god-core --version", versionOutput);
+  printCommandOutput("machine-god-core --help", helpOutput);
 
   const completionOutput = runCommand(commandState, ["completions", "powershell"]);
   if (!completionOutput.stdout.includes("permission-mode")) {
@@ -107,13 +107,13 @@ function smokeExtractedApp(appRoot, platformPackage) {
   }
   const manualDir = path.join(path.dirname(appRoot), "generated-manuals");
   runCommand(commandState, ["man", manualDir]);
-  if (!fs.existsSync(path.join(manualDir, "claude-rs.1"))) {
+  if (!fs.existsSync(path.join(manualDir, "machine-god-core.1"))) {
     throw new Error("Installed CLI did not generate its manual");
   }
 
   const doctorOutput = runCommand(commandState, ["doctor", "--json", "--strict"]);
   const doctorDetails = assertDoctorReportsArchiveRuntime(doctorOutput.stdout, appRoot);
-  printCommandOutput("claude-rs doctor --json --strict", doctorOutput);
+  printCommandOutput("machine-god-core doctor --json --strict", doctorOutput);
   runBridgeRuntimeContract(doctorDetails.runtimePath, doctorDetails.bridgeScriptPath, appRoot);
 }
 
@@ -133,7 +133,7 @@ function prepareCommandState(appRoot, platformPackage) {
   }
 
   const binDir = path.join(path.dirname(appRoot), "bin");
-  const launcherPath = path.join(binDir, "claude-rs");
+  const launcherPath = path.join(binDir, "machine-god-core");
   fs.mkdirSync(binDir, { recursive: true });
   fs.writeFileSync(
     launcherPath,
@@ -143,7 +143,7 @@ function prepareCommandState(appRoot, platformPackage) {
   fs.chmodSync(launcherPath, 0o755);
   commandEnv[pathKey] = [binDir, commandEnv[pathKey] ?? ""].filter(Boolean).join(path.delimiter);
   return {
-    command: "claude-rs",
+    command: "machine-god-core",
     args: (commandArgs) => commandArgs,
     cwd: appRoot,
     env: commandEnv
@@ -226,7 +226,7 @@ function resolvedDoctorPath(message, checkId) {
 }
 
 function assertMockOutput(output, commandName) {
-  if (!output.includes("claude-rs 0.0.0-mock")) {
+  if (!output.includes("machine-god-core 0.0.0-mock")) {
     throw new Error(`${commandName} did not run the mock binary. Output:\n${output}`);
   }
 }
@@ -362,7 +362,7 @@ Options:
   --archive-root <dir>    Directory containing install archives. Defaults to dist-install.
   --version <version>     Expected package version. Defaults to Cargo.toml.
   --real-binary           Run doctor and bridge-runtime-contract against a real binary.
-  --no-system-runtime     Strip directories containing bun from PATH before running claude-rs.
+  --no-system-runtime     Strip directories containing bun from PATH before running machine-god-core.
   --keep-temp             Keep the temporary extraction root for inspection.
   -h, --help              Show this help.
 `);

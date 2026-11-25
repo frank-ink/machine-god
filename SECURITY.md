@@ -29,7 +29,7 @@ Please include:
 
 ## Scope
 
-This policy covers the `claude-rs` binary and its direct dependencies. Vulnerabilities
+This policy covers the `machine-god` binary and its direct dependencies. Vulnerabilities
 in the upstream Agent SDK (`@anthropic-ai/claude-agent-sdk`) or Claude API should be
 reported to their respective maintainers.
 

@@ -480,7 +480,7 @@ async fn startup_and_session_replacement_preserve_actual_footer_anchors_and_over
             {"id":"directory","visible":true,"side":"left","color":"orange"},
             {"id":"model","visible":true,"side":"right","color":"cyan"}
         ])));
-        let mut cli = crate::Cli::try_parse_from(["claude-rs", "--no-update-check"]).expect("CLI");
+        let mut cli = crate::Cli::try_parse_from(["machine-god", "--no-update-check"]).expect("CLI");
         cli.dir = Some(directory.path().to_path_buf());
         let path = directory.path().join("settings.json");
         let mut app = crate::app::connect::create_app_with_settings(

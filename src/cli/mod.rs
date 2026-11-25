@@ -36,11 +36,11 @@ mod tests {
     fn interactive_launches_defer_silently_to_the_application() {
         use clap::Parser;
         let cases: &[&[&str]] = &[
-            &["claude-rs"],
-            &["claude-rs", "resume"],
-            &["claude-rs", "resume", "session-1", "initial prompt"],
-            &["claude-rs", "--resume"],
-            &["claude-rs", "--continue"],
+            &["machine-god"],
+            &["machine-god", "resume"],
+            &["machine-god", "resume", "session-1", "initial prompt"],
+            &["machine-god", "--resume"],
+            &["machine-god", "--continue"],
         ];
         for args in cases {
             let cli = Cli::try_parse_from(args.iter().copied()).unwrap();

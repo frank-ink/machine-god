@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const ROOT_PACKAGE_NAME = "claude-code-rust";
+export const ROOT_PACKAGE_NAME = "machine-god";
 
 export const DIST_NPM_DIR = "dist-npm";
 
@@ -15,8 +15,8 @@ export const PLATFORM_PACKAGES = [
     packageName: "@gschaidergabriel/machine-god-darwin-arm64",
     os: ["darwin"],
     cpu: ["arm64"],
-    binaryName: "claude-rs",
-    bundledRuntimeName: "claude-rs-bridge-bun",
+    binaryName: "machine-god-core",
+    bundledRuntimeName: "machine-god-bridge-bun",
     bunAssetName: "bun-darwin-aarch64.zip",
     bunArchiveBinaryPath: "bun-darwin-aarch64/bun",
     rustTarget: "aarch64-apple-darwin"
@@ -26,8 +26,8 @@ export const PLATFORM_PACKAGES = [
     packageName: "@gschaidergabriel/machine-god-darwin-x64",
     os: ["darwin"],
     cpu: ["x64"],
-    binaryName: "claude-rs",
-    bundledRuntimeName: "claude-rs-bridge-bun",
+    binaryName: "machine-god-core",
+    bundledRuntimeName: "machine-god-bridge-bun",
     bunAssetName: "bun-darwin-x64-baseline.zip",
     bunArchiveBinaryPath: "bun-darwin-x64-baseline/bun",
     rustTarget: "x86_64-apple-darwin"
@@ -38,8 +38,8 @@ export const PLATFORM_PACKAGES = [
     os: ["linux"],
     cpu: ["x64"],
     libc: ["glibc"],
-    binaryName: "claude-rs",
-    bundledRuntimeName: "claude-rs-bridge-bun",
+    binaryName: "machine-god-core",
+    bundledRuntimeName: "machine-god-bridge-bun",
     bunAssetName: "bun-linux-x64-baseline.zip",
     bunArchiveBinaryPath: "bun-linux-x64-baseline/bun",
     rustTarget: "x86_64-unknown-linux-gnu"
@@ -50,8 +50,8 @@ export const PLATFORM_PACKAGES = [
     os: ["linux"],
     cpu: ["arm64"],
     libc: ["glibc"],
-    binaryName: "claude-rs",
-    bundledRuntimeName: "claude-rs-bridge-bun",
+    binaryName: "machine-god-core",
+    bundledRuntimeName: "machine-god-bridge-bun",
     bunAssetName: "bun-linux-aarch64.zip",
     bunArchiveBinaryPath: "bun-linux-aarch64/bun",
     rustTarget: "aarch64-unknown-linux-gnu"
@@ -61,8 +61,8 @@ export const PLATFORM_PACKAGES = [
     packageName: "@gschaidergabriel/machine-god-win32-x64-msvc",
     os: ["win32"],
     cpu: ["x64"],
-    binaryName: "claude-rs.exe",
-    bundledRuntimeName: "claude-rs-bridge-bun.exe",
+    binaryName: "machine-god-core.exe",
+    bundledRuntimeName: "machine-god-bridge-bun.exe",
     bunAssetName: "bun-windows-x64-baseline.zip",
     bunArchiveBinaryPath: "bun-windows-x64-baseline/bun.exe",
     rustTarget: "x86_64-pc-windows-msvc"
@@ -72,8 +72,8 @@ export const PLATFORM_PACKAGES = [
     packageName: "@gschaidergabriel/machine-god-win32-arm64-msvc",
     os: ["win32"],
     cpu: ["arm64"],
-    binaryName: "claude-rs.exe",
-    bundledRuntimeName: "claude-rs-bridge-bun.exe",
+    binaryName: "machine-god-core.exe",
+    bundledRuntimeName: "machine-god-bridge-bun.exe",
     bunAssetName: "bun-windows-aarch64.zip",
     bunArchiveBinaryPath: "bun-windows-aarch64/bun.exe",
     rustTarget: "aarch64-pc-windows-msvc"
@@ -151,7 +151,7 @@ export function buildRootPackageJson({ version, rootPackageJson, agentSdkPackage
     bugs: rootPackageJson.bugs,
     homepage: rootPackageJson.homepage,
     bin: {
-      "claude-rs": "bin/claude-rs.js"
+      "machine-god": "bin/machine-god.js"
     },
     files: ["bin", "agent-sdk", "README.md", "LICENSE"],
     dependencies: agentSdkPackageJson.dependencies ?? {},
@@ -169,7 +169,7 @@ export function buildPlatformPackageJson({ platformPackage, version, rootPackage
   return removeUndefined({
     name: platformPackage.packageName,
     version,
-    description: `Claude Code Rust native binary and private Bun bridge runtime for ${platformPackage.dir}`,
+    description: `Machine God native binary and private Bun bridge runtime for ${platformPackage.dir}`,
     keywords: rootPackageJson.keywords,
     license: rootPackageJson.license,
     repository: rootPackageJson.repository,

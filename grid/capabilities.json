@@ -13,7 +13,7 @@
       "label": "Claude (your claude login, `claude -p`)",
       "capabilities": { "web_search": false, "images": false, "code_exec": false, "long_context": true, "local_private": false, "connectors": true },
       "skills": { "general": 3, "code": 3, "writing": 3, "reasoning": 3 },
-      "notes": "Your Claude Code setup (MCP servers, plugins, skills) lives in claude-rs itself. Through `claude -p` from here it answers as text: no tool approvals are possible, so web search and code execution are marked false."
+      "notes": "Your Claude Code setup (MCP servers, plugins, skills) lives in Machine God itself. Through `claude -p` from here it answers as text: no tool approvals are possible, so web search and code execution are marked false."
     },
     "gemini": {
       "label": "Gemini (API key)",

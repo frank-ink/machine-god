@@ -34,7 +34,7 @@ const successfulMessages = [
   "Downloaded release archive",
   "Verified release archive integrity",
   "Installed files",
-  "Verified claude-rs 0.0.0-mock",
+  "Verified machine-god-core 0.0.0-mock",
 ];
 
 test("Unix y/n confirmations ignore trailing input without a timed drain", { skip: process.platform !== "linux" }, async () => {
@@ -226,10 +226,10 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
     `missing mock install archive ${archivePath}; run generate-install-archives.mjs --mock-binaries first`,
   );
 
-  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-installer-progress-"));
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-installer-progress-"));
   const homeDir = path.join(sandbox, "home");
   const tempDir = path.join(sandbox, "tmp");
-  const installDir = path.join(sandbox, "app", "claude-rs");
+  const installDir = path.join(sandbox, "app", "machine-god-core");
   const binDir = path.join(sandbox, "bin");
   const shimDir = path.join(sandbox, "shims");
   const checksumsPath = path.join(sandbox, "SHA256SUMS");
@@ -238,10 +238,10 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
     fs.mkdirSync(directory, { recursive: true });
   }
   const manualDir = path.join(sandbox, "share", "man", "man1");
-  const manualPath = path.join(manualDir, "claude-rs.1");
-  const staleManualPath = path.join(manualDir, "claude-rs-old.1");
+  const manualPath = path.join(manualDir, "machine-god-core.1");
+  const staleManualPath = path.join(manualDir, "machine-god-old.1");
   fs.mkdirSync(manualDir, { recursive: true });
-  fs.symlinkSync(path.join(installDir, "share", "man", "man1", "claude-rs-old.1"), staleManualPath);
+  fs.symlinkSync(path.join(installDir, "share", "man", "man1", "machine-god-old.1"), staleManualPath);
   if (preserveManual) {
     fs.writeFileSync(manualPath, "externally managed manual", "utf8");
   }
@@ -253,7 +253,7 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
 
   const env = { ...process.env };
   for (const name of Object.keys(env)) {
-    if (name.startsWith("CLAUDE_RS_")) {
+    if (name.startsWith("MACHINE_GOD_")) {
       delete env[name];
     }
   }
@@ -283,7 +283,7 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
       "--release",
       releaseTag,
       "--install-dir",
-      relativeDirs ? "app/claude-rs" : installDir,
+      relativeDirs ? "app/machine-god-core" : installDir,
       "--bin-dir",
       relativeDirs ? "bin" : binDir,
       "--yes",
@@ -309,7 +309,7 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
       throw commandResult.error;
     }
 
-    const lockPath = path.join(path.dirname(installDir), ".claude-rs-install.lock");
+    const lockPath = path.join(path.dirname(installDir), ".machine-god-install.lock");
     assert.equal(fs.existsSync(lockPath), false, `${scenario} left the install lock behind`);
     assert.deepEqual(fs.readdirSync(tempDir), [], `${scenario} left temporary installer files behind`);
 
@@ -319,20 +319,20 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
         ? fs.readFileSync(curlLogPath, "utf8").trim().split(/\r?\n/)
         : [],
       installed: fs.existsSync(path.join(installDir, platformPackage.binaryName)),
-      launcherInstalled: fs.existsSync(path.join(binDir, "claude-rs")),
+      launcherInstalled: fs.existsSync(path.join(binDir, "machine-god-core")),
       status: commandResult.status,
       signal: commandResult.signal,
       stderr: commandResult.stderr,
       stdout: commandResult.stdout,
       manualLinked: fs.existsSync(manualPath) && fs.lstatSync(manualPath).isSymbolicLink(),
-      staleManualExists: fs.readdirSync(manualDir).includes("claude-rs-old.1"),
+      staleManualExists: fs.readdirSync(manualDir).includes("machine-god-old.1"),
     };
     if (uninstall) {
-      const removal = spawnSync("sh", [installerPath, "--uninstall", "--install-dir", relativeDirs ? "app/claude-rs" : installDir, "--bin-dir", relativeDirs ? "bin" : binDir, "--yes", "--non-interactive", "--no-modify-path"], { encoding: "utf8", cwd: sandbox, env, timeout: 120_000 });
+      const removal = spawnSync("sh", [installerPath, "--uninstall", "--install-dir", relativeDirs ? "app/machine-god-core" : installDir, "--bin-dir", relativeDirs ? "bin" : binDir, "--yes", "--non-interactive", "--no-modify-path"], { encoding: "utf8", cwd: sandbox, env, timeout: 120_000 });
       assert.equal(removal.status, 0, `uninstall failed\n${removal.stderr}`);
       result.manualExistsAfterUninstall = fs.existsSync(manualPath);
       result.manualContentAfterUninstall = fs.existsSync(manualPath) ? fs.readFileSync(manualPath, "utf8") : undefined;
-      assert.equal(fs.existsSync(path.join(binDir, "claude-rs")), false, "uninstall kept its launcher");
+      assert.equal(fs.existsSync(path.join(binDir, "machine-god-core")), false, "uninstall kept its launcher");
     }
     return result;
   } finally {
@@ -430,7 +430,7 @@ case "$url" in
     cp "$MOCK_ARCHIVE_FILE" "$destination"
     if [ -n "$write_out" ]; then
       archive_speed="$((archive_size / 2))"
-      printf '__CLAUDE_RS_DOWNLOAD_STATS__200\\t%s\\t%s\\t2.000' "$archive_size" "$archive_speed"
+      printf '__MACHINE_GOD_DOWNLOAD_STATS__200\\t%s\\t%s\\t2.000' "$archive_size" "$archive_speed"
     fi
     ;;
 esac

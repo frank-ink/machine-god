@@ -3,7 +3,7 @@
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-const ROOT_PACKAGE_NAME: &str = "claude-code-rust";
+const ROOT_PACKAGE_NAME: &str = "machine-god";
 const NPM_PLATFORM_PACKAGE_NAMES: [&str; 6] = [
     "@gschaidergabriel/machine-god-darwin-arm64",
     "@gschaidergabriel/machine-god-darwin-x64",
@@ -14,9 +14,9 @@ const NPM_PLATFORM_PACKAGE_NAMES: [&str; 6] = [
 ];
 
 #[cfg(target_os = "windows")]
-const BUNDLED_RUNTIME_NAME: &str = "claude-rs-bridge-bun.exe";
+const BUNDLED_RUNTIME_NAME: &str = "machine-god-bridge-bun.exe";
 #[cfg(not(target_os = "windows"))]
-const BUNDLED_RUNTIME_NAME: &str = "claude-rs-bridge-bun";
+const BUNDLED_RUNTIME_NAME: &str = "machine-god-bridge-bun";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InstallMethod {

@@ -44,7 +44,7 @@ if (failures.length > 0) {
 console.log(`Verified release bundle ${path.relative(repoRoot, bundlePath)}`);
 
 function verifyBundle() {
-  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-bundle-verify-"));
+  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-bundle-verify-"));
   try {
     extractArchive({ archivePath: bundlePath, destinationDir: extractDir });
     const bundleRoot = findSingleTopLevelDirectory(extractDir);
@@ -189,7 +189,7 @@ function printHelp() {
 
 Options:
   --version <version>   Expected package version. Defaults to Cargo.toml.
-  --bundle <path>       Release bundle path. Defaults to claude-code-rust-<version>-release-bundle.tar.gz.
+  --bundle <path>       Release bundle path. Defaults to machine-god-<version>-release-bundle.tar.gz.
   -h, --help            Show this help.
 `);
 }

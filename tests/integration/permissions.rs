@@ -4,8 +4,8 @@
 // that the pending_interaction_ids queue is maintained, and that responses
 // are sent through the oneshot channel.
 
-use claude_code_rust::agent::model;
-use claude_code_rust::app::{AppStatus, MessageBlock};
+use machine_god::agent::model;
+use machine_god::app::{AppStatus, MessageBlock};
 use pretty_assertions::assert_eq;
 use tokio::sync::oneshot;
 
@@ -16,7 +16,7 @@ use crate::helpers::{
 /// Helper: create a tool call, send it, then send a permission request for it.
 /// Returns the oneshot receiver so the test can verify the response.
 fn setup_permission(
-    app: &mut claude_code_rust::app::App,
+    app: &mut machine_god::app::App,
     tool_id: &str,
     options: Vec<model::PermissionOption>,
 ) -> oneshot::Receiver<model::RequestPermissionResponse> {
@@ -89,7 +89,7 @@ async fn permission_for_unknown_tool_call_auto_rejects() {
 
 #[tokio::test]
 async fn duplicate_permission_preserves_original_and_neighbor_response_ownership() {
-    use claude_code_rust::app::handle_terminal_event;
+    use machine_god::app::handle_terminal_event;
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
     let options = |prefix: &str| {
         vec![
@@ -154,7 +154,7 @@ async fn duplicate_permission_preserves_original_and_neighbor_response_ownership
 
 #[tokio::test]
 async fn confirmed_task_and_mode_inventory_survives_completion_and_accepts_next_turn_updates() {
-    use claude_code_rust::app::{ModeInfo, ModeState};
+    use machine_god::app::{ModeInfo, ModeState};
     let mut app = test_app();
     let original = vec![
         task_item("alpha", "Alpha confirmed", model::TaskStatus::Pending),
@@ -220,7 +220,7 @@ async fn confirmed_task_and_mode_inventory_survives_completion_and_accepts_next_
     assert_eq!(app.status, AppStatus::Ready);
 }
 
-fn assert_mode(app: &claude_code_rust::app::App, expected: &claude_code_rust::app::ModeState) {
+fn assert_mode(app: &machine_god::app::App, expected: &machine_god::app::ModeState) {
     assert_eq!(
         app.session_runtime.mode.as_ref().map(|mode| (
             &mode.current_mode_id,

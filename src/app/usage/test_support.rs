@@ -116,7 +116,7 @@ impl Drop for Server {
 
 fn native_executable() -> PathBuf {
     static BINARY: OnceLock<PathBuf> = OnceLock::new();
-    if let Some(path) = std::env::var_os("CLAUDE_RS_USAGE_FIXTURE") {
+    if let Some(path) = std::env::var_os("MACHINE_GOD_USAGE_FIXTURE") {
         return path.into();
     }
     BINARY

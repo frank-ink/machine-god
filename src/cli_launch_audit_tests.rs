@@ -10,7 +10,7 @@ fn prompt_policy_rejects_same_role_pairs_and_accepts_independent_roles() {
         ("--append-system-prompt", "--append-system-prompt-file"),
     ] {
         for args in [[text, "text", file, "absent.md"], [file, "absent.md", text, "text"]] {
-            let error = Cli::try_parse_from(["claude-rs"].into_iter().chain(args)).unwrap_err();
+            let error = Cli::try_parse_from(["machine-god"].into_iter().chain(args)).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::ArgumentConflict);
             assert!(error.to_string().contains(text) && error.to_string().contains(file));
         }
@@ -18,7 +18,7 @@ fn prompt_policy_rejects_same_role_pairs_and_accepts_independent_roles() {
     for replacement in ["--system-prompt", "--system-prompt-file"] {
         for append in ["--append-system-prompt", "--append-system-prompt-file"] {
             let cli =
-                Cli::try_parse_from(["claude-rs", replacement, "replacement", append, "append"])
+                Cli::try_parse_from(["machine-god", replacement, "replacement", append, "append"])
                     .unwrap();
             cli.validate().unwrap();
         }
@@ -45,7 +45,7 @@ fn fork_eligibility_preserves_resume_intent_and_initial_prompt() {
     ];
     for (args, expected, prompt) in cases {
         let cli = Cli::try_parse_from(
-            ["claude-rs", "--fork-session"].into_iter().chain(args.iter().copied()),
+            ["machine-god", "--fork-session"].into_iter().chain(args.iter().copied()),
         )
         .unwrap();
         cli.validate().unwrap();
@@ -55,7 +55,7 @@ fn fork_eligibility_preserves_resume_intent_and_initial_prompt() {
     }
     for args in [&[][..], &["new prompt"][..], &["--name", "Experiment"][..]] {
         let cli = Cli::try_parse_from(
-            ["claude-rs", "--fork-session"].into_iter().chain(args.iter().copied()),
+            ["machine-god", "--fork-session"].into_iter().chain(args.iter().copied()),
         )
         .unwrap();
         let error = cli.validate().unwrap_err();
@@ -85,7 +85,7 @@ fn each_launch_option_is_rejected_by_support_commands_before_file_resolution() {
     let root = tempfile::tempdir().unwrap();
     for option in options {
         let cli = Cli::try_parse_from(
-            ["claude-rs", "resume", "session-1"].into_iter().chain(option.iter().copied()),
+            ["machine-god", "resume", "session-1"].into_iter().chain(option.iter().copied()),
         )
         .unwrap();
         cli.validate().unwrap();
@@ -95,7 +95,7 @@ fn each_launch_option_is_rejected_by_support_commands_before_file_resolution() {
         );
         for command in ["doctor", "logs", "config"] {
             let mut cli = Cli::try_parse_from(
-                ["claude-rs", command].into_iter().chain(option.iter().copied()),
+                ["machine-god", command].into_iter().chain(option.iter().copied()),
             )
             .unwrap();
             cli.dir = Some(root.path().join("nonexistent-working-directory"));
@@ -104,7 +104,7 @@ fn each_launch_option_is_rejected_by_support_commands_before_file_resolution() {
         }
     }
     for command in ["doctor", "logs", "config"] {
-        let cli = Cli::try_parse_from(["claude-rs", command]).unwrap();
+        let cli = Cli::try_parse_from(["machine-god", command]).unwrap();
         cli.validate().unwrap();
     }
     assert!(std::fs::read_dir(root.path()).unwrap().next().is_none());

@@ -1,6 +1,6 @@
 # Help
 
-Claude Code Rust has two built-in help paths:
+Machine God has two built-in help paths:
 
 ```text
 /help

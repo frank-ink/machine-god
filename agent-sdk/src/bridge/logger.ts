@@ -1,13 +1,13 @@
 import type { BridgeCommand, BridgeEvent } from "../types.js";
 import { redactStartupDetail } from "./startup_failures.js";
 
-const LOG_SCHEMA = "claude-rs-log/v1" as const;
+const LOG_SCHEMA = "machine-god-log/v1" as const;
 /**
  * `1` is detailed diagnostics (every level, full fields). `0` is the default
  * baseline the host sets when detailed logging is off: warnings and errors
  * only, with each field bounded and redacted. Unset (unit tests) writes nothing.
  */
-const DIAGNOSTICS_MODE = process.env.CLAUDE_RS_BRIDGE_DIAGNOSTICS;
+const DIAGNOSTICS_MODE = process.env.MACHINE_GOD_BRIDGE_DIAGNOSTICS;
 const DETAILED_DIAGNOSTICS = DIAGNOSTICS_MODE === "1";
 const BASELINE_DIAGNOSTICS = DIAGNOSTICS_MODE === "0";
 /** Longest excerpt of one baseline field, in characters. */

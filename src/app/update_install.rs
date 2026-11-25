@@ -23,8 +23,8 @@ const WINDOWS_INSTALLER_URL: &str =
 const WORKER_SUBCOMMAND: &str = "update-worker";
 const WORKER_INSTALL_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 const WORKER_POLL_INTERVAL: Duration = Duration::from_millis(100);
-const WORKER_LOG_FILE: &str = "claude-rs-update.log";
-const WORKER_LOCK_FILE: &str = "claude-rs-update.lock";
+const WORKER_LOG_FILE: &str = "machine-god-update.log";
+const WORKER_LOCK_FILE: &str = "machine-god-update.lock";
 
 /// Where installer processes read and write, and how long they may run.
 enum InstallIo<'a> {
@@ -88,7 +88,7 @@ pub fn run_update_install(app: &App, latest_version: &str, method: &InstallMetho
 /// Hand the install to a detached worker so the shell prompt returns immediately.
 pub fn start_background_update_install(app: &App, latest_version: &str, method: &InstallMethod) {
     match spawn_worker(app.global_settings_path.as_deref(), latest_version, method) {
-        Ok(()) => eprintln!("Updating claude-rs to v{latest_version} in the background."),
+        Ok(()) => eprintln!("Updating machine-god to v{latest_version} in the background."),
         Err(error) => {
             report_outcome_to_terminal(app, failure_message(method, latest_version, &Err(error)));
         }
@@ -199,7 +199,7 @@ fn run_worker(
             return finish_worker(paths, None, method, latest_version, &Err(error));
         }
     };
-    let _ = writeln!(&log, "Installing claude-rs v{latest_version} ({} install).", method.label());
+    let _ = writeln!(&log, "Installing machine-god v{latest_version} ({} install).", method.label());
     let result = install(&InstallIo::Log { file: &log, deadline: Instant::now() + timeout });
     finish_worker(paths, Some(&log), method, latest_version, &result)
 }
@@ -251,8 +251,8 @@ fn spawn_worker(
     let profile =
         settings.parent().ok_or_else(|| "app settings path has no directory".to_owned())?;
     let exe = std::env::current_exe()
-        .map_err(|error| format!("failed to locate the claude-rs executable: {error}"))?;
-    spawn_detached(Command::new(&exe).args(args).env("CLAUDE_RS_CONFIG_DIR", profile))
+        .map_err(|error| format!("failed to locate the machine-god executable: {error}"))?;
+    spawn_detached(Command::new(&exe).args(args).env("MACHINE_GOD_CONFIG_DIR", profile))
         .map(drop)
         .map_err(|error| format!("failed to start {}: {error}", exe.display()))
 }
@@ -374,7 +374,7 @@ fn run_npm_update(latest_version: &str, io: &InstallIo<'_>) -> Result<ExitStatus
     io.run(Command::new(&npm).args([
         "install",
         "-g",
-        &format!("claude-code-rust@{latest_version}"),
+        &format!("machine-god@{latest_version}"),
     ]))
 }
 
@@ -389,16 +389,16 @@ fn run_script_update(
     command
         .arg(&installer.script)
         .args(["--release", latest_version, "--yes", "--keep-npm"])
-        .env_remove("CLAUDE_RS_RELEASE")
-        .env_remove("CLAUDE_RS_INSTALL_DIR")
-        .env_remove("CLAUDE_RS_BIN_DIR")
-        .env_remove("CLAUDE_RS_NO_MODIFY_PATH")
-        .env_remove("CLAUDE_RS_REMOVE_NPM")
-        .env_remove("CLAUDE_RS_RUN")
-        .env_remove("CLAUDE_RS_UNINSTALL")
-        .env_remove("CLAUDE_RS_UPDATE")
-        .env_remove("CLAUDE_RS_VERIFY")
-        .env("CLAUDE_RS_NON_INTERACTIVE", "1");
+        .env_remove("MACHINE_GOD_RELEASE")
+        .env_remove("MACHINE_GOD_INSTALL_DIR")
+        .env_remove("MACHINE_GOD_BIN_DIR")
+        .env_remove("MACHINE_GOD_NO_MODIFY_PATH")
+        .env_remove("MACHINE_GOD_REMOVE_NPM")
+        .env_remove("MACHINE_GOD_RUN")
+        .env_remove("MACHINE_GOD_UNINSTALL")
+        .env_remove("MACHINE_GOD_UPDATE")
+        .env_remove("MACHINE_GOD_VERIFY")
+        .env("MACHINE_GOD_NON_INTERACTIVE", "1");
     if let Some(install_dir) = install_dir {
         command.arg("--update").arg("--install-dir").arg(install_dir);
     }
@@ -424,22 +424,22 @@ fn run_script_update(
                 "$ProgressPreference='SilentlyContinue'; Invoke-Expression (Invoke-RestMethod -Uri '{WINDOWS_INSTALLER_URL}')"
             ),
         ])
-        .env_remove("CLAUDE_RS_INSTALL_DIR")
-        .env_remove("CLAUDE_RS_NO_MODIFY_PATH")
-        .env_remove("CLAUDE_RS_REMOVE_NPM")
-        .env_remove("CLAUDE_RS_RUN")
-        .env_remove("CLAUDE_RS_UNINSTALL")
-        .env_remove("CLAUDE_RS_UPDATE")
-        .env_remove("CLAUDE_RS_UPDATE_PARENT_PID")
-        .env_remove("CLAUDE_RS_VERIFY")
-        .env("CLAUDE_RS_RELEASE", latest_version)
-        .env("CLAUDE_RS_NON_INTERACTIVE", "1")
-        .env("CLAUDE_RS_KEEP_NPM", "1");
+        .env_remove("MACHINE_GOD_INSTALL_DIR")
+        .env_remove("MACHINE_GOD_NO_MODIFY_PATH")
+        .env_remove("MACHINE_GOD_REMOVE_NPM")
+        .env_remove("MACHINE_GOD_RUN")
+        .env_remove("MACHINE_GOD_UNINSTALL")
+        .env_remove("MACHINE_GOD_UPDATE")
+        .env_remove("MACHINE_GOD_UPDATE_PARENT_PID")
+        .env_remove("MACHINE_GOD_VERIFY")
+        .env("MACHINE_GOD_RELEASE", latest_version)
+        .env("MACHINE_GOD_NON_INTERACTIVE", "1")
+        .env("MACHINE_GOD_KEEP_NPM", "1");
     if let Some(install_dir) = install_dir {
         command
-            .env("CLAUDE_RS_INSTALL_DIR", install_dir)
-            .env("CLAUDE_RS_UPDATE", "1")
-            .env("CLAUDE_RS_UPDATE_PARENT_PID", std::process::id().to_string());
+            .env("MACHINE_GOD_INSTALL_DIR", install_dir)
+            .env("MACHINE_GOD_UPDATE", "1")
+            .env("MACHINE_GOD_UPDATE_PARENT_PID", std::process::id().to_string());
     }
     io.run(&mut command)
 }
@@ -500,7 +500,7 @@ fn download_unix_installer(io: &InstallIo<'_>) -> Result<DownloadedInstaller, St
 fn create_update_temp_dir() -> Result<PathBuf, String> {
     let base = std::env::temp_dir();
     for attempt in 0..100_u32 {
-        let candidate = base.join(format!("claude-rs-update-{}-{attempt}", std::process::id()));
+        let candidate = base.join(format!("machine-god-update-{}-{attempt}", std::process::id()));
         match std::fs::create_dir(&candidate) {
             Ok(()) => return Ok(candidate),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
@@ -592,7 +592,7 @@ mod tests {
         for method in methods {
             let args = worker_args(VERSION, &method).expect("worker arguments");
             let cli = crate::Cli::try_parse_from(
-                std::iter::once(OsString::from("claude-rs")).chain(args),
+                std::iter::once(OsString::from("machine-god")).chain(args),
             )
             .expect("worker command line");
             cli.validate().expect("valid worker command line");
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn failure_notice_waits_for_the_launch_transcript_and_is_shown_once() {
         use clap::Parser as _;
-        let cli = crate::Cli::try_parse_from(["claude-rs"]).expect("CLI");
+        let cli = crate::Cli::try_parse_from(["machine-god"]).expect("CLI");
         let mut app = App::test_default();
         app.startup = crate::app::state::StartupState::from_cli(&cli);
         app.update_install_failure = Some("npm update install for v9.9.9 failed.".to_owned());

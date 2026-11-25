@@ -67,17 +67,17 @@ fn run(
         .env("UPDATE_EXIT", code.to_string())
         .env("UPDATE_DOWNLOAD_MODE", download)
         .env("PATH", tools)
-        .env("CLAUDE_RS_RELEASE", "wrong-release")
-        .env("CLAUDE_RS_INSTALL_DIR", "wrong-directory");
+        .env("MACHINE_GOD_RELEASE", "wrong-release")
+        .env("MACHINE_GOD_INSTALL_DIR", "wrong-directory");
     for key in [
-        "CLAUDE_RS_BIN_DIR",
-        "CLAUDE_RS_NO_MODIFY_PATH",
-        "CLAUDE_RS_REMOVE_NPM",
-        "CLAUDE_RS_RUN",
-        "CLAUDE_RS_UNINSTALL",
-        "CLAUDE_RS_UPDATE",
-        "CLAUDE_RS_UPDATE_PARENT_PID",
-        "CLAUDE_RS_VERIFY",
+        "MACHINE_GOD_BIN_DIR",
+        "MACHINE_GOD_NO_MODIFY_PATH",
+        "MACHINE_GOD_REMOVE_NPM",
+        "MACHINE_GOD_RUN",
+        "MACHINE_GOD_UNINSTALL",
+        "MACHINE_GOD_UPDATE",
+        "MACHINE_GOD_UPDATE_PARENT_PID",
+        "MACHINE_GOD_VERIFY",
     ] {
         command.env(key, "conflicting-inherited-value");
     }
@@ -117,7 +117,7 @@ fn actual_npm_installs_propagate_foreground_exit_and_worker_failure_then_clear_i
             run(&f, &tools, "npm", mode, code, None, "");
             let j = journal(&f);
             let args: Vec<_> = j.lines().filter_map(|l| l.strip_prefix("arg=")).collect();
-            assert_eq!(args, ["install", "-g", "claude-code-rust@9.9.9"]);
+            assert_eq!(args, ["install", "-g", "machine-god@9.9.9"]);
             assert_eq!(
                 std::fs::read_to_string(f.path("result")).unwrap(),
                 if mode == "foreground" {
@@ -162,13 +162,13 @@ fn script_dispatch_preserves_selected_release_directory_and_noninteractive_inten
         assert_eq!(std::fs::read_to_string(f.path("result")).unwrap(), "0");
         let j = journal(&f);
         let args: Vec<_> = j.lines().filter_map(|l| l.strip_prefix("arg=")).collect();
-        assert!(j.lines().any(|l| l == "CLAUDE_RS_NON_INTERACTIVE=1"));
+        assert!(j.lines().any(|l| l == "MACHINE_GOD_NON_INTERACTIVE=1"));
         for key in [
-            "CLAUDE_RS_NO_MODIFY_PATH",
-            "CLAUDE_RS_REMOVE_NPM",
-            "CLAUDE_RS_RUN",
-            "CLAUDE_RS_UNINSTALL",
-            "CLAUDE_RS_VERIFY",
+            "MACHINE_GOD_NO_MODIFY_PATH",
+            "MACHINE_GOD_REMOVE_NPM",
+            "MACHINE_GOD_RUN",
+            "MACHINE_GOD_UNINSTALL",
+            "MACHINE_GOD_VERIFY",
         ] {
             assert!(!j.lines().any(|l| l.starts_with(&format!("{key}="))), "{key}: {j}");
         }
@@ -179,13 +179,13 @@ fn script_dispatch_preserves_selected_release_directory_and_noninteractive_inten
                 ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
             );
             assert!(args[5].contains("https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1"));
-            for value in ["CLAUDE_RS_RELEASE=9.9.9", "CLAUDE_RS_KEEP_NPM=1"] {
+            for value in ["MACHINE_GOD_RELEASE=9.9.9", "MACHINE_GOD_KEEP_NPM=1"] {
                 assert!(j.lines().any(|l| l == value));
             }
             for (key, expected) in [
-                ("CLAUDE_RS_INSTALL_DIR", directory.display().to_string()),
-                ("CLAUDE_RS_UPDATE", "1".into()),
-                ("CLAUDE_RS_UPDATE_PARENT_PID", pid.to_string()),
+                ("MACHINE_GOD_INSTALL_DIR", directory.display().to_string()),
+                ("MACHINE_GOD_UPDATE", "1".into()),
+                ("MACHINE_GOD_UPDATE_PARENT_PID", pid.to_string()),
             ] {
                 let value = j.lines().find_map(|l| l.strip_prefix(&format!("{key}=")));
                 assert_eq!(value, inplace.then_some(expected.as_str()));
@@ -201,10 +201,10 @@ fn script_dispatch_preserves_selected_release_directory_and_noninteractive_inten
             }
             assert_eq!(args, expected);
             for key in [
-                "CLAUDE_RS_RELEASE",
-                "CLAUDE_RS_INSTALL_DIR",
-                "CLAUDE_RS_BIN_DIR",
-                "CLAUDE_RS_UPDATE",
+                "MACHINE_GOD_RELEASE",
+                "MACHINE_GOD_INSTALL_DIR",
+                "MACHINE_GOD_BIN_DIR",
+                "MACHINE_GOD_UPDATE",
             ] {
                 assert!(!j.lines().any(|l| l.starts_with(&format!("{key}="))));
             }

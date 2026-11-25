@@ -399,7 +399,7 @@ test("empty queue reads retain summary identity and time while failures preserve
 
 test("resume reads the SDK saved structured results even when native tool prose omits their precise timestamps", () => {
   const directory = realpathSync(
-    mkdtempSync(join(tmpdir(), "claude-rs-tool-times-")),
+    mkdtempSync(join(tmpdir(), "machine-god-tool-times-")),
   );
   try {
     const project = join(directory, "project");

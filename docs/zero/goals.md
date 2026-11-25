@@ -31,7 +31,6 @@ Source: `zero/ZIELE.md` (measured goals definition) and `zero/unifieddb/schema.s
 Notes:
 - `loader`, `omega`, and `plugin_portability` are MEASURED: the bundled plugin manifest loads, the omega ground mode answers through the local 0.8B model, and the FranKenstein 3.0 plugin runs without hard-coded `/home` paths or machine names.
 - `freewiki`, `retina`, `grid`, `entity`, `scrape` are PLANNED: test files exist as references but the gates have not yet passed. `measured_value` is NULL (UNKNOWN measurement), not `0`.
-
 ## Column Reference
 
 | Column | Type | Constraints | Epistemic Tag | Description |
@@ -104,8 +103,6 @@ FROM ziele
 WHERE epistemic_status = 'HYPOTHESIS'
   AND confidence > 0.5;
 -- NOTE: confidence > 0.5 does not imply the goal is true.
-```
-
 ### 5. Goals due for re-evaluation (decay-aware)
 
 ```sql

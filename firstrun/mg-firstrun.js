@@ -1,11 +1,11 @@
-// Machine God first-run companion. Run by the `machine-god` launcher with the bundled Bun runtime, before claude-rs.
+// Machine God first-run companion. Run by the `machine-god` launcher with the bundled Bun runtime, before machine-god-core.
 //
 // What it does, in order, and only when a person is at the terminal:
 //   1. Looks for the ChatGPT desktop app (or an open window titled ChatGPT). Nothing else is inspected:
 //      no browser cookies, history, profiles or logins. If nothing is found it asks once.
 //   2. After an explicit yes it downloads a small local model (812 MB) and lets it greet you.
 //   3. The greeting offers an optional ChatGPT bridge. The bridge is set up only after another explicit yes.
-// Every answer is remembered in firstrun.json, so this runs at most once. It never blocks claude-rs: any error
+// Every answer is remembered in firstrun.json, so this runs at most once. It never blocks machine-god-core: any error
 // or Ctrl-C ends the companion and Machine God starts normally.
 //
 // Test switches: MG_FIRSTRUN_FORCE=1 (ignore state and TTY check), MG_FIRSTRUN_ANSWERS=yes,no,... (scripted answers),

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "description": "NDJSON bridge between claude-code-rust and the Claude Agent SDK",
+  "description": "NDJSON bridge between machine-god and the Claude Agent SDK",
   "main": "dist/bridge.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",

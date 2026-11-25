@@ -35,19 +35,19 @@ pub(super) fn resolver_fixture() -> ResolverFixture {
     // Keep every bounded ancestor search inside this fixture.
     let isolated = dir.path().join("0/1/2/3/4/5/6/7/8");
     let root = isolated.as_path();
-    let runtime = if cfg!(windows) { "claude-rs-bridge-bun.exe" } else { "claude-rs-bridge-bun" };
+    let runtime = if cfg!(windows) { "machine-god-bridge-bun.exe" } else { "machine-god-bridge-bun" };
     ResolverFixture {
-        installed_exe: write_file(root, "package/vendor/x86_64/claude-rs"),
+        installed_exe: write_file(root, "package/vendor/x86_64/machine-god"),
         npm_platform_exe: write_file(
             root,
             "npm-prefix/node_modules/@gschaidergabriel/machine-god-win32-x64-msvc/bin/claude-rs",
         ),
-        unbundled_exe: write_file(root, "other/vendor/x86_64/claude-rs"),
-        cargo_target_exe: write_file(root, "manifest/target/debug/claude-rs"),
+        unbundled_exe: write_file(root, "other/vendor/x86_64/machine-god"),
+        cargo_target_exe: write_file(root, "manifest/target/debug/machine-god"),
         packaged_bridge: write_file(root, "package/agent-sdk/dist/bridge.js"),
         npm_sibling_bridge: write_file(
             root,
-            "npm-prefix/node_modules/claude-code-rust/agent-sdk/dist/bridge.js",
+            "npm-prefix/node_modules/machine-god/agent-sdk/dist/bridge.js",
         ),
         packaged_runtime: write_file(root, &format!("package/vendor/x86_64/{runtime}")),
         cargo_target_bridge: write_file(root, "manifest/target/agent-sdk/dist/bridge.js"),
@@ -103,7 +103,7 @@ fn script_overrides_reject_invalid_targets_without_using_healthy_fallbacks() {
                     message.contains(if explicit {
                         "bridge script"
                     } else {
-                        "CLAUDE_RS_AGENT_BRIDGE"
+                        "MACHINE_GOD_AGENT_BRIDGE"
                     }),
                     "{message}"
                 );
@@ -203,7 +203,7 @@ fn automatic_script_search_skips_a_directory_before_the_real_package() {
 #[test]
 fn raw_executable_symlink_resolves_the_target_package_at_both_consumers() {
     let fixture = resolver_fixture();
-    let shim = fixture.dir.path().join("global-bin/claude-rs");
+    let shim = fixture.dir.path().join("global-bin/machine-god");
     fs::create_dir_all(shim.parent().unwrap()).unwrap();
     std::os::unix::fs::symlink(&fixture.npm_platform_exe, &shim).unwrap();
     let resolver = fixture.resolver(Some(shim), false);
@@ -303,7 +303,7 @@ fn invalid_development_runtime_overrides_cannot_select_available_fallbacks() {
         assert_eq!(inspection.path_bun, None);
         assert_eq!(inspection.env_path, Some(invalid.clone()));
         for message in [format!("{error:#}"), inspection.error.unwrap()] {
-            assert!(message.contains("CLAUDE_RS_AGENT_BRIDGE_RUNTIME"), "{message}");
+            assert!(message.contains("MACHINE_GOD_AGENT_BRIDGE_RUNTIME"), "{message}");
             assert!(message.contains(&invalid.display().to_string()), "{message}");
             assert!(
                 message.contains(if directory { "not a file" } else { "does not exist" }),
@@ -350,7 +350,7 @@ async fn launcher_preserves_single_script_argument_diagnostics_and_separate_pipe
         let probe = directory.path().join("runtime probe.cjs");
         fs::write(&probe,r"const fs = require('node:fs');
 const input = fs.readFileSync(0, 'utf8');
-fs.writeSync(1, JSON.stringify({argv: process.argv.slice(1), diagnostics: process.env.CLAUDE_RS_BRIDGE_DIAGNOSTICS, input}));
+fs.writeSync(1, JSON.stringify({argv: process.argv.slice(1), diagnostics: process.env.MACHINE_GOD_BRIDGE_DIAGNOSTICS, input}));
 fs.writeSync(2, 'separate-stderr');
 process.exit(0);
 ").unwrap();

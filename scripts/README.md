@@ -56,12 +56,12 @@ active release tooling and are validated by PR, release, or nightly workflows.
 - `start` and `end`: the first and last affected release, both inclusive, as plain `MAJOR.MINOR.PATCH`.
 - `summary`: the complete one-line user-facing text, at most 200 characters, using only letters, digits, spaces, and `. , : ; ( ) / + _ @ # = -`. `install.sh` reads the file without a JSON parser and the text is pasted into a shell command, so quotes, backslashes, and `$` are rejected by the test.
 
-The installers fetch the file from `main` after the release is selected and print `Known issue in claude-rs <version>: <summary>` for every entry whose range contains the selected version. Prerelease and build suffixes are ignored when comparing. The check only warns: it never blocks or prompts, it is skipped when the selected version is already installed, and a fetch or parse failure is ignored. Because the file is read from `main`, a merged entry takes effect immediately for every installer run, without a release.
+The installers fetch the file from `main` after the release is selected and print `Known issue in machine-god-core <version>: <summary>` for every entry whose range contains the selected version. Prerelease and build suffixes are ignored when comparing. The check only warns: it never blocks or prompts, it is skipped when the selected version is already installed, and a fetch or parse failure is ignored. Because the file is read from `main`, a merged entry takes effect immediately for every installer run, without a release.
 
 To add an advisory, append an entry, run `node --test scripts/install/release-advisories.test.mjs`, and merge. After the fixed release is published, show the same text to npm users of the affected versions by deprecating the range on the root package only:
 
 ```sh
-npm deprecate "claude-code-rust@>=<start> <=<end>" "<summary> Upgrade: npm install -g claude-code-rust@latest"
+npm deprecate "machine-god@>=<start> <=<end>" "<summary> Upgrade: npm install -g machine-god@latest"
 ```
 
 ## Release

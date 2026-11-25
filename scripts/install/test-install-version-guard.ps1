@@ -57,12 +57,12 @@ function New-OwnedInstall {
     param([string]$Path, [string]$Version)
     New-Item -ItemType Directory -Path $Path -Force | Out-Null
     $packageJson = [pscustomobject]@{
-        name = "claude-code-rust"
+        name = "machine-god"
         version = $Version
     } | ConvertTo-Json
     [IO.File]::WriteAllText((Join-Path $Path "package.json"), "$packageJson$([Environment]::NewLine)")
-    [IO.File]::WriteAllText((Join-Path $Path "claude-rs.exe"), "existing binary")
-    [IO.File]::WriteAllText((Join-Path $Path "claude-rs-bridge-bun.exe"), "existing runtime")
+    [IO.File]::WriteAllText((Join-Path $Path "machine-god-core.exe"), "existing binary")
+    [IO.File]::WriteAllText((Join-Path $Path "machine-god-bridge-bun.exe"), "existing runtime")
 }
 
 function Invoke-InstallerScenario {
@@ -73,7 +73,7 @@ function Invoke-InstallerScenario {
         [string]$Advisories
     )
 
-    $sandbox = Join-Path ([IO.Path]::GetTempPath()) "claude-rs-version-guard-test-$PID-$([Guid]::NewGuid().ToString('N'))"
+    $sandbox = Join-Path ([IO.Path]::GetTempPath()) "machine-god-version-guard-test-$PID-$([Guid]::NewGuid().ToString('N'))"
     $installDir = Join-Path $sandbox "install"
     $wrapperPath = Join-Path $sandbox "invoke-installer.ps1"
     $downloadLog = Join-Path $sandbox "downloads.log"
@@ -96,8 +96,8 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
-Get-ChildItem Env:CLAUDE_RS_* -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
-$env:CLAUDE_RS_NON_INTERACTIVE = "1"
+Get-ChildItem Env:MACHINE_GOD_* -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
+$env:MACHINE_GOD_NON_INTERACTIVE = "1"
 
 function Invoke-WebRequest {
     param([string]$Uri, [string]$OutFile, [int]$TimeoutSec)
@@ -163,14 +163,14 @@ exit $LASTEXITCODE
     }
 }
 
-$RootPackage = "claude-code-rust"
+$RootPackage = "machine-god"
 $NonInteractive = $true
-$InstallDir = "C:\test\claude-rs"
+$InstallDir = "C:\test\machine-god-core"
 
 Assert-Equal "1.2.3-preview.1+build.5" (Get-ReleaseVersion -Tag "v1.2.3-preview.1+build.5") "Release normalization did not remove exactly one v prefix"
 Assert-Equal "Version1" (Get-ReleaseVersion -Tag "Version1") "Release normalization removed non-prefix version characters"
 
-$metadataSandbox = Join-Path ([IO.Path]::GetTempPath()) "claude-rs-version-metadata-test-$PID"
+$metadataSandbox = Join-Path ([IO.Path]::GetTempPath()) "machine-god-version-metadata-test-$PID"
 try {
     Remove-Item -LiteralPath $metadataSandbox -Recurse -Force -ErrorAction SilentlyContinue
     New-OwnedInstall -Path $metadataSandbox -Version "1.2.3-preview.1+build.5"
@@ -182,7 +182,7 @@ try {
     Remove-Item -LiteralPath $metadataSandbox -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$advisoriesSandbox = Join-Path ([IO.Path]::GetTempPath()) "claude-rs-advisories-test-$PID.json"
+$advisoriesSandbox = Join-Path ([IO.Path]::GetTempPath()) "machine-god-advisories-test-$PID.json"
 try {
     [IO.File]::WriteAllText($advisoriesSandbox, @'
 {
@@ -232,12 +232,12 @@ Assert-Equal $selectedVersion $defaultResult.InstalledVersion "Pinned same-versi
 $updateResult = Invoke-InstallerScenario -RequestedRelease $selectedTag -Mode "Update"
 Assert-Equal 0 $updateResult.Status "Same-version update did not exit successfully"
 Assert-True $updateResult.Output.Contains("already installed; no changes made") "Same-version update did not report its no-op"
-Assert-True (-not $updateResult.Output.Contains("Reinstalling claude-rs")) "Same-version update attempted a reinstall"
+Assert-True (-not $updateResult.Output.Contains("Reinstalling machine-god-core")) "Same-version update attempted a reinstall"
 Assert-Equal 0 $updateResult.Downloads.Count "Same-version update attempted a release download"
 
 $yesResult = Invoke-InstallerScenario -RequestedRelease $selectedTag -Mode "Yes"
 Assert-True ($yesResult.Status -ne 0) "Mock release payload failure did not stop the -Yes reinstall"
-Assert-True $yesResult.Output.Contains("Reinstalling claude-rs $selectedVersion") "-Yes did not report a same-version reinstall"
+Assert-True $yesResult.Output.Contains("Reinstalling machine-god-core $selectedVersion") "-Yes did not report a same-version reinstall"
 Assert-Equal 2 $yesResult.Downloads.Count "-Yes reinstall made an unexpected number of download attempts"
 Assert-True $yesResult.Downloads[0].EndsWith("/main/scripts/install/release-advisories.json", [StringComparison]::Ordinal) "-Yes reinstall did not check release advisories before downloading"
 Assert-True $yesResult.Downloads[1].EndsWith("/$selectedTag/SHA256SUMS", [StringComparison]::Ordinal) "-Yes reinstall did not reach the checksum download"
@@ -259,7 +259,7 @@ Assert-True $differentResult.Downloads[1].EndsWith("/$differentlyCasedTag/SHA256
 
 $matchingAdvisories = '{"advisories":[{"start":"9.8.0","end":"9.8.7","summary":"Known test issue. Fixed in 9.8.8."}]}'
 $advisedResult = Invoke-InstallerScenario -RequestedRelease $selectedTag -Mode "Yes" -Advisories $matchingAdvisories
-Assert-True $advisedResult.Output.Contains("Known issue in claude-rs ${selectedVersion}: Known test issue. Fixed in 9.8.8.") "Selected release inside an advisory range did not warn: $($advisedResult.Output)"
+Assert-True $advisedResult.Output.Contains("Known issue in machine-god-core ${selectedVersion}: Known test issue. Fixed in 9.8.8.") "Selected release inside an advisory range did not warn: $($advisedResult.Output)"
 Assert-Equal 2 $advisedResult.Downloads.Count "Release advisory warning stopped the install before the checksum download"
 
 $advisedNoOpResult = Invoke-InstallerScenario -RequestedRelease $selectedTag -Advisories $matchingAdvisories

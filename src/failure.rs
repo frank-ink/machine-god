@@ -110,7 +110,7 @@ fn write_app_error_report_with_paths(
     writeln!(writer, "  next_step: {}", error.recommended_command())?;
     writeln!(
         writer,
-        "  issue_guidance: paste this report with `claude-rs logs --bundle --yes` output if the problem persists"
+        "  issue_guidance: paste this report with `machine-god logs --bundle --yes` output if the problem persists"
     )
 }
 
@@ -128,7 +128,7 @@ fn write_panic_report(
     metadata: &CrashMetadata,
 ) -> std::io::Result<()> {
     writeln!(writer)?;
-    writeln!(writer, "claude-rs crashed unexpectedly")?;
+    writeln!(writer, "machine-god crashed unexpectedly")?;
     writeln!(writer, "  category: crash")?;
     writeln!(writer, "  message: {}", metadata.message)?;
     if let Some(location) = &metadata.location {
@@ -194,7 +194,7 @@ fn latest_log_path_display(paths: Option<&crate::logging::DiagnosticsPaths>) -> 
 impl CrashMetadata {
     fn from_panic_info(panic_info: &PanicHookInfo<'_>, latest_log_path: Option<String>) -> Self {
         Self {
-            schema: "claude-rs-crash/v1",
+            schema: "machine-god-crash/v1",
             kind: "panic",
             created_at: timestamp_now(),
             version: env!("CARGO_PKG_VERSION"),
@@ -204,7 +204,7 @@ impl CrashMetadata {
                 format!("{}:{}:{}", location.file(), location.line(), location.column())
             }),
             latest_log_path,
-            diagnostics_bundle_command: "claude-rs logs --bundle --yes",
+            diagnostics_bundle_command: "machine-god logs --bundle --yes",
         }
     }
 }

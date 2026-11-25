@@ -8,9 +8,9 @@ fn fixture(picker: bool) -> (tempfile::TempDir, App) {
     std::fs::write(&path,r#"{"updates":{"future":42,"skip_until_unix_secs":9999999999},"presentation":{"copyFullResponse":true}}"#).unwrap();
     let mut app = App::test_default();
     let cli = if picker {
-        crate::Cli::parse_from(["claude-rs", "--resume"])
+        crate::Cli::parse_from(["machine-god", "--resume"])
     } else {
-        crate::Cli::parse_from(["claude-rs"])
+        crate::Cli::parse_from(["machine-god"])
     };
     app.startup = crate::app::state::StartupState::from_cli(&cli);
     app.global_settings = settings::load_from_path(&path).unwrap();

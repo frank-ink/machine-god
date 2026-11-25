@@ -1,72 +1,280 @@
 module zero.schema_check
 
+// Executable authority: docs/zero/schema_check.py.
+// The ten invariants below are a 1:1 projection of the Python validator registry.
+// No prose-only rule is declared here: every invariant maps to a validator that runs.
+
 architecture SchemaChecker {
   stateAuthority: SchemaCheckState
-  path: ParseSQL -> ParseDoc -> Compare -> ValidateLabels -> ScanForbidden -> Report
+  path: LoadInputs -> ParseDDL -> ParseCapabilities -> Validate -> Aggregate -> Report
 }
 
 compound SchemaCheckState {
-  sql_tables: map<string, TableSpec>
-  doc_tables: map<string, TableSpec>
-  status_rows: list<StatusRow>
-  errors: list<CheckError>
-  strict: bool
+  R_t: CapabilitiesMd       // state record: capabilities.md
+  E_t: list<Receipt>        // evidence: receipts
+  M: AdmissibilitySpace     // enforced admissibility space, one structure
+}
+
+compound CapabilitiesMd {
+  body: string
+}
+
+compound Receipt {
+  id: string
+  kind: enum { RECEIPT, TEST }
+  commit: string
+}
+
+compound StatusRow {
+  capability: string
+  class: enum { MEASURED, HYPOTHESIS, UNKNOWN }
+  evidence_ref: string
+  tracking_issue: string
+  table: string
+  promotion_stage: enum { NONE, MEASURE, FALSIFY, MATCHED_ABLATION, VERIFIED_OUTCOME, CAUSAL_CREDIT, BOUNDED_ADMISSION, REENTRY_TEST, CONTROL_INFLUENCE }
+}
+
+compound Report {
+  body: string
 }
 
 compound TableSpec {
   name: string
   columns: map<string, ColumnSpec>
+  body: string
 }
 
 compound ColumnSpec {
   name: string
   type: string
   constraints: list<string>
-  epistemic_label: option<string>
 }
 
-compound StatusRow {
-  capability: string
-  class: string
-  test_path: string
-  measured_value: string
-  ci_run: string
-  line_number: int
+compound AdmissibilitySpace {
+  ddl: string
+  reports: list<Report>
+  canonical_tables: set<string>
+  removed_columns: set<string>
+  forbidden_claim_patterns: set<string>
+  label_evidence_coupling: map<string, set<string>>
+  tracking_issue_index: map<string, list<string>>
+  strict: bool
+  max_capacity: int = 1
+  promotion_stage_by_class: map<string, set<string>>
+  committed_receipt_ids: set<string>
+  committed_test_names: set<string>
 }
 
 compound CheckError {
-  code: enum { MISSING_TABLE, MISSING_COLUMN, TYPE_MISMATCH, CONSTRAINT_MISMATCH, EPISTEMIC_MISMATCH, INVALID_LABEL, FORBIDDEN_CLAIM, MISSING_INPUT, UNKNOWN_ARGV, UNPROJECTED_DDL }
+  validator: string
+  code: string
   message: string
   location: string
   severity: enum { ERROR, WARNING }
 }
 
-invariant NoUnknownDefault:
-  // UNKNOWN epistemic class never coerced to 0/0.5/''
-  forall c in ColumnSpec: c.epistemic_label == "UNKNOWN" ==> not c.constraints.contains("DEFAULT")
+compound CheckResult {
+  errors: list<CheckError>
+  status: enum { PASS, FAIL }
+}
+
+// 1:1 invariant -> Python validator registry (docs/zero/schema_check.py).
+mapping invariant_to_python_validator {
+  EvidenceRefFormat           -> EvidenceRefFormat
+  EvidenceRefResolves         -> EvidenceRefResolves
+  LabelEvidenceCoupling       -> LabelEvidenceCoupling
+  LabelExclusive              -> LabelExclusive
+  NoUnknownDefault            -> NoUnknownDefault
+  TrackingIssueResolves       -> TrackingIssueResolves
+  AnchorSlugMatches           -> AnchorSlugMatches
+  CanonicalTableOnly          -> CanonicalTableOnly
+  ForbiddenClaimsAbsentInReports -> ForbiddenClaimsAbsentInReports
+  RemovedColumnsAbsent        -> RemovedColumnsAbsent
+  FailClosedCapabilitiesTable -> FailClosedCapabilitiesTable
+  PromotionStageEnforced      -> PromotionStageEnforced
+}
+
+invariant EvidenceRefFormat:
+  // evidence_ref is "-" or receipt:<id> or test:<name>@<hash>
+  forall r in R_t.rows:
+    r.evidence_ref == "-" ||
+    matches(r.evidence_ref, "receipt:[a-zA-Z0-9_-]+") ||
+    matches(r.evidence_ref, "test:[a-zA-Z0-9_-]+@[a-f0-9]{64}")
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant EvidenceRefResolves:
+  // MEASURED rows must reference a committed receipt; HYPOTHESIS rows must reference a committed test;
+  // UNKNOWN rows must use "-"
+  forall r in R_t.rows:
+    (r.class == "MEASURED"  -> (matches(r.evidence_ref, "receipt:[a-zA-Z0-9_-]+") && extract_receipt_id(r.evidence_ref) in M.committed_receipt_ids)) &&
+    (r.class == "HYPOTHESIS" -> (matches(r.evidence_ref, "test:[a-zA-Z0-9_-]+@[a-f0-9]{64}") && extract_test_name(r.evidence_ref) in M.committed_test_names)) &&
+    (r.class == "UNKNOWN"    -> r.evidence_ref == "-")
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant LabelEvidenceCoupling:
+  // exactly one epistemic class per row; the evidence reference kind must be
+  // admissible for that class under M.label_evidence_coupling
+  forall r in R_t.rows:
+    r.class in {"MEASURED", "HYPOTHESIS", "UNKNOWN"} &&
+    evidence_ref_kind(r.evidence_ref) in M.label_evidence_coupling[r.class]
   ON_VIOLATION -> TriggerEmergencyDeescalation
 
 invariant LabelExclusive:
-  // Exactly one of MEASURED/PLANNED/UNKNOWN per status row
-  forall r in StatusRow: r.class in {"MEASURED", "PLANNED", "UNKNOWN"} && count_labels(r.class) == 1
+  // no capability appears with more than one epistemic class
+  let caps = group_by(R_t.rows, .capability)
+  forall (cap, rows) in caps:
+    unique(rows.map(.class)).size == 1
   ON_VIOLATION -> TriggerEmergencyDeescalation
 
-invariant ForbiddenClaimsAbsent:
-  // No anthropomorphic capability claims in scanned files
-  forall file in ScannedFiles: not contains_forbidden_pattern(file.content)
+invariant NoUnknownDefault:
+  // UNKNOWN class must not be used as a default/fallback: every UNKNOWN row must have
+  // an explicit justification in tracking_issue (not "-") and evidence_ref == "-"
+  forall r in R_t.rows:
+    r.class == "UNKNOWN" -> (r.tracking_issue != "-" && r.evidence_ref == "-")
   ON_VIOLATION -> TriggerEmergencyDeescalation
 
-fn parse_sql_ddl(sql: string) -> map<string, TableSpec> { ... }
-fn parse_schema_doc(doc: string) -> map<string, TableSpec> { ... }
-fn parse_status_doc(doc: string) -> list<StatusRow> { ... }
-fn compare_schemas(sql: map, doc: map, strict: bool) -> list<CheckError> { ... }
-fn validate_labels(rows: list<StatusRow>) -> list<CheckError> { ... }
-fn scan_forbidden_claims(paths: list<Path>) -> list<CheckError> { ... }
-fn read_gate_counts() -> (int, int) { ... }  // from cargo test / npm test output
-fn run_checker(args: list<string>) -> int { ... }
+invariant TrackingIssueResolves:
+  // tracking_issue is "-" or resolves to an existing markdown file
+  forall r in R_t.rows:
+    r.tracking_issue == "-" || r.tracking_issue in M.tracking_issue_index
+  ON_VIOLATION -> TriggerEmergencyDeescalation
 
-hypothesis H_SCHEMA_PROJECTION: "Doc projection matches DDL exactly when --strict"
-hypothesis H_LABEL_DISCIPLINE: "Every capability row carries exactly one valid label"
-hypothesis H_NO_ANTHROPOMORPHISM: "No forbidden claim patterns in any scanned source"
+invariant AnchorSlugMatches:
+  // the anchor slug in tracking_issue equals the slug of the referenced heading
+  forall r in R_t.rows:
+    r.tracking_issue == "-" ||
+    anchor_slug(r.tracking_issue) ==
+      heading_slug(resolve_markdown(r.tracking_issue, M.tracking_issue_index))
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant CanonicalTableOnly:
+  // every table named by a status row is a canonical table
+  forall r in R_t.rows:
+    r.table in M.canonical_tables
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant ForbiddenClaimsAbsentInReports:
+  // forbidden claim patterns are absent from report bodies; SQL DDL is not a
+  // prose corpus and is not scanned for claims
+  forall report in M.reports:
+    not contains_any(report.body, M.forbidden_claim_patterns)
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant RemovedColumnsAbsent:
+  // removed columns are absent from every table of the whole DDL, not only from
+  // the capabilities table
+  forall table in parse_sql_ddl(M.ddl):
+    intersect(table.columns.keys(), M.removed_columns).empty
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant FailClosedCapabilitiesTable:
+  // capabilities.md must parse without ambiguity: no duplicate capability IDs,
+  // no malformed rows, no unknown columns; any parse failure is a hard error
+  let parsed = parse_capabilities_md(R_t.body)
+  parsed.parse_errors.empty &&
+  unique(parsed.rows.map(.capability)).size == parsed.rows.size
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+invariant PromotionStageEnforced:
+  // promotion_stage must be consistent with class:
+  // MEASURED -> at least VERIFIED_OUTCOME; HYPOTHESIS -> at most MATCHED_ABLATION; UNKNOWN -> NONE
+  forall r in R_t.rows:
+    (r.class == "MEASURED"  -> promotion_stage_order(r.promotion_stage) >= promotion_stage_order("VERIFIED_OUTCOME")) &&
+    (r.class == "HYPOTHESIS" -> promotion_stage_order(r.promotion_stage) <= promotion_stage_order("MATCHED_ABLATION")) &&
+    (r.class == "UNKNOWN"    -> r.promotion_stage == "NONE") &&
+    // promotion_stage must be admissible for the class per M.promotion_stage_by_class
+    r.promotion_stage in M.promotion_stage_by_class[r.class]
+  ON_VIOLATION -> TriggerEmergencyDeescalation
+
+fn parse_sql_ddl(ddl: string) -> map<string, TableSpec> { ... }
+fn parse_capabilities_md(body: string) -> ParsedCapabilities { ... }
+
+compound ParsedCapabilities {
+  rows: list<StatusRow>
+  parse_errors: list<string>
+}
+
+fn evidence_ref_kind(evidence_ref: string) -> enum { NONE, RECEIPT, TEST } { ... }
+fn extract_receipt_id(evidence_ref: string) -> string { ... }
+fn extract_test_name(evidence_ref: string) -> string { ... }
+fn anchor_slug(tracking_issue: string) -> string { ... }
+fn heading_slug(markdown: string) -> string { ... }
+fn resolve_markdown(tracking_issue: string, index: map<string, list<string>>) -> string { ... }
+fn contains_any(text: string, patterns: set<string>) -> bool { ... }
+fn promotion_stage_order(stage: string) -> int { ... }
+
+fn EvidenceRefFormat(rows: list<StatusRow>) -> list<CheckError> { ... }
+fn EvidenceRefResolves(rows: list<StatusRow>, committed_receipt_ids: set<string>, committed_test_names: set<string>) -> list<CheckError> { ... }
+fn LabelEvidenceCoupling(rows: list<StatusRow>, coupling: map<string, set<string>>) -> list<CheckError> { ... }
+fn LabelExclusive(rows: list<StatusRow>) -> list<CheckError> { ... }
+fn NoUnknownDefault(rows: list<StatusRow>) -> list<CheckError> { ... }
+fn TrackingIssueResolves(rows: list<StatusRow>, index: map<string, list<string>>) -> list<CheckError> { ... }
+fn AnchorSlugMatches(rows: list<StatusRow>, index: map<string, list<string>>) -> list<CheckError> { ... }
+fn CanonicalTableOnly(rows: list<StatusRow>, canonical_tables: set<string>) -> list<CheckError> { ... }
+fn ForbiddenClaimsAbsentInReports(reports: list<Report>, patterns: set<string>) -> list<CheckError> { ... }
+fn RemovedColumnsAbsent(tables: map<string, TableSpec>, removed_columns: set<string>) -> list<CheckError> { ... }
+fn FailClosedCapabilitiesTable(parsed: ParsedCapabilities) -> list<CheckError> { ... }
+fn PromotionStageEnforced(rows: list<StatusRow>, promotion_stage_by_class: map<string, set<string>>) -> list<CheckError> { ... }
+
+fn validate_all(state: SchemaCheckState) -> list<CheckError> {
+  let parsed = parse_capabilities_md(state.R_t.body)
+  let tables = parse_sql_ddl(state.M.ddl)
+  EvidenceRefFormat(parsed.rows)
+    ++ EvidenceRefResolves(parsed.rows, state.M.committed_receipt_ids, state.M.committed_test_names)
+    ++ LabelEvidenceCoupling(parsed.rows, state.M.label_evidence_coupling)
+    ++ LabelExclusive(parsed.rows)
+    ++ NoUnknownDefault(parsed.rows)
+    ++ TrackingIssueResolves(parsed.rows, state.M.tracking_issue_index)
+    ++ AnchorSlugMatches(parsed.rows, state.M.tracking_issue_index)
+    ++ CanonicalTableOnly(parsed.rows, state.M.canonical_tables)
+    ++ ForbiddenClaimsAbsentInReports(state.M.reports, state.M.forbidden_claim_patterns)
+    ++ RemovedColumnsAbsent(tables, state.M.removed_columns)
+    ++ FailClosedCapabilitiesTable(parsed)
+    ++ PromotionStageEnforced(parsed.rows, state.M.promotion_stage_by_class)
+}
+
+fn transition(state: SchemaCheckState) -> CheckResult {
+  // pure: identical (R_t, E_t, M) yields an identical result
+  require state.M.max_capacity == 1 else TriggerEmergencyDeescalation
+  let errors = validate_all(state)
+  CheckResult { errors: errors, status: if errors.empty then PASS else FAIL }
+}
+
+fn load_inputs(args: list<string>) -> Result<SchemaCheckState, InputError> { ... }
+
+compound InputError {
+  code: enum { MISSING_ARGS, UNREADABLE_FILE, INVALID_DDL, INVALID_RECEIPTS, INVALID_INDEX }
+  message: string
+}
+
+fn report(result: CheckResult) -> void { ... }
+fn report_input_error(err: InputError) -> void { ... }
+
+fn run_checker(args: list<string>) -> int {
+  match load_inputs(args) {
+    Ok(state) => {
+      let result = transition(state)
+      report(result)
+      if result.status == PASS then 0 else 1
+    }
+    Err(err) => {
+      report_input_error(err)
+      2
+    }
+  }
+}
+
+hypothesis H_EVIDENCE_REF_FORMAT: "Every status row's evidence_ref matches receipt:<id>, test:<name>@<hash>, or -"
+hypothesis H_EVIDENCE_REF_RESOLVES: "MEASURED rows reference committed receipts; HYPOTHESIS rows reference committed tests; UNKNOWN rows use -"
+hypothesis H_LABEL_EVIDENCE_COUPLING: "Every status row's epistemic class admits its evidence reference kind"
+hypothesis H_LABEL_EXCLUSIVE: "No capability appears with more than one epistemic class"
+hypothesis H_NO_UNKNOWN_DEFAULT: "UNKNOWN class is never a default; every UNKNOWN row has explicit justification"
+hypothesis H_TRACKING_ISSUE_RESOLVES: "Every non-dash tracking_issue resolves to an existing markdown file"
+hypothesis H_ANCHOR_SLUG_MATCHES: "Every referenced anchor slug equals the slug of the referenced heading"
+hypothesis H_CANONICAL_TABLE_ONLY: "Every table named by a status row is canonical"
+hypothesis H_REPORTS_CLAIM_FREE: "No report body contains a forbidden claim pattern"
+hypothesis H_REMOVED_COLUMNS_ABSENT: "No removed column occurs in any table of the whole DDL"
+hypothesis H_FAIL_CLOSED_CAPABILITIES_TABLE: "capabilities.md parses without ambiguity or error"
+hypothesis H_PROMOTION_STAGE_ENFORCED: "promotion_stage is consistent with class and admissible per class"
 
 promotion MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE

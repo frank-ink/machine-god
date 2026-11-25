@@ -75,11 +75,11 @@ export function buildThirdPartyNotices({
   return `# Third-Party Notices
 
 This npm platform package redistributes a private Bun executable used only to
-run the bundled Agent SDK bridge for \`claude-code-rust\`. The executable is
-renamed to \`claude-rs-bridge-bun\` or \`claude-rs-bridge-bun.exe\`; it is not
+run the bundled Agent SDK bridge for \`machine-god\`. The executable is
+renamed to \`machine-god-bridge-bun\` or \`machine-god-bridge-bun.exe\`; it is not
 exposed as a user-facing \`bun\` command.
 
-The \`claude-code-rust\` project is licensed under Apache-2.0.
+The \`machine-god\` project is licensed under Apache-2.0.
 
 ## Bundled Bun Runtime
 

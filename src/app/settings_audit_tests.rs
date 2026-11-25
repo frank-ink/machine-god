@@ -20,8 +20,8 @@ fn profile_selection_respects_override_fallback_and_unavailable_locations() {
     for (profile, system, expected) in [
         (Some("profile"), Some("system"), Some("profile/settings.json")),
         (Some("profile"), None, Some("profile/settings.json")),
-        (Some(""), Some("system"), Some("system/claude-code-rust/settings.json")),
-        (None, Some("system"), Some("system/claude-code-rust/settings.json")),
+        (Some(""), Some("system"), Some("system/machine-god/settings.json")),
+        (None, Some("system"), Some("system/machine-god/settings.json")),
         (Some(""), None, None),
         (None, None, None),
     ] {

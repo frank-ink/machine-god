@@ -71,7 +71,7 @@ impl DoctorFixture {
         script: &Path,
         args: &[&str],
     ) -> std::process::Output {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
         command
             .current_dir(cwd)
             .arg("--dir")
@@ -80,9 +80,9 @@ impl DoctorFixture {
             .arg(script)
             .args(args)
             .env("CLAUDE_CONFIG_DIR", &self.profile)
-            .env("CLAUDE_RS_CONFIG_DIR", &self.app_profile)
-            .env("CLAUDE_RS_AGENT_BRIDGE_RUNTIME", &self.runtime)
-            .env_remove("CLAUDE_RS_AGENT_BRIDGE")
+            .env("MACHINE_GOD_CONFIG_DIR", &self.app_profile)
+            .env("MACHINE_GOD_AGENT_BRIDGE_RUNTIME", &self.runtime)
+            .env_remove("MACHINE_GOD_AGENT_BRIDGE")
             .env_remove("CLAUDE_CODE_PROJECT_DIR_NAME")
             .env("NO_COLOR", "1")
             .env_remove("FORCE_COLOR")
@@ -201,7 +201,7 @@ async fn doctor_reports_the_selected_failure_in_each_format_and_strict_changes_o
     assert_eq!(check(&report, "bridge_script")["status"], "pass");
     assert_eq!(check(&report, "bridge_runtime_version")["details"]["version"], "1.2.3");
     for (id, suffix) in
-        [("runtime_log_dir", "logs/runtime"), ("legacy_log_path", "logs/claude-rs.log")]
+        [("runtime_log_dir", "logs/runtime"), ("legacy_log_path", "logs/machine-god.log")]
     {
         let diagnostic = check(&report, id);
         assert_eq!(diagnostic["status"], "pass");

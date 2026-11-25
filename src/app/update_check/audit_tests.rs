@@ -60,7 +60,7 @@ async fn http_results_reach_saved_metadata_and_the_exact_manual_or_exit_action()
         );
         app.request_shutdown();
         assert_eq!(
-            automatic_update_action_with(&app, &Cli::parse_from(["claude-rs"]), || {
+            automatic_update_action_with(&app, &Cli::parse_from(["machine-god"]), || {
                 InstallMethod::Npm
             }),
             (enabled == Some(true)).then(|| super::super::PostExitAction::InstallUpdate {
@@ -91,7 +91,7 @@ async fn queued_check_preserves_revocation_and_exit_reloads_each_supported_conse
     assert_eq!(saved["notifications"]["actionsRequired"], false);
     app.request_shutdown();
     assert!(
-        automatic_update_action_with(&app, &Cli::parse_from(["claude-rs"]), || panic!(
+        automatic_update_action_with(&app, &Cli::parse_from(["machine-god"]), || panic!(
             "revocation must precede detection"
         ))
         .is_none()
@@ -142,9 +142,9 @@ async fn queued_check_preserves_revocation_and_exit_reloads_each_supported_conse
         }
         let before = std::fs::read(&path).ok();
         let cli = if case == "disabled" {
-            Cli::parse_from(["claude-rs", "--no-update-check"])
+            Cli::parse_from(["machine-god", "--no-update-check"])
         } else {
-            Cli::parse_from(["claude-rs"])
+            Cli::parse_from(["machine-god"])
         };
         let called = std::cell::Cell::new(false);
         let action = automatic_update_action_with(&app, &cli, || {

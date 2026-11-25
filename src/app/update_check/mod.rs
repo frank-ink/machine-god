@@ -17,7 +17,7 @@ const GITHUB_LATEST_RELEASE_API_URL: &str =
     "https://api.github.com/repos/gschaidergabriel/machine-god/releases/latest";
 const GITHUB_API_ACCEPT_VALUE: &str = "application/vnd.github+json";
 const GITHUB_API_VERSION_VALUE: &str = "2022-11-28";
-const GITHUB_USER_AGENT_VALUE: &str = "claude-code-rust-update-check";
+const GITHUB_USER_AGENT_VALUE: &str = "machine-god-update-check";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct SimpleVersion {

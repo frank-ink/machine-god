@@ -83,7 +83,7 @@ fn saved_trust_controls_read_only_startup_admission_and_launch_intent() {
         fixture.write(&json!({"account":"keep","projects":{&fixture.key:{"hasTrustDialogAccepted":approved}}}));
         let before = std::fs::read(&fixture.preferences).unwrap();
         let cli = crate::Cli::try_parse_from([
-            std::ffi::OsStr::new("claude-rs"),
+            std::ffi::OsStr::new("machine-god"),
             std::ffi::OsStr::new("--no-update-check"),
             std::ffi::OsStr::new("--dir"),
             fixture.project.as_os_str(),

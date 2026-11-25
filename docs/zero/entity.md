@@ -1,18 +1,15 @@
-# EntityOS binding (MEASURED / UNKNOWN)
+# EntityOS binding (evidence classes)
 
 ## State authority
 
-`src/zero/entity.rs` is the only module that derives EntityOS identity and
-root state. The authority is the bundled `plugins/frankenstein3` plugin:
+`src/zero/entity.rs` is the module responsible for deriving EntityOS identity and root state from the bundled `plugins/frankenstein3` plugin evidence.
 
-- `zero-manifest.json` — primary identity authority (`entity_name`, `name`,
-  `version`, `entity_id`) and root state (`root_state` | `root` | `state` |
-  `entity`, otherwise the whole manifest object).
+**Status: UNKNOWN.** `src/zero/entity.rs` is not implemented in this repository state; no `cargo test` has been executed against it. No identity, root state, or health value is ever invented. Missing or malformed evidence yields `UNKNOWN` / error.
+
+Evidence precedence:
+- `zero-manifest.json` — primary identity authority (`entity_name`, `name`, `version`, `entity_id`) and root state (`root_state` | `root` | `state` | `entity`, otherwise the whole manifest object).
 - `plugin.json` — fallback evidence source only (name/version/id).
 - plugin data directory — owner of `unified.db`.
-
-Missing or malformed evidence is an error / `UNKNOWN`; no identity, root state
-or health value is ever invented.
 
 ## Path resolution (f3_pfade precedence)
 
@@ -34,25 +31,40 @@ Plugin data directory:
 
 `unified.db` is always `<plugin data dir>/unified.db`.
 
-## One database for retina and entity
+## Storage contract — two schema files, explicit ownership
 
-`entity::unified_db_path()` is the canonical resolver. The retina side uses
-`zero::retina_db::unified_db_path()`, which delegates to it, so both organs
-address the same file. Test: `zero::entity::tests::db_path_matches_retina`.
+There is no single schema source of truth across the whole plugin bundle. Authority is split by file:
+
+| Schema file | Owner | Scope |
+|---|---|---|
+| `zero/unifieddb/schema.sql` | `zero/` (this repo) | `unified.db` tables owned by Machine God / zero40, notably `durable_memory` rows with `kind=...` used by retina, welt_digest, grund_antwort. |
+| `plugins/frankenstein3/daten/schema_leer.sql` | bundled plugin (`plugins/frankenstein3`) | Plugin-owned schema. `zero/` does not create, migrate, or claim authority over it. |
+
+`entity::unified_db_path()` is the canonical resolver for the single `unified.db` file (`<plugin data dir>/unified.db`). Every Machine God organ reads and writes through it.
+
+All Machine God kinds are `durable_memory` rows with `kind=...`, not standalone tables created by `zero/`:
+- `kind='retina'` — perception events (Retina one-line state), north star item 9.
+- `kind='welt_digest'` — today's digest, north star item 21.
+- `kind='grund_antwort'` — ground-mode answers, north star item 23.
+
+Missing or malformed evidence for any kind yields `UNKNOWN`; no value is ever invented.
+
+## Cross-repo contract (external)
+
+The tables `mg_haltung` and `mg_drift_ereignis` live in the service side (`~/welt-organ`, built outside this repo). They are **external** to `zero/` and `plugins/frankenstein3`. The app reads them read-only; veto/rollback remain a CLI for Gabriel (`haltung.py veto|rollback --wer gabriel`), never from the app. `zero/` does not own or migrate these tables.
 
 ## Health
 
 `entity_health_at(paths, now)` performs the measurement:
 
-- `MEASURED(ok)` only when manifest + plugin metadata were read and parsed.
-- `UNKNOWN` with a cause otherwise.
+- ok is reported only when manifest + plugin metadata were read and parsed.
+- UNKNOWN with a cause otherwise.
 - `db_present` reports whether the database file was observed on disk.
 
-Status line: `GRID ok | Retina ok | EntityOS ok | Omnipool ok`; stale or
-unmeasured components render as `UNKNOWN`.
+Status line: `GRID ok | Retina ok | EntityOS ok | Omnipool ok`; stale or unmeasured components render as `UNKNOWN`.
 
 ## Claim classes
 
-- MEASURED: identity/root values, health class, db path, db presence.
+- Identity/root values, health class, db path and db presence are reported only when actually observed in this run.
 - HYPOTHESIS: that the bundled plugin layout stays stable across machines.
-- UNKNOWN: anything not observed in this run (missing files, parse errors).
+- UNKNOWN: anything not observed in this run (missing files, parse errors, unimplemented module).

@@ -18,7 +18,7 @@ function makeExecutable(filePath) {
 }
 
 test("envWithoutSystemRuntimePath removes every Unix Bun directory from PATH", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-path-test-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-path-test-"));
   try {
     const firstBunDir = path.join(tempDir, "first");
     const secondBunDir = path.join(tempDir, "second");
@@ -39,7 +39,7 @@ test("envWithoutSystemRuntimePath removes every Unix Bun directory from PATH", (
 });
 
 test("resolveExecutablesOnPath ignores non-executable Unix files", { skip: process.platform === "win32" }, () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-path-test-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-path-test-"));
   try {
     const binDir = path.join(tempDir, "bin");
     fs.mkdirSync(binDir, { recursive: true });
@@ -52,7 +52,7 @@ test("resolveExecutablesOnPath ignores non-executable Unix files", { skip: proce
 });
 
 test("resolveExecutablesOnPath respects Windows PATHEXT path shapes", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-path-test-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-path-test-"));
   try {
     const bunDir = path.join(tempDir, "bin");
     fs.mkdirSync(bunDir, { recursive: true });
@@ -85,7 +85,7 @@ test("sanitizedNpmEnvironment removes npm registry and token overrides", () => {
 });
 
 test("runtimeDependencyPackageDirs skips missing incompatible optional packages", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-lock-test-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-lock-test-"));
   try {
     const installedPackage = path.join(tempDir, "node_modules", "present");
     fs.mkdirSync(installedPackage, { recursive: true });

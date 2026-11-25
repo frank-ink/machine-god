@@ -14,3 +14,4 @@ pub mod claude_code;
 pub mod claude_code_test;
 pub mod retina_db;
 pub mod omega_test;
+pub mod bild;

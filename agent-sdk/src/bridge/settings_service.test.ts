@@ -18,7 +18,7 @@ let root: string;
 let cwd: string;
 const oldProfile = process.env.CLAUDE_CONFIG_DIR;
 beforeEach(async () => {
-  root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "claude-rs-settings-")));
+  root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "machine-god-settings-")));
   cwd = path.join(root, "project");
   process.env.CLAUDE_CONFIG_DIR = path.join(root, "profile");
   await fs.mkdir(path.join(cwd, ".claude"), { recursive: true });
@@ -1177,7 +1177,7 @@ test("committed settings remain saved when snapshot refresh or owned-lock cleanu
       if (args[1] === file) committed = true;
     });
     t.mock.method(fs, "unlink", async (...args: Parameters<typeof fs.unlink>) => {
-      if (phase === "lock-cleanup" && args[0] === `${file}.claude-rs.lock` && committed)
+      if (phase === "lock-cleanup" && args[0] === `${file}.machine-god.lock` && committed)
         throw cause;
       await unlink(...args);
     });
@@ -1201,11 +1201,11 @@ test("committed settings remain saved when snapshot refresh or owned-lock cleanu
         "an old snapshot cannot masquerade as refreshed truth",
       );
       if (phase === "lock-cleanup")
-        assert.deepEqual(await artifacts(file), [`${path.basename(file)}.claude-rs.lock`]);
+        assert.deepEqual(await artifacts(file), [`${path.basename(file)}.machine-god.lock`]);
     } finally {
       t.mock.restoreAll();
       // Only the lock created by this injected failure belongs to this fixture.
-      if (phase === "lock-cleanup") await fs.unlink(`${file}.claude-rs.lock`);
+      if (phase === "lock-cleanup") await fs.unlink(`${file}.machine-god.lock`);
     }
     assert.equal(
       (await inspectSettings(cwd)).values.find((value) => value.id === "language")?.value,
@@ -1287,7 +1287,7 @@ test("staging, synchronization, comparison and rename failures preserve files an
 
 test("a competing settings writer cannot remove the active owner's lock or staged data", async (t) => {
   const file = nativePath("user"),
-    lockPath = `${file}.claude-rs.lock`;
+    lockPath = `${file}.machine-god.lock`;
   await write("user", { language: "German", future: "retained" });
   const shown = await inspectSettings(cwd),
     before = await fs.readFile(file, "utf8");

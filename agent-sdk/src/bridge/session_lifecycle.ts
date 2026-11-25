@@ -111,8 +111,8 @@ export type PendingRewindResult = Omit<
 
 const BRIDGE_RUNTIME_PROCESS_NAME =
   process.platform === "win32"
-    ? "claude-rs-bridge-bun.exe"
-    : "claude-rs-bridge-bun";
+    ? "machine-god-bridge-bun.exe"
+    : "machine-god-bridge-bun";
 const BRIDGE_RUNTIME_GUARD_PROMPT =
   `Do not terminate the Claude Rust bridge runtime process \`${BRIDGE_RUNTIME_PROCESS_NAME}\`; ` +
   "when cleaning up development servers, only stop processes by explicit PIDs you started in this session.";
@@ -478,8 +478,8 @@ export async function createSession(params: {
   pendingRewindResult?: PendingRewindResult;
 }): Promise<SessionState> {
   const previous = params.resume ? sessions.get(params.resume) : undefined;
-  // Built-in plugins (FranKenstein 3.0 + Agent Zero) shipped with claude-rs, set by the Rust host.
-  const builtinPlugins = (process.env.CLAUDE_RS_BUILTIN_PLUGINS ?? "").split(pathDelimiter).filter(Boolean);
+  // Built-in plugins (FranKenstein 3.0 + Agent Zero) shipped with machine-god, set by the Rust host.
+  const builtinPlugins = (process.env.MACHINE_GOD_BUILTIN_PLUGINS ?? "").split(pathDelimiter).filter(Boolean);
   const pluginPaths = [
     ...new Set([...builtinPlugins, ...(params.pluginPaths ?? (previous ? sessionPluginFolders(previous) : []))]),
   ];
@@ -590,10 +590,10 @@ export async function createSession(params: {
   };
 
   const claudeCodeExecutable = process.env.CLAUDE_CODE_EXECUTABLE;
-  const sdkDebugFile = process.env.CLAUDE_RS_SDK_DEBUG_FILE;
+  const sdkDebugFile = process.env.MACHINE_GOD_SDK_DEBUG_FILE;
   const enableSdkDebug =
-    process.env.CLAUDE_RS_SDK_DEBUG === "1" || Boolean(sdkDebugFile);
-  const enableSpawnDebug = process.env.CLAUDE_RS_SDK_SPAWN_DEBUG === "1";
+    process.env.MACHINE_GOD_SDK_DEBUG === "1" || Boolean(sdkDebugFile);
+  const enableSpawnDebug = process.env.MACHINE_GOD_SDK_SPAWN_DEBUG === "1";
   if (claudeCodeExecutable && !fs.existsSync(claudeCodeExecutable)) {
     throw new Error(
       `CLAUDE_CODE_EXECUTABLE does not exist: ${claudeCodeExecutable}`,

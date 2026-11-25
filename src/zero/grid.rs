@@ -200,19 +200,19 @@ impl GridEndpoint {
     /// Only the literal `127.0.0.1` is admissible.
     pub fn new(host: &str, port: u16) -> Result<Self, GridError> {
         let parsed: IpAddr = host.parse().map_err(|_| {
-            GridError::InvalidEndpoint(format!(
+            GridError::InvalidPort(format!(
                 "host must be the literal {GRID_HOST}, got {host:?}"
             ))
         })?;
 
         if parsed != IpAddr::V4(Ipv4Addr::LOCALHOST) {
-            return Err(GridError::InvalidEndpoint(format!(
+            return Err(GridError::InvalidPort(format!(
                 "host must be the literal {GRID_HOST}, got {host:?}"
             )));
         }
 
         if port == 0 {
-            return Err(GridError::InvalidEndpoint(
+            return Err(GridError::InvalidPort(
                 "port must be between 1 and 65535".to_owned(),
             ));
         }
@@ -326,8 +326,6 @@ pub trait GridTransport: Send + Sync {
 
 #[derive(Debug, Error)]
 pub enum GridError {
-    #[error("invalid GRID endpoint: {0}")]
-    InvalidEndpoint(String),
     #[error("invalid GRID port: {0}")]
     InvalidPort(String),
     #[error("invalid GRID path: {0}")]
@@ -582,7 +580,7 @@ impl TcpGridTransport {
         // Re-check at the socket boundary. GridEndpoint fields are private, but
         // this keeps the safety property local to the network implementation.
         if endpoint.host != IpAddr::V4(Ipv4Addr::LOCALHOST) {
-            return Err(GridError::InvalidEndpoint(format!(
+            return Err(GridError::InvalidPort(format!(
                 "host must be the literal {GRID_HOST}"
             )));
         }

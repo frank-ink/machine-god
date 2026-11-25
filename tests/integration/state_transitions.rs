@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use claude_code_rust::agent::model;
-use claude_code_rust::app::AppStatus;
+use machine_god::agent::model;
+use machine_god::app::AppStatus;
 use pretty_assertions::assert_eq;
 
 use crate::helpers::{send_client_event, session_update, test_app, turn_complete};

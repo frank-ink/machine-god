@@ -1,6 +1,6 @@
 # Settings reference
 
-Use this page to look up saved scopes, setting keys, persistence and runtime behavior. For editing steps, start with [Configure claude-rs](configure.md). A saved value and the value running in the current session can differ.
+Use this page to look up saved scopes, setting keys, persistence and runtime behavior. For editing steps, start with [Configure machine-god](configure.md). A saved value and the value running in the current session can differ.
 
 ## Where settings are saved
 
@@ -12,7 +12,7 @@ Each save goes to one scope. Press `s` in the list to cycle the save scope throu
 | Project | `./.claude/settings.json` | Defaults shared with the repository. |
 | Local | `./.claude/settings.local.json` | Private defaults for this project. |
 | Managed | Organization policy | Shown for information. Settings restricted by policy are read-only. |
-| App preferences | `claude-code-rust/settings.json` in the OS config directory, or `<CLAUDE_RS_CONFIG_DIR>/settings.json` when overridden | This app's own preferences: footer layout, tab-title activity, the `/copy` picker, notification categories and automatic updates. Always saved for the user. |
+| App preferences | `machine-god/settings.json` in the OS config directory, or `<MACHINE_GOD_CONFIG_DIR>/settings.json` when overridden | This app's own preferences: footer layout, tab-title activity, the `/copy` picker, notification categories and automatic updates. Always saved for the user. |
 
 Not every setting can be saved at every scope. A setting that the selected scope cannot hold is read-only until you switch scope; [Settings by pane](#settings-by-pane) lists the restrictions.
 
@@ -20,7 +20,7 @@ Workspace trust is recorded separately in `~/.claude.json`. It is not a settings
 
 Set `CLAUDE_CONFIG_DIR` before startup to use an isolated Claude profile. User settings then live in `<directory>/settings.json`, workspace trust in `<directory>/.claude.json`, and file credentials in `<directory>/.credentials.json`. Sessions, plugins and authentication use the same directory. Project and Local settings stay in the project, and app preferences and diagnostics keep their normal OS locations.
 
-Set `CLAUDE_RS_CONFIG_DIR` to select a separate directory for this app's preferences. They are read from and saved to `<directory>/settings.json`, including the footer layout, presentation preferences, notification categories and update preferences. An empty or unset value uses the normal OS config location. This override is independent of `CLAUDE_CONFIG_DIR`; diagnostics retain their normal location.
+Set `MACHINE_GOD_CONFIG_DIR` to select a separate directory for this app's preferences. They are read from and saved to `<directory>/settings.json`, including the footer layout, presentation preferences, notification categories and update preferences. An empty or unset value uses the normal OS config location. This override is independent of `CLAUDE_CONFIG_DIR`; diagnostics retain their normal location.
 
 The Settings tab shows saved values. A running session can differ, because workspace trust, managed policy, model capabilities, startup arguments and session commands also apply. The Status tab and the chat footer show what the session is running with.
 
@@ -184,9 +184,9 @@ Automatic installation is skipped for source builds and unrecognized installatio
 
 The installation runs detached from the terminal and asks no questions. On exit the app prints one line naming the version and returns to the shell; closing the terminal does not stop the installation. Only one background installation runs at a time, and one that takes longer than 10 minutes is stopped.
 
-Installer output is written to `claude-rs-update.log` in the parent of the [runtime log directory](diagnostics.md#logging), replacing the log of the previous installation. A failed installation is shown as a warning at the next start and retried after the next normal exit.
+Installer output is written to `machine-god-update.log` in the parent of the [runtime log directory](diagnostics.md#logging), replacing the log of the previous installation. A failed installation is shown as a warning at the next start and retried after the next normal exit.
 
-The setting updates only `claude-rs`. It does not update a separately installed Claude CLI.
+The setting updates only `machine-god`. It does not update a separately installed Claude CLI.
 
 ## How files are changed
 
@@ -203,9 +203,9 @@ The setting updates only `claude-rs`. It does not update a separately installed 
 These read-only commands inspect redacted settings files without starting the TUI:
 
 ```bash
-claude-rs config
-claude-rs config show --which project-settings
-claude-rs config export --output claude-rs-config.json
+machine-god config
+machine-god config show --which project-settings
+machine-god config export --output machine-god-config.json
 ```
 
 The output covers User, Project and Local settings and the preferences file. Malformed files are reported, not rewritten. The commands read the files as they are on disk: they do not combine scopes and do not include managed policy. See [Config Inspection](diagnostics.md#config-inspection).

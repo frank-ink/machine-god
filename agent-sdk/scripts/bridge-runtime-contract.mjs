@@ -25,7 +25,7 @@ async function runContract({ runtime, bridge }) {
   const child = spawn(runtime, [bridge], {
     env: {
       ...process.env,
-      CLAUDE_RS_BRIDGE_DIAGNOSTICS: "1",
+      MACHINE_GOD_BRIDGE_DIAGNOSTICS: "1",
     },
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
@@ -85,7 +85,7 @@ async function runContract({ runtime, bridge }) {
     supports_session_listing: true,
     supports_resume_session: true,
   });
-  assert.equal(initialized.result.agent_name, "claude-rs-agent-bridge");
+  assert.equal(initialized.result.agent_name, "machine-god-agent-bridge");
 
   await readEvent(
     stdoutEvents,
@@ -105,7 +105,7 @@ async function runContract({ runtime, bridge }) {
   assert(stderrLines.length > 0, "bridge diagnostics should emit JSON lines to stderr");
   for (const line of stderrLines) {
     const diagnostic = JSON.parse(line);
-    assert.equal(diagnostic.schema, "claude-rs-log/v1");
+    assert.equal(diagnostic.schema, "machine-god-log/v1");
     assert.equal(typeof diagnostic.timestamp, "string");
     assert.equal(typeof diagnostic.level, "string");
     assert.equal(typeof diagnostic.target, "string");

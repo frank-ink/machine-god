@@ -167,7 +167,7 @@ mod tests {
     fn explicit_cli_choices_apply_until_startup_completes() {
         use clap::Parser;
         let cli = crate::Cli::try_parse_from([
-            "claude-rs",
+            "machine-god",
             "--resume",
             "--model",
             "opus",
@@ -211,7 +211,7 @@ mod tests {
             ..SessionConfig::default()
         };
         let cli = crate::Cli::try_parse_from([
-            "claude-rs",
+            "machine-god",
             "--resume",
             "--fork-session",
             "--model",

@@ -695,15 +695,15 @@ mod launch_command_tests {
 
     #[test]
     fn name_reaches_new_continued_and_resumed_sessions() {
-        let created = startup_command(&["claude-rs", "-n", "Release prep"]);
+        let created = startup_command(&["machine-god", "-n", "Release prep"]);
         assert_eq!(created["command"], "create_session");
         assert_eq!(created["launch_settings"], json!({ "name": "Release prep" }));
 
-        let continued = startup_command(&["claude-rs", "--continue", "--name", "Follow-up"]);
+        let continued = startup_command(&["machine-god", "--continue", "--name", "Follow-up"]);
         assert_eq!(continued["continue_session"], true);
         assert_eq!(continued["launch_settings"], json!({ "name": "Follow-up" }));
 
-        let resumed = startup_command(&["claude-rs", "resume", "session-1", "-n", "Renamed"]);
+        let resumed = startup_command(&["machine-god", "resume", "session-1", "-n", "Renamed"]);
         assert_eq!(resumed["command"], "resume_session");
         assert_eq!(resumed["session_id"], "session-1");
         assert_eq!(resumed["launch_settings"], json!({ "name": "Renamed" }));
@@ -711,11 +711,11 @@ mod launch_command_tests {
 
     #[test]
     fn fork_session_reaches_resumed_and_continued_sessions() {
-        let resumed = startup_command(&["claude-rs", "-r", "session-1", "--fork-session"]);
+        let resumed = startup_command(&["machine-god", "-r", "session-1", "--fork-session"]);
         assert_eq!(resumed["command"], "resume_session");
         assert_eq!(resumed["launch_settings"], json!({ "fork_session": true }));
 
-        let continued = startup_command(&["claude-rs", "-c", "--fork-session", "-n", "Branch"]);
+        let continued = startup_command(&["machine-god", "-c", "--fork-session", "-n", "Branch"]);
         assert_eq!(continued["continue_session"], true);
         assert_eq!(continued["launch_settings"], json!({ "fork_session": true, "name": "Branch" }));
     }
@@ -737,7 +737,7 @@ mod launch_command_tests {
         let inline = r#"{"mcpServers":{"docs":{"command":"override"}}}"#;
 
         let created = startup_command(&[
-            "claude-rs",
+            "machine-god",
             "-C",
             dir,
             "--settings",
@@ -760,7 +760,7 @@ mod launch_command_tests {
             })
         );
         let resumed = startup_command(&[
-            "claude-rs",
+            "machine-god",
             "-r",
             "session-1",
             "--settings",
@@ -779,7 +779,7 @@ mod launch_command_tests {
             .expect("append");
         let dir = project.path().to_str().expect("UTF-8 path");
         let from_files = startup_command(&[
-            "claude-rs",
+            "machine-god",
             "-C",
             dir,
             "--system-prompt-file",
@@ -794,7 +794,7 @@ mod launch_command_tests {
                 "append_system_prompt": "End every reply with DONE."
             })
         );
-        let inline = startup_command(&["claude-rs", "--append-system-prompt", "Answer in German."]);
+        let inline = startup_command(&["machine-god", "--append-system-prompt", "Answer in German."]);
         assert_eq!(
             inline["launch_settings"],
             json!({ "append_system_prompt": "Answer in German." })
@@ -809,7 +809,7 @@ mod launch_command_tests {
         let dir = project.path().to_str().expect("UTF-8 path");
         let shared_dir = shared.path().to_str().expect("UTF-8 path");
         let created = startup_command(&[
-            "claude-rs",
+            "machine-god",
             "-C",
             dir,
             "--add-dir",

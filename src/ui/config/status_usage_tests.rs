@@ -517,7 +517,7 @@ fn overflowing_usage_and_status_remain_reachable_without_covering_controls() {
 #[tokio::test(flavor = "current_thread")]
 async fn status_open_resolves_real_memory_then_removal_without_stale_paths() {
     const NAME: &str = "status_open_resolves_real_memory_then_removal_without_stale_paths";
-    if std::env::var("CLAUDE_RS_AUDIT_CASE").ok().as_deref() != Some(NAME) {
+    if std::env::var("MACHINE_GOD_AUDIT_CASE").ok().as_deref() != Some(NAME) {
         let root = tempfile::tempdir().unwrap();
         let mut command = crate::diagnostics_test_support::command(
             &format!("ui::config::status_usage_tests::{NAME}"),
@@ -537,7 +537,7 @@ async fn status_open_resolves_real_memory_then_removal_without_stale_paths() {
         );
         return;
     }
-    let root = std::path::PathBuf::from(std::env::var_os("CLAUDE_RS_AUDIT_ROOT").unwrap());
+    let root = std::path::PathBuf::from(std::env::var_os("MACHINE_GOD_AUDIT_ROOT").unwrap());
     let memory = root
         .join("profile")
         .join("projects")

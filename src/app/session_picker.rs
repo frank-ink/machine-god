@@ -590,7 +590,7 @@ mod tests {
     }
     fn startup_choice() -> crate::app::state::StartupState {
         use clap::Parser;
-        let cli = crate::Cli::try_parse_from(["claude-rs", "--resume", "--model", "fixture-model"])
+        let cli = crate::Cli::try_parse_from(["machine-god", "--resume", "--model", "fixture-model"])
             .unwrap();
         let mut state = crate::app::state::StartupState::from_cli(&cli);
         state.request_connection();

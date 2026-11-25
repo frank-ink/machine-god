@@ -260,7 +260,7 @@ async function bounded<T>(task: Promise<T>, description: string): Promise<T> {
 test("installed SDK transports auth, clear and callback operations through the production adapter", {
   timeout: 20_000,
 }, async (context) => {
-  const directory = mkdtempSync(join(tmpdir(), "claude-rs-mcp-auth-"));
+  const directory = mkdtempSync(join(tmpdir(), "machine-god-mcp-auth-"));
   const project = join(directory, "project");
   const profile = join(directory, "profile");
   const peer = join(directory, "peer.cjs");

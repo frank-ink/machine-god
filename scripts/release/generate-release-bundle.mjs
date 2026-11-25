@@ -45,7 +45,7 @@ const bundleName = `${bundleRootName}.tar.gz`;
 const bundlePath = path.join(outDir, bundleName);
 const releaseManifestPath = path.join(outDir, "release-manifest.json");
 const internalShaPath = path.join(outDir, "SHA256SUMS.internal");
-const tempParent = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-release-bundle-"));
+const tempParent = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-release-bundle-"));
 const bundleRoot = path.join(tempParent, bundleRootName);
 
 fs.mkdirSync(outDir, { recursive: true });

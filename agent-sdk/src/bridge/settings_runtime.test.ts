@@ -17,7 +17,7 @@ async function probe(
   policy: string,
 ): Promise<Record<string, unknown>> {
   const root = await fs.mkdtemp(
-    path.join(os.tmpdir(), "claude-rs-settings-runtime-"),
+    path.join(os.tmpdir(), "machine-god-settings-runtime-"),
   );
   const cwd = path.join(root, "project");
   const profile = path.join(root, "profile");

@@ -21,7 +21,7 @@ fn test_loopback_enforcement() {
     assert!(OmegaConfig::validate_loopback("http://0.0.0.0:8111/v1/chat/completions").is_err());
 
     // The env-derived endpoint always uses 127.0.0.1 regardless of the port.
-    let ep = OmegaConfig::endpoint_from_env().expect("endpoint must build from env");
+    let ep = OmegaConfig::endpoint_from_env().expect("endpoint must build");
     assert!(ep.starts_with("http://127.0.0.1:"));
 }
 
@@ -31,6 +31,10 @@ fn test_language_detection() {
     assert_eq!(detect_language("Die Katze sitzt auf der Matte."), Lang::De);
     assert_eq!(detect_language("The dog is big and runs in the garden."), Lang::En);
     assert_eq!(detect_language("The cat sits on the mat."), Lang::En);
+
+    // Acceptance: greetings map to their language.
+    assert_eq!(detect_language("Hallo"), Lang::De);
+    assert_eq!(detect_language("Hello"), Lang::En);
 
     // No reliable signal -> UNKNOWN; never coerced to DE or EN.
     assert_eq!(detect_language("12345 !@#$"), Lang::Unknown);
@@ -42,20 +46,27 @@ fn test_language_detection() {
 
 #[test]
 fn test_fallback_on_down() {
-    let de = fallback_sentence(Lang::De);
+    let port = OmegaConfig::port_from_env();
+    let expected = format!("127.0.0.1:{}", port);
+
+    let de = fallback_sentence(Lang::De, port);
     assert!(de.contains("Maschine-Gott"));
-    assert!(de.contains("127.0.0.1:8111"));
+    assert!(de.contains(&expected));
     assert!(!de.is_empty());
 
-    let en = fallback_sentence(Lang::En);
+    let en = fallback_sentence(Lang::En, port);
     assert!(en.contains("Machine God"));
-    assert!(en.contains("127.0.0.1:8111"));
+    assert!(en.contains(&expected));
     assert!(!en.is_empty());
 
-    let unk = fallback_sentence(Lang::Unknown);
+    let unk = fallback_sentence(Lang::Unknown, port);
     assert!(unk.contains("Machine God"));
-    assert!(unk.contains("127.0.0.1:8111"));
+    assert!(unk.contains(&expected));
     assert!(!unk.is_empty());
+
+    // fallback_reply returns an owned String with the same content.
+    assert!(fallback_reply(Lang::De, port).contains("Maschine-Gott"));
+    assert!(fallback_reply(Lang::En, port).contains("Machine God"));
 }
 
 #[test]

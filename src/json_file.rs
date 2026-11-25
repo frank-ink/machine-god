@@ -23,7 +23,7 @@ pub(crate) fn lock(path: &Path) -> std::io::Result<DocumentLock> {
         std::fs::create_dir_all(parent)?;
     }
     let mut name = path.as_os_str().to_os_string();
-    name.push(".claude-rs.lock");
+    name.push(".machine-god.lock");
     let path = std::path::PathBuf::from(name);
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create_new(true);
@@ -63,7 +63,7 @@ fn replace_with_check(
 ) -> std::io::Result<bool> {
     let parent = path.parent().ok_or_else(|| std::io::Error::other("JSON path has no parent"))?;
     std::fs::create_dir_all(parent)?;
-    let temp_path = parent.join(format!(".claude-rs.{}.tmp", uuid::Uuid::new_v4()));
+    let temp_path = parent.join(format!(".machine-god.{}.tmp", uuid::Uuid::new_v4()));
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn new_json_staging_and_committed_file_are_owner_only() {
         use std::os::unix::fs::PermissionsExt;
-        const CHILD: &str = "CLAUDE_RS_JSON_MODE_TEST_CHILD";
+        const CHILD: &str = "MACHINE_GOD_JSON_MODE_TEST_CHILD";
         if std::env::var_os(CHILD).is_none() {
             // Set umask only in an isolated child; other tests retain their process settings.
             let output = std::process::Command::new("sh")

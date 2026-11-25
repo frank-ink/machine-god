@@ -12,7 +12,7 @@ Script archives and npm payloads support Linux x64/arm64 with glibc, Windows x64
 
 Install scripts are available in GitHub Releases starting with `v0.14.0` and are the recommended install path. They install a self-contained release without requiring npm, Node.js, or Bun on the user's machine.
 
-The scripts download a complete release archive from GitHub, verify the release archive integrity, install the native binary with the bundled private Bun runtime, Agent SDK bridge, and production `node_modules`, then run a quiet `claude-rs --version` check. Download diagnostics and strict runtime diagnostics are available with the opt-in verify flag.
+The scripts download a complete release archive from GitHub, verify the release archive integrity, install the native binary with the bundled private Bun runtime, Agent SDK bridge, and production `node_modules`, then run a quiet `machine-god --version` check. Download diagnostics and strict runtime diagnostics are available with the opt-in verify flag.
 
 **macOS/Linux:**
 
@@ -31,8 +31,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubu
 Open a new terminal if the installer changed PATH, then run:
 
 ```bash
-claude-rs --version
-claude-rs doctor
+machine-god --version
+machine-god doctor
 ```
 
 The first command should print the installed version. Review any failed doctor checks before starting; authentication failures have a separate [recovery guide](troubleshooting.md#login-and-authentication-failures). Continue with [Your first session](usage.md) once the command is available.
@@ -42,12 +42,12 @@ The first command should print the installed version. Review any failed doctor c
 npm remains supported for users who prefer package-manager ownership of the global command:
 
 ```bash
-npm install -g claude-code-rust
-claude-rs --version
-claude-rs
+npm install -g machine-god
+machine-god --version
+machine-god
 ```
 
-The npm option requires Node.js 24 and npm to install and run its JavaScript launcher. The package owns the `claude-rs` command, selects the matching platform payload with npm optional dependencies, and includes the private Bun runtime used by the Agent SDK bridge. A Rust toolchain and separate Bun installation are not required. No install-time binary download or `postinstall` script is used.
+The npm option requires Node.js 24 and npm to install and run its JavaScript launcher. The package owns the `machine-god` command, selects the matching platform payload with npm optional dependencies, and includes the private Bun runtime used by the Agent SDK bridge. A Rust toolchain and separate Bun installation are not required. No install-time binary download or `postinstall` script is used.
 
 After installing through npm, follow [Verify and start](#verify-and-start).
 
@@ -57,14 +57,14 @@ The options below apply to the script installer. For npm, use npm to select and 
 
 ### Pinning a Release
 
-Use `CLAUDE_RS_RELEASE` to install a specific release:
+Use `MACHINE_GOD_RELEASE` to install a specific release:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | CLAUDE_RS_RELEASE=v0.14.0 sh
 ```
 
 ```powershell
-$env:CLAUDE_RS_RELEASE = "v0.14.0"
+$env:MACHINE_GOD_RELEASE = "v0.14.0"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 ```
 
@@ -74,7 +74,7 @@ If the selected release has no install archive, the script reports `install scri
 
 ### Reinstalling the Same Version
 
-Before downloading release checksums or an archive, the installer compares the selected release with the version recorded in an existing script-owned install at the configured install directory. It does not compare with an npm install or another `claude-rs` found on `PATH`, because those may represent a different installation method or location.
+Before downloading release checksums or an archive, the installer compares the selected release with the version recorded in an existing script-owned install at the configured install directory. It does not compare with an npm install or another `machine-god` found on `PATH`, because those may represent a different installation method or location.
 
 When the selected version is already installed, an interactive installation asks whether to reinstall it and defaults to no. Declining is a successful no-op and leaves the existing files unchanged. In CI or another non-interactive environment, the same-version check also exits successfully without reinstalling.
 
@@ -124,15 +124,15 @@ The Unix installer also accepts:
 When using the PowerShell one-liner, configure the installer with environment variables because arguments cannot be passed through `iex`:
 
 ```powershell
-$env:CLAUDE_RS_INSTALL_DIR = "$env:LOCALAPPDATA\Programs\claude-rs"
-$env:CLAUDE_RS_NO_MODIFY_PATH = "1"
+$env:MACHINE_GOD_INSTALL_DIR = "$env:LOCALAPPDATA\Programs\machine-god"
+$env:MACHINE_GOD_NO_MODIFY_PATH = "1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
 ```
 
 If you download the script first, PowerShell flags are also available:
 
 ```powershell
-.\install.ps1 -Release v0.14.0 -InstallDir "$env:LOCALAPPDATA\Programs\claude-rs" -NoModifyPath
+.\install.ps1 -Release v0.14.0 -InstallDir "$env:LOCALAPPDATA\Programs\machine-god" -NoModifyPath
 ```
 
 Other PowerShell flags available when the script is downloaded first:
@@ -147,13 +147,13 @@ Other PowerShell flags available when the script is downloaded first:
 
 With the PowerShell one-liner, use the matching environment variables:
 
-- `CLAUDE_RS_VERIFY=1`
-- `CLAUDE_RS_RUN=1`
-- `CLAUDE_RS_REMOVE_NPM=1`
-- `CLAUDE_RS_KEEP_NPM=1`
-- `CLAUDE_RS_UNINSTALL=1`
+- `MACHINE_GOD_VERIFY=1`
+- `MACHINE_GOD_RUN=1`
+- `MACHINE_GOD_REMOVE_NPM=1`
+- `MACHINE_GOD_KEEP_NPM=1`
+- `MACHINE_GOD_UNINSTALL=1`
 
-After a successful install, an interactive run asks whether to start `claude-rs` immediately. This runs the installed binary directly, so it works even before a new shell picks up PATH changes. Use `--run`, `-Run`, or `CLAUDE_RS_RUN=1` to start it automatically after install.
+After a successful install, an interactive run asks whether to start `machine-god` immediately. This runs the installed binary directly, so it works even before a new shell picks up PATH changes. Use `--run`, `-Run`, or `MACHINE_GOD_RUN=1` to start it automatically after install.
 
 ## Update the app
 
@@ -172,40 +172,40 @@ On supported interactive terminals, confirmation prompts show `y Yes / N No` and
 **The default Unix install layout is:**
 
 ```text
-${XDG_DATA_HOME:-$HOME/.local/share}/claude-rs/
-$HOME/.local/bin/claude-rs
-$HOME/.local/share/man/man1/claude-rs*.1
+${XDG_DATA_HOME:-$HOME/.local/share}/machine-god/
+$HOME/.local/bin/machine-god
+$HOME/.local/share/man/man1/machine-god*.1
 ```
 
-The app directory contains `claude-rs`, `claude-rs-bridge-bun`, `agent-sdk/`, and `node_modules/`. The file in `$HOME/.local/bin` is a launcher script that executes the app binary. Unix archives also contain manuals under `share/man/man1/`; the installer links them into the sibling `share/man/man1/` directory beside `bin`. Uninstall removes its own manual links and preserves manuals from other installations. See [CLI reference](cli.md#man-pages) for viewing manuals and generating them with npm or source installations.
+The app directory contains `machine-god`, `machine-god-bridge-bun`, `agent-sdk/`, and `node_modules/`. The file in `$HOME/.local/bin` is a launcher script that executes the app binary. Unix archives also contain manuals under `share/man/man1/`; the installer links them into the sibling `share/man/man1/` directory beside `bin`. Uninstall removes its own manual links and preserves manuals from other installations. See [CLI reference](cli.md#man-pages) for viewing manuals and generating them with npm or source installations.
 
 **The default Windows install layout is:**
 
 ```text
-%LOCALAPPDATA%\Programs\claude-rs\
+%LOCALAPPDATA%\Programs\machine-god\
 ```
 
 The Windows app directory is added to the user `Path` unless path modification is disabled.
 
 ## Switching Install Methods
 
-`claude-rs` is resolved by normal `PATH` order. npm and script installs use different app layouts, and one method does not automatically own files created by the other. If both are installed, whichever `claude-rs` appears first on `PATH` runs.
+`machine-god` is resolved by normal `PATH` order. npm and script installs use different app layouts, and one method does not automatically own files created by the other. If both are installed, whichever `machine-god` appears first on `PATH` runs.
 
 After verifying a new installation, the installer reports recognized other script installations on `PATH` and offers to uninstall each one with `y Yes / N No`. The question names the exact app directory; another copy is not necessarily older. Confirming removes that copy and its owned launcher, manual links, and managed PATH configuration where applicable. Unknown copies receive manual guidance, and installations whose directories overlap the current app or launcher are kept. Different PATH spellings, symlinks, and junctions pointing to the current installation do not produce a duplicate-install prompt.
 
-Declining keeps the other installation. `--yes` / `-Yes` and non-interactive runs skip optional cleanup and preserve other script copies. They also keep a detected npm installation unless you explicitly request npm removal with `--remove-npm`, `-RemoveNpm`, or `CLAUDE_RS_REMOVE_NPM=1`. Update mode preserves other installations and does not offer cleanup. Cleanup failures are reported without failing the completed new installation.
+Declining keeps the other installation. `--yes` / `-Yes` and non-interactive runs skip optional cleanup and preserve other script copies. They also keep a detected npm installation unless you explicitly request npm removal with `--remove-npm`, `-RemoveNpm`, or `MACHINE_GOD_REMOVE_NPM=1`. Update mode preserves other installations and does not offer cleanup. Cleanup failures are reported without failing the completed new installation.
 
-To see every visible `claude-rs` on macOS/Linux:
+To see every visible `machine-god` on macOS/Linux:
 
 ```bash
-command -v claude-rs
-which -a claude-rs
+command -v machine-god
+which -a machine-god
 ```
 
-To see every visible `claude-rs` on Windows:
+To see every visible `machine-god` on Windows:
 
 ```powershell
-Get-Command claude-rs -All
+Get-Command machine-god -All
 ```
 
 To switch from npm to the install script, either let the installer prompt you or pass the explicit removal flag:
@@ -215,20 +215,20 @@ curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/s
 ```
 
 ```powershell
-$env:CLAUDE_RS_REMOVE_NPM = "1"
+$env:MACHINE_GOD_REMOVE_NPM = "1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
-Remove-Item Env:\CLAUDE_RS_REMOVE_NPM
+Remove-Item Env:\MACHINE_GOD_REMOVE_NPM
 ```
 
 To switch from the install script back to npm, [uninstall](#uninstall) the script layout first, then install from npm:
 
 ```bash
-npm install -g claude-code-rust
+npm install -g machine-god
 ```
 
-The installers do not silently remove the other install method because that would delete files outside their ownership and can be surprising in managed environments. For non-interactive installs, use `--remove-npm` / `CLAUDE_RS_REMOVE_NPM=1` when you want the script installer to remove the npm install, or `--keep-npm` / `CLAUDE_RS_KEEP_NPM=1` when you want it kept without prompting.
+The installers do not silently remove the other install method because that would delete files outside their ownership and can be surprising in managed environments. For non-interactive installs, use `--remove-npm` / `MACHINE_GOD_REMOVE_NPM=1` when you want the script installer to remove the npm install, or `--keep-npm` / `MACHINE_GOD_KEEP_NPM=1` when you want it kept without prompting.
 
-If the wrong `claude-rs` runs after switching methods, see [Troubleshooting](troubleshooting.md).
+If the wrong `machine-god` runs after switching methods, see [Troubleshooting](troubleshooting.md).
 
 ## Uninstall
 
@@ -244,20 +244,20 @@ On Windows, PowerShell supports `-Uninstall` when the script is downloaded first
 .\install.ps1 -Uninstall
 ```
 
-With the PowerShell one-liner, arguments cannot be passed through `iex`, so use `CLAUDE_RS_UNINSTALL`:
+With the PowerShell one-liner, arguments cannot be passed through `iex`, so use `MACHINE_GOD_UNINSTALL`:
 
 ```powershell
-$env:CLAUDE_RS_UNINSTALL = "1"
+$env:MACHINE_GOD_UNINSTALL = "1"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.ps1' | iex"
-Remove-Item Env:\CLAUDE_RS_UNINSTALL
+Remove-Item Env:\MACHINE_GOD_UNINSTALL
 ```
 
-The script uninstall path removes the script install directory, removes the Unix launcher when it points at that directory, and removes installer-managed PATH entries where supported. It refuses to delete an app directory that does not look like a `claude-code-rust` script install.
+The script uninstall path removes the script install directory, removes the Unix launcher when it points at that directory, and removes installer-managed PATH entries where supported. It refuses to delete an app directory that does not look like a `machine-god` script install.
 
 An npm install is owned by npm and is removed with npm:
 
 ```bash
-npm uninstall -g claude-code-rust
+npm uninstall -g machine-god
 ```
 
 ## Reporting Install Problems
@@ -269,7 +269,7 @@ Include:
 - terminal
 - `npm --version`, for npm installs
 - `npm config get omit`, for npm installs
-- `claude-rs --version`
-- `claude-rs doctor --json`
+- `machine-god --version`
+- `machine-god doctor --json`
 - the command you ran
 - the exact error output

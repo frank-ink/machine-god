@@ -2,8 +2,8 @@
 //! Public terminal-event integration tests. These check completion, focus, and
 //! the exact draft handed to the event loop, without executing auth commands.
 
-use claude_code_rust::agent::{events::ClientEvent, model};
-use claude_code_rust::app::{
+use machine_god::agent::{events::ClientEvent, model};
+use machine_god::app::{
     App, AutocompleteKind, FocusOwner, ModeInfo, ModeState, handle_client_event,
     handle_terminal_event,
 };

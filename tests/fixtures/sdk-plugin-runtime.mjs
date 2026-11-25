@@ -8,7 +8,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { AsyncQueue } from "../../agent-sdk/dist/bridge/shared.js";
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-plugin-probe-"));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-plugin-probe-"));
 const cwd = path.join(root, "project"),
   profile = path.join(root, "profile");
 const journal = path.join(root, "mcp.jsonl"),

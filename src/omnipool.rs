@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Omnipool (API-OMNI-BRAIN) built into claude-rs: every bridge turn runs on the free pool.
+//! Omnipool (API-OMNI-BRAIN) built into machine-god: every bridge turn runs on the free pool.
 //!
 //! On bridge start: find Omnipool's data dir, start its daemon if the port is closed, derive this
 //! app's access key locally (HMAC-SHA256 of the app name with Omnipool's own `app_key`, identical to
 //! `harness_key` in omnipool/server.py) and hand base URL + key to the bridge process env only.
-//! No key is typed, stored, printed or logged by claude-rs. Off: `CLAUDE_RS_OMNIPOOL=0`.
+//! No key is typed, stored, printed or logged by machine-god. Off: `MACHINE_GOD_OMNIPOOL=0`.
 //! `/api` opens Omnipool's web app in a browser the user picks in chat.
 
 use sha2::{Digest, Sha256};
@@ -15,7 +15,7 @@ use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
-pub const APP: &str = "claude_rs";
+pub const APP: &str = "machine_god";
 pub const DEFAULT_PORT: u16 = 8799;
 const BINARY: &str = if cfg!(windows) { "API-OMNI-BRAIN.exe" } else { "API-OMNI-BRAIN" };
 
@@ -57,7 +57,7 @@ fn port_open(port: u16) -> bool {
 }
 
 /// The native binary if there is one (Linux build), else the universal `Omnipool.pyz` via Python
-/// (macOS, Windows, other Linux): next to claude-rs, in `$OMNIPOOL_BIN`, or in Omnipool's data dir.
+/// (macOS, Windows, other Linux): next to machine-god, in `$OMNIPOOL_BIN`, or in Omnipool's data dir.
 fn daemon_command(dir: &Path) -> Option<Command> {
     let beside = |f: &str| std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.join(f)));
     let found = |cands: [Option<PathBuf>; 3]| cands.into_iter().flatten().find(|p| p.is_file());
@@ -75,7 +75,7 @@ fn daemon_command(dir: &Path) -> Option<Command> {
 
 /// Reads Omnipool's settings, starts the daemon if needed (waits up to 15 s), derives the key.
 fn connect() -> Option<Link> {
-    if std::env::var("CLAUDE_RS_OMNIPOOL").is_ok_and(|v| v == "0") {
+    if std::env::var("MACHINE_GOD_OMNIPOOL").is_ok_and(|v| v == "0") {
         return None;
     }
     let (dir, raw) = data_dirs().into_iter().find_map(|d| std::fs::read_to_string(d.join("settings.json")).ok().map(|r| (d, r)))?;
@@ -179,10 +179,10 @@ mod tests {
     #[test]
     fn harness_key_has_omnipool_shape() {
         let k = harness_key("secret", APP);
-        assert!(k.starts_with("op-claude_rs-"));
-        assert_eq!(k.len(), "op-claude_rs-".len() + 24);
-        // value computed by Omnipool's own Python derivation (hmac.new(b"secret", b"claude_rs", sha256))
-        assert_eq!(k, "op-claude_rs-23d53a1bf59c4cdd722e0336");
+        assert!(k.starts_with("op-machine_god-"));
+        assert_eq!(k.len(), "op-machine_god-".len() + 24);
+        // value computed by Omnipool's own Python derivation (hmac.new(b"secret", b"machine_god", sha256))
+        assert_eq!(k, "op-machine_god-23d53a1bf59c4cdd722e0336");
     }
 
     #[test]

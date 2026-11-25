@@ -84,7 +84,7 @@ function verifyRootPackage() {
 
   expectEqual(packageJson.name, ROOT_PACKAGE_NAME, `${context} name`);
   expectEqual(packageJson.version, expectedVersion, `${context} version`);
-  expectDeepEqual(packageJson.bin, { "claude-rs": "bin/claude-rs.js" }, `${context} bin`);
+  expectDeepEqual(packageJson.bin, { "machine-god": "bin/machine-god.js" }, `${context} bin`);
   expectDeepEqual(
     packageJson.optionalDependencies,
     expectedPlatformOptionalDependencies(),
@@ -95,11 +95,11 @@ function verifyRootPackage() {
   expectNoForbiddenManifestFields(packageJson, context);
 
   const files = listPackageFiles(packageDir);
-  expectFilesExist(files, ["package.json", "bin/claude-rs.js", "agent-sdk/package.json", "README.md", "LICENSE"], context);
+  expectFilesExist(files, ["package.json", "bin/machine-god.js", "agent-sdk/package.json", "README.md", "LICENSE"], context);
   expectFilesExist(files, ["agent-sdk/dist/bridge.js", "agent-sdk/dist/types.js"], context);
   expectOnlyAllowedFiles(files, rootAllowedFile, context);
   expectNoForbiddenFiles(files, context);
-  expectNoNodeShebangs(packageDir, files, context, ["bin/claude-rs.js"]);
+  expectNoNodeShebangs(packageDir, files, context, ["bin/machine-god.js"]);
 
   const packManifest = packAndVerify(packageDir, context, rootAllowedFile);
   writePackageManifest("root", packageJson, packManifest.files);
@@ -198,7 +198,7 @@ function packAndVerify(packageDir, context, allowedFile) {
     return { files: [] };
   }
 
-  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-npm-pack-cache-"));
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-npm-pack-cache-"));
   try {
     const output = runNpm(["pack", ".", "--dry-run", "--json", "--cache", cacheDir], packageDir);
 
@@ -341,7 +341,7 @@ function expectedPlatformOptionalDependencies() {
 }
 
 function rootAllowedFile(filePath) {
-  if (["LICENSE", "README.md", "package.json", "bin/claude-rs.js", "agent-sdk/package.json"].includes(filePath)) {
+  if (["LICENSE", "README.md", "package.json", "bin/machine-god.js", "agent-sdk/package.json"].includes(filePath)) {
     return true;
   }
 

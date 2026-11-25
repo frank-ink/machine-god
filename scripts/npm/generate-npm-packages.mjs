@@ -56,7 +56,7 @@ function generateRootPackage() {
     path.join(packageDir, "package.json"),
     buildRootPackageJson({ version, rootPackageJson, agentSdkPackageJson })
   );
-  copyFileFromRepo("bin/claude-rs.js", path.join(packageDir, "bin", "claude-rs.js"));
+  copyFileFromRepo("bin/machine-god.js", path.join(packageDir, "bin", "machine-god.js"));
   copyAgentSdkRuntime(path.join(packageDir, "agent-sdk"));
   copyFileFromRepo("README.md", path.join(packageDir, "README.md"));
   copyFileFromRepo("LICENSE", path.join(packageDir, "LICENSE"));
@@ -79,13 +79,13 @@ function generatePlatformPackage(platformPackage) {
   fs.mkdirSync(path.dirname(binaryDestination), { recursive: true });
 
   if (options.mockBinaries) {
-    writeMockBinary(platformPackage, binaryDestination, "claude-rs 0.0.0-mock");
+    writeMockBinary(platformPackage, binaryDestination, "machine-god-core 0.0.0-mock");
     writeMockBinary(platformPackage, runtimeDestination, bunRuntimeManifest.version);
     return;
   }
 
   if (options.mockNativeBinary) {
-    writeMockBinary(platformPackage, binaryDestination, "claude-rs 0.0.0-mock");
+    writeMockBinary(platformPackage, binaryDestination, "machine-god-core 0.0.0-mock");
   } else {
     copyStagedBinary(
       platformPackage,
@@ -162,7 +162,7 @@ function copyFileFromRepo(relativeSource, destination) {
 }
 
 function writePlatformReadme(platformPackage, destination) {
-  const projectName = "claude-code-rust";
+  const projectName = "machine-god";
   const projectUrl = typeof rootPackageJson.homepage === "string" ? rootPackageJson.homepage : undefined;
   const projectReference = projectUrl ? `[${projectName}](${projectUrl})` : `\`${projectName}\``;
   const npmPackageUrl = `https://www.npmjs.com/package/${platformPackage.packageName}`;
@@ -222,7 +222,7 @@ function writeMockBinary(platformPackage, destination, output) {
 }
 
 function writeWindowsMockExecutable(destination, output) {
-  const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-mock-exe-"));
+  const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-mock-exe-"));
   const sourcePath = path.join(buildDir, "main.rs");
   try {
     fs.writeFileSync(sourcePath, `fn main() {\n    println!(${JSON.stringify(output)});\n}\n`, "utf8");

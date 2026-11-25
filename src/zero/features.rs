@@ -74,17 +74,26 @@ impl fmt::Display for CapabilityStatus {
 }
 
 /// Promotion stage in the CVIR ladder.
+/// Explicit serde renames ensure wire format matches as_str() exactly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
 pub enum PromotionStage {
+    #[serde(rename = "MEASURE")]
     Measure,
+    #[serde(rename = "FALSIFY")]
     Falsify,
+    #[serde(rename = "MATCHED_ABLATION")]
     MatchedAblation,
+    #[serde(rename = "VERIFIED_OUTCOME")]
     VerifiedOutcome,
+    #[serde(rename = "CAUSAL_CREDIT")]
     CausalCredit,
+    #[serde(rename = "BOUNDED_ADMISSION")]
     BoundedAdmission,
+    #[serde(rename = "REENTRY_TEST")]
     ReentryTest,
+    #[serde(rename = "CONTROL_INFLUENCE")]
     ControlInfluence,
+    #[serde(rename = "UNKNOWN")]
     Unknown,
 }
 
@@ -812,7 +821,7 @@ mod tests {
               "capability": "sample",
               "status": "MEASURED",
               "evidence_ref": "test:zero::features::tests::sample@WORKTREE",
-              "gate": "cargo test -p claude_rs zero::features"
+              "gate": "cargo test -p machine_god zero::features"
             }
           ]
         }"#
@@ -957,5 +966,40 @@ mod tests {
         assert_eq!(parsed.test_name, "zero::features::tests::x");
         assert_eq!(parsed.commit, "abc123");
         assert!(EvidenceRef::parse("abc123").is_err());
+    }
+
+    #[test]
+    fn promotion_stage_roundtrip() {
+        // Test that serde wire format matches as_str() for all 7 non-Unknown variants
+        // plus Unknown (8 total)
+        let stages = [
+            PromotionStage::Measure,
+            PromotionStage::Falsify,
+            PromotionStage::MatchedAblation,
+            PromotionStage::VerifiedOutcome,
+            PromotionStage::CausalCredit,
+            PromotionStage::BoundedAdmission,
+            PromotionStage::ReentryTest,
+            PromotionStage::ControlInfluence,
+            PromotionStage::Unknown,
+        ];
+
+        for stage in stages {
+            let serialized = serde_json::to_string(&stage).unwrap();
+            let expected = format!("\"{}\"", stage.as_str());
+            assert_eq!(
+                serialized, expected,
+                "PromotionStage::{:?} serde output '{}' != as_str() '{}'",
+                stage, serialized, expected
+            );
+
+            // Also test deserialization round-trip
+            let deserialized: PromotionStage = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(
+                deserialized, stage,
+                "PromotionStage::{:?} deserialization round-trip failed",
+                stage
+            );
+        }
     }
 }

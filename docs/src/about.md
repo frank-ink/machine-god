@@ -1,6 +1,6 @@
 # About
 
-Claude Code Rust (`claude-rs`) is a keyboard-driven terminal interface for Claude Code. It uses Anthropic's Agent SDK for conversations, tools and session history, and provides its own interface for reading output, reviewing changes and managing sessions.
+Machine God (`machine-god`) is a keyboard-driven terminal interface for Claude Code. It uses Anthropic's Agent SDK for conversations, tools and session history, and provides its own interface for reading output, reviewing changes and managing sessions.
 
 Start with [Installation](installation.md) and [Your first session](usage.md). If you already use the app, go to [conversation tasks](conversations.md), [configuration](configure.md) or [troubleshooting](troubleshooting.md). Contributors should start with [Development](development.md).
 
@@ -14,7 +14,7 @@ There are no speed or memory benchmarks against the stock Claude Code interface.
 
 ## Project Status
 
-The project is pre-1.0 and under active development. Run `claude-rs --version` to identify your installed version and consult the [Changelog](changelog.md) for release changes. The website follows the repository's main branch, so it can describe changes newer than your installation.
+The project is pre-1.0 and under active development. Run `machine-god --version` to identify your installed version and consult the [Changelog](changelog.md) for release changes. The website follows the repository's main branch, so it can describe changes newer than your installation.
 
 The project is useful today, but the runtime still depends on the upstream Claude Agent SDK bridge. Startup readiness, authentication behavior, billing, model availability, and service limits are controlled by Anthropic.
 

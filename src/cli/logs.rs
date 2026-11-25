@@ -15,7 +15,7 @@ use zip::CompressionMethod;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
-const BUNDLE_SCHEMA: &str = "claude-rs-debug-bundle/v2";
+const BUNDLE_SCHEMA: &str = "machine-god-debug-bundle/v2";
 const BUNDLE_RUNTIME_LOG_LIMIT: usize = 5;
 
 pub fn run(
@@ -54,7 +54,7 @@ fn write_summary(
     let runtime_logs = crate::logging::list_managed_runtime_logs_in(&paths.runtime_dir)?;
     let latest = crate::logging::latest_log_path_in(&paths.runtime_dir, &paths.legacy_log_path)?;
 
-    writeln!(stdout, "{}", style.title("claude-rs logs"))?;
+    writeln!(stdout, "{}", style.title("machine-god logs"))?;
     writeln!(
         stdout,
         "{} {}, {}",
@@ -82,28 +82,28 @@ fn write_summary(
         stdout,
         style,
         "path",
-        "claude-rs logs --path",
+        "machine-god logs --path",
         "Print runtime log directory",
     )?;
     write_command_block(
         stdout,
         style,
         "latest",
-        "claude-rs logs --latest",
+        "machine-god logs --latest",
         "Print latest log path",
     )?;
     write_command_block(
         stdout,
         style,
         "tail",
-        "claude-rs logs --tail 200",
+        "machine-god logs --tail 200",
         "Print redacted latest log tail",
     )?;
     write_command_block(
         stdout,
         style,
         "bundle",
-        "claude-rs logs --bundle --yes",
+        "machine-god logs --bundle --yes",
         "Create redacted support ZIP",
     )?;
     Ok(0)
@@ -173,7 +173,7 @@ fn write_latest_path(
     legacy_log_path: &Path,
 ) -> anyhow::Result<i32> {
     let Some(path) = crate::logging::latest_log_path_in(runtime_dir, legacy_log_path)? else {
-        writeln!(stderr, "No claude-rs log file was found.")?;
+        writeln!(stderr, "No machine-god log file was found.")?;
         return Ok(1);
     };
 
@@ -188,7 +188,7 @@ fn write_tail(
     line_count: usize,
 ) -> anyhow::Result<i32> {
     let Some(path) = crate::logging::latest_log_path_in(runtime_dir, legacy_log_path)? else {
-        writeln!(stderr, "No claude-rs log file was found.")?;
+        writeln!(stderr, "No machine-god log file was found.")?;
         return Ok(1);
     };
 
@@ -226,7 +226,7 @@ fn confirm_bundle(stderr: &mut impl Write, plan: &BundlePlan) -> anyhow::Result<
         return Ok(false);
     }
 
-    writeln!(stderr, "claude-rs will create a redacted debug bundle at:")?;
+    writeln!(stderr, "machine-god will create a redacted debug bundle at:")?;
     writeln!(stderr, "  {}", plan.output_path.display())?;
     writeln!(stderr)?;
     writeln!(stderr, "Included files:")?;
@@ -518,7 +518,7 @@ fn read_text_lossy(path: &Path) -> std::io::Result<String> {
 }
 
 fn default_bundle_path(root_dir: &Path) -> PathBuf {
-    root_dir.join(format!("claude-rs-debug-bundle-{}.zip", timestamp_for_file()))
+    root_dir.join(format!("machine-god-debug-bundle-{}.zip", timestamp_for_file()))
 }
 
 fn temporary_bundle_path(output_path: &Path) -> PathBuf {

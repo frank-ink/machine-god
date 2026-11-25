@@ -1,3 +1,9 @@
+| Component | Claim | Label | Evidence Ref |
+|---|---|---|---|
+| docs/zero/schema.md | File contains unified.db projection for new tables welt_digest, grund_antwort, mg_haltung, mg_haltung_widerspruch, retina | MEASURED | This file (revision) |
+| docs/zero/schema.md | New tables match zero/unifieddb/schema.sql DDL column-for-column | HYPOTHESIS | docs/zero/schema_check.py --emit-md (not yet run against new DDL) |
+| docs/zero/schema.md | Epistemic labels on all new columns are honest (MEASURED/HYPOTHESIS/UNKNOWN) | HYPOTHESIS | docs/zero/schema_check.py validation rules |
+
 # Schema Projection — zero/unifieddb/schema.sql ↔ docs/zero/schema.md
 
 ## Source of truth
@@ -160,6 +166,69 @@ Tables/columns without explicit label default to `MEASURE` (stage 0).
 | last_activity_at | INTEGER | NOT NULL | MEASURED | FALSIFY | Unix epoch ms |
 | promotion_stage | TEXT | NOT NULL DEFAULT 'FALSIFY' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | MEASURED | FALSIFY | CVIR promotion stage |
 
+### welt_digest
+
+| column | type | constraints | epistemic_label | promotion_stage | description |
+|--------|------|-------------|-----------------|-----------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Digest row ID |
+| kind | TEXT | NOT NULL CHECK (kind='welt_digest') | HYPOTHESIS | MEASURE | Fixed kind value |
+| value_json | TEXT | NOT NULL | HYPOTHESIS | MEASURE | JSON {text, n} |
+| source | TEXT | NOT NULL | HYPOTHESIS | MEASURE | 'durable_memory' or 'file' |
+| path | TEXT | DEFAULT '' | HYPOTHESIS | MEASURE | File path when source='file' |
+| created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
+| promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
+
+### grund_antwort
+
+| column | type | constraints | epistemic_label | promotion_stage | description |
+|--------|------|-------------|-----------------|-----------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Ground-mode answer row ID |
+| kind | TEXT | NOT NULL CHECK (kind='grund_antwort') | HYPOTHESIS | MEASURE | Fixed kind value |
+| value_json | TEXT | NOT NULL | HYPOTHESIS | MEASURE | JSON {"q":..., "a":...} |
+| session_id | TEXT | DEFAULT '' | HYPOTHESIS | MEASURE | Session correlation ID |
+| created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
+| promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
+
+### mg_haltung
+
+| column | type | constraints | epistemic_label | promotion_stage | description |
+|--------|------|-------------|-----------------|-----------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Stance row ID |
+| thema | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance topic |
+| version | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance version |
+| konfidenz | REAL | NOT NULL CHECK (konfidenz >= 0.0 AND konfidenz <= 1.0) | HYPOTHESIS | MEASURE | Stance confidence 0.0..1.0 |
+| datum | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance date (ISO 8601) |
+| claim | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance claim text |
+| gruende | TEXT | NOT NULL DEFAULT '[]' | HYPOTHESIS | MEASURE | JSON list of reasons |
+| quellen | TEXT | NOT NULL DEFAULT '[]' | HYPOTHESIS | MEASURE | JSON list of {link,quelle,land,richtung} |
+| status | TEXT | NOT NULL CHECK (status IN ('aktiv','archiviert','veto')) | HYPOTHESIS | MEASURE | Stance lifecycle status |
+| created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
+| promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
+
+### mg_haltung_widerspruch
+
+| column | type | constraints | epistemic_label | promotion_stage | description |
+|--------|------|-------------|-----------------|-----------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Contradiction row ID |
+| haltung_id | INTEGER | NOT NULL REFERENCES mg_haltung(id) | HYPOTHESIS | MEASURE | Parent stance ID |
+| thema | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Contradiction topic |
+| offen | INTEGER | NOT NULL CHECK (offen IN (0,1)) DEFAULT 1 | HYPOTHESIS | MEASURE | Open flag (1 = open) |
+| beschreibung | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Contradiction description |
+| created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
+| promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
+
+### retina
+
+| column | type | constraints | epistemic_label | promotion_stage | description |
+|--------|------|-------------|-----------------|-----------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Retina perception event ID |
+| kind | TEXT | NOT NULL CHECK (kind='retina') | HYPOTHESIS | MEASURE | Fixed kind value |
+| zeile | TEXT | NOT NULL | HYPOTHESIS | MEASURE | One-line Retina state |
+| source_component | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Originating component ('retina') |
+| grid_frame_id | TEXT | DEFAULT '' | HYPOTHESIS | MEASURE | GRID frame correlation ID |
+| created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
+| promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
+
 ## Indexes
 
 ```sql
@@ -202,6 +271,23 @@ CREATE INDEX idx_freewiki_last_tip ON freewiki_providers(last_tip_at);
 -- omega_sessions
 CREATE INDEX idx_omega_sessions_language ON omega_sessions(language);
 CREATE INDEX idx_omega_sessions_activity ON omega_sessions(last_activity_at);
+
+-- welt_digest
+CREATE INDEX idx_welt_digest_created_at ON welt_digest(created_at);
+
+-- grund_antwort
+CREATE INDEX idx_grund_antwort_created_at ON grund_antwort(created_at);
+
+-- mg_haltung
+CREATE INDEX idx_mg_haltung_status ON mg_haltung(status);
+CREATE INDEX idx_mg_haltung_thema ON mg_haltung(thema);
+
+-- mg_haltung_widerspruch
+CREATE INDEX idx_mg_haltung_widerspruch_offen ON mg_haltung_widerspruch(offen);
+CREATE INDEX idx_mg_haltung_widerspruch_haltung_id ON mg_haltung_widerspruch(haltung_id);
+
+-- retina
+CREATE INDEX idx_retina_created_at ON retina(created_at);
 ```
 
 ## Triggers (CVIR enforcement)
@@ -275,6 +361,7 @@ END;
 8. **Forbidden claims**: No "AGI", "consciousness", "sentience", "approaches AGI", "shows signs of" in any text column.
 9. **Gate counts from CI**: Status tables read pass/fail counts from CI output, never hardcoded.
 10. **Column type/constraint/label parity**: SQL and markdown projections identical.
+11. **New tables carry epistemic columns**: `welt_digest`, `grund_antwort`, `mg_haltung`, `mg_haltung_widerspruch`, `retina` each define `epistemic_label` and `promotion_stage` columns.
 
 ## Mutation Test Fixtures (docs/zero/schema_check_test.py)
 
@@ -292,3 +379,4 @@ Each negative case has a mutation fixture that must be rejected:
 | `test_schema_mismatch` | Markdown projection differs from SQL | 1 |
 | `test_hardcoded_gate_counts` | Status table contains hardcoded numbers | 1 |
 | `test_duplicate_labels` | Row carries multiple status labels | 1 |
+| `test_new_table_missing_epistemic_columns` | New table lacks epistemic_label or promotion_stage | 1 |

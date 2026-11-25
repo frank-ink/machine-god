@@ -1,7 +1,7 @@
 {
-  "name": "claude-code-rust",
+  "name": "machine-god",
   "version": "0.1.0",
-  "description": "Claude Code Rust - native Rust terminal interface for Claude Code",
+  "description": "Machine God - native Rust terminal interface for Claude Code",
   "keywords": [
     "cli",
     "tui",
@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/gschaidergabriel/machine-god#readme",
   "bin": {
-    "claude-rs": "bin/claude-rs.js"
+    "machine-god": "bin/machine-god.js"
   },
   "files": [
     "bin",

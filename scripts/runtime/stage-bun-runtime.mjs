@@ -44,7 +44,7 @@ const distPlatformDir = path.resolve(repoRoot, options.distPlatform ?? "dist-pla
 await stageRuntimes(selectedPackages, distPlatformDir);
 
 async function stageRuntimes(platformPackages, distPlatformDir) {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-bun-runtime-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-bun-runtime-"));
 
   try {
     for (const platformPackage of platformPackages) {
@@ -281,7 +281,7 @@ function requestWithRedirects(url, redirectCount = 0) {
       url,
       {
         headers: {
-          "User-Agent": "claude-code-rust-release-check"
+          "User-Agent": "machine-god-release-check"
         }
       },
       (response) => {

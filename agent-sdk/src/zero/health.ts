@@ -1086,3 +1086,46 @@ export async function reportHealth(
   }
   return summarizeHealth(reports);
 }
+
+/* ------------------------------------------------------------------ *
+ * GRID error code mapping (for Rust GridError -> TS error codes).
+ * INVALID_PORT replaces the removed INVALID_ENDPOINT.
+ * ------------------------------------------------------------------ */
+
+export type GridErrorCode =
+  | "INVALID_PORT"
+  | "INVALID_PATH"
+  | "TRANSPORT_FAILED"
+  | "SERIALIZATION_FAILED"
+  | "REJECTED";
+
+export function mapGridErrorToCode(error: Error & { code?: string }): GridErrorCode {
+  // Rust GridError variants (post-rename): InvalidPort, InvalidPath, Transport, Serialization, Rejected
+  // The Rust side serializes errors with a `code` field matching the variant name in SCREAMING_SNAKE_CASE.
+  const code = error.code?.toUpperCase();
+  switch (code) {
+    case "INVALID_PORT":
+      return "INVALID_PORT";
+    case "INVALID_PATH":
+      return "INVALID_PATH";
+    case "TRANSPORT":
+      return "TRANSPORT_FAILED";
+    case "SERIALIZATION":
+      return "SERIALIZATION_FAILED";
+    case "REJECTED":
+      return "REJECTED";
+    default:
+      // Fail closed: unknown codes map to TRANSPORT_FAILED for safety
+      return "TRANSPORT_FAILED";
+  }
+}
+
+export function isGridErrorCode(code: string): code is GridErrorCode {
+  return [
+    "INVALID_PORT",
+    "INVALID_PATH",
+    "TRANSPORT_FAILED",
+    "SERIALIZATION_FAILED",
+    "REJECTED",
+  ].includes(code);
+}

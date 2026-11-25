@@ -8,34 +8,34 @@ const path = require("node:path");
 const TARGETS = {
   "darwin:arm64": {
     packageName: "@gschaidergabriel/machine-god-darwin-arm64",
-    exe: "claude-rs",
+    exe: "machine-god-core",
     display: "darwin:arm64"
   },
   "darwin:x64": {
     packageName: "@gschaidergabriel/machine-god-darwin-x64",
-    exe: "claude-rs",
+    exe: "machine-god-core",
     display: "darwin:x64"
   },
   "linux:x64": {
     packageName: "@gschaidergabriel/machine-god-linux-x64-gnu",
-    exe: "claude-rs",
+    exe: "machine-god-core",
     libc: "glibc",
     display: "linux:x64 glibc"
   },
   "linux:arm64": {
     packageName: "@gschaidergabriel/machine-god-linux-arm64-gnu",
-    exe: "claude-rs",
+    exe: "machine-god-core",
     libc: "glibc",
     display: "linux:arm64 glibc"
   },
   "win32:x64": {
     packageName: "@gschaidergabriel/machine-god-win32-x64-msvc",
-    exe: "claude-rs.exe",
+    exe: "machine-god-core.exe",
     display: "win32:x64"
   },
   "win32:arm64": {
     packageName: "@gschaidergabriel/machine-god-win32-arm64-msvc",
-    exe: "claude-rs.exe",
+    exe: "machine-god-core.exe",
     display: "win32:arm64"
   }
 };
@@ -70,9 +70,9 @@ function selectTarget(processLike = process) {
   if (!info) {
     return {
       error:
-        `Unsupported platform/arch for claude-rs: ${key}\n` +
+        `Unsupported platform/arch for machine-god-core: ${key}\n` +
         `Supported platforms: ${supportedPlatformsText()}\n` +
-        "Use one of the supported npm platforms, or build claude-code-rust from source for this host."
+        "Use one of the supported npm platforms, or build machine-god from source for this host."
     };
   }
 
@@ -81,9 +81,9 @@ function selectTarget(processLike = process) {
     if (libc !== info.libc) {
       return {
         error:
-          `Unsupported Linux libc for claude-rs: linux/${processLike.arch} ${libc}\n` +
+          `Unsupported Linux libc for machine-god-core: linux/${processLike.arch} ${libc}\n` +
           `linux/${processLike.arch} musl is not supported by the current npm packages.\n` +
-          "Linux npm packages currently require glibc. Build claude-code-rust from source for this host."
+          "Linux npm packages currently require glibc. Build machine-god from source for this host."
       };
     }
   }
@@ -112,7 +112,7 @@ function resolveInstall(options = {}) {
           `Missing platform package ${info.packageName} for ${key}.\n` +
           "This usually means npm optional dependencies were omitted, for example by `npm install --omit=optional`.\n" +
           "Check `npm config get omit`, then reinstall with:\n" +
-          "  npm install -g claude-code-rust"
+          "  npm install -g machine-god"
       };
     }
     throw error;
@@ -124,7 +124,7 @@ function resolveInstall(options = {}) {
       error:
         `Missing binary at ${binaryPath}\n` +
         `The installed ${info.packageName} package is incomplete. Reinstall with:\n` +
-        "  npm install -g claude-code-rust"
+        "  npm install -g machine-god"
     };
   }
 
@@ -133,8 +133,8 @@ function resolveInstall(options = {}) {
     return {
       error:
         `Missing bundled bridge at ${bundledBridgeScript}\n` +
-        "The installed claude-code-rust package is incomplete. Reinstall with:\n" +
-        "  npm install -g claude-code-rust"
+        "The installed machine-god package is incomplete. Reinstall with:\n" +
+        "  npm install -g machine-god"
     };
   }
 
@@ -151,14 +151,14 @@ function main() {
   const child = spawn(resolved.binaryPath, process.argv.slice(2), {
     env: {
       ...process.env,
-      CLAUDE_RS_AGENT_BRIDGE: process.env.CLAUDE_RS_AGENT_BRIDGE || resolved.bundledBridgeScript
+      MACHINE_GOD_AGENT_BRIDGE: process.env.MACHINE_GOD_AGENT_BRIDGE || resolved.bundledBridgeScript
     },
     stdio: "inherit",
     windowsHide: true
   });
 
   child.on("error", (error) => {
-    console.error(`Failed to launch claude-rs: ${error.message}`);
+    console.error(`Failed to launch machine-god-core: ${error.message}`);
     process.exit(1);
   });
 

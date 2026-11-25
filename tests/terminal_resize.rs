@@ -49,7 +49,7 @@ struct AppProfileFixture<'a> {
 #[allow(clippy::expect_used)]
 fn configure_test_profiles(command: &mut CommandBuilder, root: &Path) {
     for (variable, directory) in
-        [("CLAUDE_CONFIG_DIR", "profile"), ("CLAUDE_RS_CONFIG_DIR", "app-config")]
+        [("CLAUDE_CONFIG_DIR", "profile"), ("MACHINE_GOD_CONFIG_DIR", "app-config")]
     {
         let directory = root.join(directory);
         std::fs::create_dir_all(&directory).expect("isolated configuration directory");
@@ -101,7 +101,7 @@ impl TestChild {
     fn wait_for_exit(&mut self, timeout: Duration) -> Option<ExitStatus> {
         let started = Instant::now();
         while started.elapsed() < timeout {
-            if let Some(status) = self.process.try_wait().expect("poll claude-rs") {
+            if let Some(status) = self.process.try_wait().expect("poll machine-god") {
                 return Some(status);
             }
             std::thread::sleep(Duration::from_millis(20));
@@ -253,9 +253,9 @@ impl TerminalTest {
         });
         let journal = temp.path().join("commands.jsonl");
         let release_file = temp.path().join("release");
-        let mut command = CommandBuilder::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut command = CommandBuilder::new(env!("CARGO_BIN_EXE_machine-god-core"));
         if let Some(inherited_directory) = app_profile.inherited_directory {
-            command.env("CLAUDE_RS_CONFIG_DIR", inherited_directory);
+            command.env("MACHINE_GOD_CONFIG_DIR", inherited_directory);
         }
         configure_test_profiles(&mut command, temp.path());
         if let Some(contents) = app_profile.contents {
@@ -307,8 +307,8 @@ impl TerminalTest {
         }
         command.cwd(&project);
         live_feedback::configure_home(&mut command, scenario, &project);
-        command.env("CLAUDE_RS_AGENT_BRIDGE", &bridge);
-        command.env("CLAUDE_RS_AGENT_BRIDGE_RUNTIME", runtime);
+        command.env("MACHINE_GOD_AGENT_BRIDGE", &bridge);
+        command.env("MACHINE_GOD_AGENT_BRIDGE_RUNTIME", runtime);
         command.env("FAKE_BRIDGE_LINES", lines.to_string());
         command.env("FAKE_BRIDGE_INTERVAL_MS", "15");
         command.env("FAKE_BRIDGE_FOLLOW_UP_LINES", "3");
@@ -322,7 +322,7 @@ impl TerminalTest {
             auth_mode.and_then(|mode| Self::install_fake_cli(&mut command, temp.path(), mode));
         let writer = Arc::new(Mutex::new(pair.master.take_writer().expect("pty writer")));
         let reader = pair.master.try_clone_reader().expect("pty reader");
-        let process = pair.slave.spawn_command(command).expect("spawn claude-rs");
+        let process = pair.slave.spawn_command(command).expect("spawn machine-god");
         let child = TestChild { process, writer: Arc::clone(&writer) };
         drop(pair.slave);
         let output = capture_output(reader, writer);
@@ -1299,7 +1299,7 @@ fn forked_resume_continues_under_the_new_session_id() {
     loop {
         let output =
             String::from_utf8_lossy(&test.output.lock().expect("output lock").raw).into_owned();
-        if output.contains("Resume this session: claude-rs resume chosen-session-fork") {
+        if output.contains("Resume this session: machine-god resume chosen-session-fork") {
             break;
         }
         assert!(started.elapsed() < WAIT_LIMIT, "{}", tail(&output, 400));
@@ -2597,14 +2597,14 @@ fn presentation_clocks_and_copy_picker_navigation_survive_terminal_resize() {
 #[test]
 fn final_resume_output_decodes_cursor_spacing_and_requires_the_complete_session() {
     for (raw, expected) in [
-        (b"\r\nResume this session: claude-rs resume fake-session\r\n".as_slice(), true),
-        (b"\r\nResume this session: claude-rs resume\x1b[1Cfake-session\r\n".as_slice(), true),
-        (b"\r\nResume this session: claude-rs resumefake-session\r\n".as_slice(), false),
-        (b"\r\nResume this session: claude-rs resume other-session\r\n".as_slice(), false),
-        (b"\r\nResume this session: claude-rs resume\x1b[1Cfake-".as_slice(), false),
+        (b"\r\nResume this session: machine-god resume fake-session\r\n".as_slice(), true),
+        (b"\r\nResume this session: machine-god resume\x1b[1Cfake-session\r\n".as_slice(), true),
+        (b"\r\nResume this session: machine-god resumefake-session\r\n".as_slice(), false),
+        (b"\r\nResume this session: machine-god resume other-session\r\n".as_slice(), false),
+        (b"\r\nResume this session: machine-god resume\x1b[1Cfake-".as_slice(), false),
     ] {
         assert_eq!(
-            rendered_final_output(raw, 28, 61).contains("claude-rs resume fake-session"),
+            rendered_final_output(raw, 28, 61).contains("machine-god resume fake-session"),
             expected,
             "{raw:?}"
         );
@@ -3359,7 +3359,7 @@ fn a_bad_dir_or_bridge_script_exits_before_the_terminal_is_touched() {
     ];
     for (flag, path) in cases {
         let pair = native_pty_system().openpty(pty_size(SHORT_ROWS, COLS)).expect("open pty");
-        let mut command = CommandBuilder::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut command = CommandBuilder::new(env!("CARGO_BIN_EXE_machine-god-core"));
         configure_test_profiles(&mut command, temp.path());
         command.arg("--no-update-check");
         command.arg(flag);
@@ -3367,12 +3367,12 @@ fn a_bad_dir_or_bridge_script_exits_before_the_terminal_is_touched() {
         command.cwd(temp.path());
         let writer = Arc::new(Mutex::new(pair.master.take_writer().expect("pty writer")));
         let reader = pair.master.try_clone_reader().expect("pty reader");
-        let process = pair.slave.spawn_command(command).expect("spawn claude-rs");
+        let process = pair.slave.spawn_command(command).expect("spawn machine-god");
         let mut child = TestChild { process, writer: Arc::clone(&writer) };
         drop(pair.slave);
         let output = capture_output(reader, writer);
 
-        let status = child.wait_for_exit(WAIT_LIMIT).expect("claude-rs exits on its own");
+        let status = child.wait_for_exit(WAIT_LIMIT).expect("machine-god exits on its own");
         assert_eq!(status.exit_code(), 2, "{flag}");
         // The child's exit is the signal. ConPTY keeps the pseudo console open after the
         // child exits, so the PTY never reaches EOF on Windows; wait for the error text the
@@ -3739,7 +3739,7 @@ impl TerminalTest {
         // The actual session's final resume command follows native restoration.
         // After successful exit it fences every earlier console write without
         // assuming ConPTY EOF or waiting a fixed amount for a reader thread.
-        self.wait_final_rendered_output_since(offset, "claude-rs resume fake-session");
+        self.wait_final_rendered_output_since(offset, "machine-god resume fake-session");
         let output = self.output.lock().expect("output lock");
         assert!(!output.parser.screen().alternate_screen());
         assert!(!output.parser.screen().hide_cursor());

@@ -8,7 +8,7 @@ import { AsyncQueue } from "../../agent-sdk/dist/bridge/shared.js";
 
 const mode = process.argv[2];
 assert.ok(["replacement", "omitted", "handoff"].includes(mode));
-const root = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-plugin-inventory-"));
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-plugin-inventory-"));
 let closeAll, restore;
 const controls = [],
   events = [],

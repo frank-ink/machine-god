@@ -87,7 +87,7 @@ const bytes = (updates: SessionUpdate[]) =>
   updates.reduce((total, update) => total + Buffer.byteLength(JSON.stringify(update)), 0);
 
 function exportFromSavedSession(records: RecordInput[], operations: Operation[]) {
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "claude-rs-export-")));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "machine-god-export-")));
   try {
     const cwd = join(directory, "project"),
       siblingCwd = join(directory, "sibling");

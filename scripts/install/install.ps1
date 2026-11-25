@@ -20,7 +20,7 @@ $ProgressPreference = "SilentlyContinue"
 $RepoOwner = "gschaidergabriel"
 $RepoName = "machine-god"
 $RepoSlug = "$RepoOwner/$RepoName"
-$RootPackage = "claude-code-rust"
+$RootPackage = "machine-god"
 $DownloadRetryCount = 3
 $DownloadConnectTimeoutSeconds = 30
 $DownloadLowSpeedBytesPerSecond = 1024
@@ -40,7 +40,7 @@ Options:
   -NoModifyPath          Do not update the user PATH.
   -Verify                Show download diagnostics and run strict runtime
                          diagnostics after install.
-  -Run                   Start claude-rs after a successful install.
+  -Run                   Start machine-god-core after a successful install.
   -RemoveNpm             Remove an existing global npm install when found.
   -KeepNpm               Keep an existing global npm install without prompting.
   -Uninstall             Remove the script install layout and user PATH entry.
@@ -48,17 +48,17 @@ Options:
   -Help                  Show this help.
 
 Environment:
-  CLAUDE_RS_RELEASE
-  CLAUDE_RS_INSTALL_DIR
-  CLAUDE_RS_NON_INTERACTIVE
-  CLAUDE_RS_NO_MODIFY_PATH
-  CLAUDE_RS_VERIFY
-  CLAUDE_RS_RUN
-  CLAUDE_RS_REMOVE_NPM
-  CLAUDE_RS_KEEP_NPM
-  CLAUDE_RS_UNINSTALL
-  CLAUDE_RS_UPDATE
-  CLAUDE_RS_UPDATE_PARENT_PID
+  MACHINE_GOD_RELEASE
+  MACHINE_GOD_INSTALL_DIR
+  MACHINE_GOD_NON_INTERACTIVE
+  MACHINE_GOD_NO_MODIFY_PATH
+  MACHINE_GOD_VERIFY
+  MACHINE_GOD_RUN
+  MACHINE_GOD_REMOVE_NPM
+  MACHINE_GOD_KEEP_NPM
+  MACHINE_GOD_UNINSTALL
+  MACHINE_GOD_UPDATE
+  MACHINE_GOD_UPDATE_PARENT_PID
 "@
 }
 
@@ -74,49 +74,49 @@ function Test-TruthyEnv {
 }
 
 if (-not $PSBoundParameters.ContainsKey("Release") -or [string]::IsNullOrWhiteSpace($Release)) {
-    $Release = if ($env:CLAUDE_RS_RELEASE) { $env:CLAUDE_RS_RELEASE } else { "latest" }
+    $Release = if ($env:MACHINE_GOD_RELEASE) { $env:MACHINE_GOD_RELEASE } else { "latest" }
 }
 
 if (-not $PSBoundParameters.ContainsKey("InstallDir") -or [string]::IsNullOrWhiteSpace($InstallDir)) {
-    if ($env:CLAUDE_RS_INSTALL_DIR) {
-        $InstallDir = $env:CLAUDE_RS_INSTALL_DIR
+    if ($env:MACHINE_GOD_INSTALL_DIR) {
+        $InstallDir = $env:MACHINE_GOD_INSTALL_DIR
     } else {
         $localAppData = if ($env:LOCALAPPDATA) {
             $env:LOCALAPPDATA
         } else {
             [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
         }
-        $InstallDir = Join-Path $localAppData "Programs\claude-rs"
+        $InstallDir = Join-Path $localAppData "Programs\machine-god-core"
     }
 }
 
-$NonInteractive = Test-TruthyEnv "CLAUDE_RS_NON_INTERACTIVE"
+$NonInteractive = Test-TruthyEnv "MACHINE_GOD_NON_INTERACTIVE"
 if ($env:CI) {
     $NonInteractive = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_NO_MODIFY_PATH") {
+if (Test-TruthyEnv "MACHINE_GOD_NO_MODIFY_PATH") {
     $NoModifyPath = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_VERIFY") {
+if (Test-TruthyEnv "MACHINE_GOD_VERIFY") {
     $Verify = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_RUN") {
+if (Test-TruthyEnv "MACHINE_GOD_RUN") {
     $Run = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_REMOVE_NPM") {
+if (Test-TruthyEnv "MACHINE_GOD_REMOVE_NPM") {
     $RemoveNpm = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_KEEP_NPM") {
+if (Test-TruthyEnv "MACHINE_GOD_KEEP_NPM") {
     $KeepNpm = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_UNINSTALL") {
+if (Test-TruthyEnv "MACHINE_GOD_UNINSTALL") {
     $Uninstall = $true
 }
-if (Test-TruthyEnv "CLAUDE_RS_UPDATE") {
+if (Test-TruthyEnv "MACHINE_GOD_UPDATE") {
     $Update = $true
 }
-if (-not $PSBoundParameters.ContainsKey("UpdateParentProcessId") -and $env:CLAUDE_RS_UPDATE_PARENT_PID) {
-    $UpdateParentProcessId = [int]$env:CLAUDE_RS_UPDATE_PARENT_PID
+if (-not $PSBoundParameters.ContainsKey("UpdateParentProcessId") -and $env:MACHINE_GOD_UPDATE_PARENT_PID) {
+    $UpdateParentProcessId = [int]$env:MACHINE_GOD_UPDATE_PARENT_PID
 }
 if ($Update -and $Uninstall) {
     throw "-Update and -Uninstall cannot be used together"
@@ -447,10 +447,10 @@ function Write-Intro {
     $script:InstallerFrameOpen = $true
     Write-InstallerText -Text "$($Glyph.BarStart)  " -Color DarkGray -NoNewline
     if ($UseColor) {
-        Write-Host " claude-rs " -ForegroundColor Black -BackgroundColor Cyan -NoNewline
+        Write-Host " machine-god-core " -ForegroundColor Black -BackgroundColor Cyan -NoNewline
         Write-InstallerText -Text " $Name" -Color DarkGray
     } else {
-        Write-InstallerText -Text "claude-rs $Name"
+        Write-InstallerText -Text "machine-god-core $Name"
     }
     Write-InstallerGutter
 }
@@ -526,7 +526,7 @@ function Format-DownloadBytes {
 function Format-DownloadDiagnostic {
     param([string]$StatsLine)
 
-    $prefix = "__CLAUDE_RS_DOWNLOAD_STATS__"
+    $prefix = "__MACHINE_GOD_DOWNLOAD_STATS__"
     if ([string]::IsNullOrWhiteSpace($StatsLine) -or
         -not $StatsLine.StartsWith($prefix, [StringComparison]::Ordinal)) {
         return $null
@@ -732,7 +732,7 @@ function Invoke-ArchiveDownload {
         $totalBytes = Get-DownloadContentLength -HeadersPath $headersPath
     }
 
-    $statsFormat = "__CLAUDE_RS_DOWNLOAD_STATS__%{http_code}\t%{size_download}\t%{speed_download}\t%{time_total}"
+    $statsFormat = "__MACHINE_GOD_DOWNLOAD_STATS__%{http_code}\t%{size_download}\t%{speed_download}\t%{time_total}"
     $configLines = @(
         "fail",
         "location",
@@ -798,7 +798,7 @@ function Invoke-ArchiveDownload {
         $detail = @()
         if ($Verify) {
             $statsLine = @($curlOutput -split "\r?\n" | Where-Object {
-                $_.StartsWith("__CLAUDE_RS_DOWNLOAD_STATS__", [StringComparison]::Ordinal)
+                $_.StartsWith("__MACHINE_GOD_DOWNLOAD_STATS__", [StringComparison]::Ordinal)
             } | Select-Object -Last 1)
             if ($statsLine.Count -gt 0) {
                 $diagnostic = Format-DownloadDiagnostic -StatsLine "$($statsLine[0])"
@@ -976,7 +976,7 @@ function Write-ReleaseAdvisories {
         return
     }
     foreach ($summary in $summaries) {
-        Write-WarnLine "Known issue in claude-rs ${Version}: $summary"
+        Write-WarnLine "Known issue in machine-god-core ${Version}: $summary"
     }
 }
 
@@ -1004,8 +1004,8 @@ function Assert-NoReparsePoints {
 function Assert-RequiredFiles {
     param([string]$AppRoot)
     $requiredFiles = @(
-        "claude-rs.exe",
-        "claude-rs-bridge-bun.exe",
+        "machine-god-core.exe",
+        "machine-god-bridge-bun.exe",
         "package.json",
         "THIRD-PARTY-NOTICES.md",
         "agent-sdk\package.json",
@@ -1024,13 +1024,13 @@ function Assert-RequiredFiles {
 function Acquire-InstallLock {
     param([string]$InstallParent)
     New-Item -ItemType Directory -Path $InstallParent -Force | Out-Null
-    $lockPath = Join-Path $InstallParent ".claude-rs-install.lock"
+    $lockPath = Join-Path $InstallParent ".machine-god-install.lock"
     try {
         # DeleteOnClose removes the lock file when it is released, even when
         # the installer exits abnormally.
         return New-Object System.IO.FileStream($lockPath, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None, 4096, [System.IO.FileOptions]::DeleteOnClose)
     } catch {
-        Fail "another claude-rs installer appears to be running: $lockPath"
+        Fail "another machine-god-core installer appears to be running: $lockPath"
     }
 }
 
@@ -1054,12 +1054,12 @@ function Replace-AppDirectory {
                 if ($UpdateParentProcessId -gt 0) {
                     try {
                         Start-BackupCleanup -BackupPath $backup -ParentProcessId $UpdateParentProcessId
-                        Write-Ok "Scheduled old install cleanup after claude-rs exits"
+                        Write-Ok "Scheduled old install cleanup after machine-god-core exits"
                     } catch {
                         Write-WarnLine "Updated successfully, but could not schedule cleanup of $backup"
                     }
                 } else {
-                    Write-WarnLine "Updated successfully. Remove the old install backup after claude-rs exits: $backup"
+                    Write-WarnLine "Updated successfully. Remove the old install backup after machine-god-core exits: $backup"
                 }
             }
         }
@@ -1075,9 +1075,9 @@ function Start-BackupCleanup {
     param([string]$BackupPath, [int]$ParentProcessId)
     $workerScript = @'
 $ErrorActionPreference = "SilentlyContinue"
-$parentId = [int]$env:CLAUDE_RS_CLEANUP_PARENT_PID
+$parentId = [int]$env:MACHINE_GOD_CLEANUP_PARENT_PID
 Wait-Process -Id $parentId -ErrorAction SilentlyContinue
-$backup = $env:CLAUDE_RS_CLEANUP_BACKUP
+$backup = $env:MACHINE_GOD_CLEANUP_BACKUP
 for ($attempt = 0; $attempt -lt 20; $attempt++) {
     Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue
     if (-not (Test-Path -LiteralPath $backup)) {
@@ -1093,8 +1093,8 @@ for ($attempt = 0; $attempt -lt 20; $attempt++) {
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
     $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
-    $startInfo.EnvironmentVariables["CLAUDE_RS_CLEANUP_PARENT_PID"] = [string]$ParentProcessId
-    $startInfo.EnvironmentVariables["CLAUDE_RS_CLEANUP_BACKUP"] = $BackupPath
+    $startInfo.EnvironmentVariables["MACHINE_GOD_CLEANUP_PARENT_PID"] = [string]$ParentProcessId
+    $startInfo.EnvironmentVariables["MACHINE_GOD_CLEANUP_BACKUP"] = $BackupPath
     $worker = [System.Diagnostics.Process]::Start($startInfo)
     if (-not $worker) {
         throw "could not start update cleanup worker"
@@ -1112,10 +1112,10 @@ function Get-ScriptInstallInfo {
     if (-not (Test-Path -LiteralPath $packageJsonPath -PathType Leaf)) {
         return $null
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $Path "claude-rs.exe") -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Path "machine-god-core.exe") -PathType Leaf)) {
         return $null
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $Path "claude-rs-bridge-bun.exe") -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Path "machine-god-bridge-bun.exe") -PathType Leaf)) {
         return $null
     }
 
@@ -1152,7 +1152,7 @@ function Confirm-SameVersionReinstall {
     if ($Yes) {
         return $true
     }
-    return Confirm-DefaultNo "claude-rs $Version is already installed at $InstallDir. Reinstall the same version?"
+    return Confirm-DefaultNo "machine-god-core $Version is already installed at $InstallDir. Reinstall the same version?"
 }
 
 function Get-NpmCommand {
@@ -1241,7 +1241,7 @@ function Resolve-NpmInstallChoice {
         return
     }
 
-    if (-not $KeepNpm -and -not $Yes -and (Confirm-DefaultNo "Uninstall this npm installation of claude-rs?")) {
+    if (-not $KeepNpm -and -not $Yes -and (Confirm-DefaultNo "Uninstall this npm installation of machine-god-core?")) {
         Remove-NpmInstall -NpmInstall $npmInstall
         return
     }
@@ -1258,9 +1258,9 @@ function Get-NormalizedPath {
     $absolute = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($expanded)
     $normalized = [IO.Path]::GetFullPath($absolute)
     if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
-        if (-not ("ClaudeRsInstall.PathIdentity" -as [type])) {
+        if (-not ("MachineGodInstall.PathIdentity" -as [type])) {
             Add-Type -TypeDefinition @'
-namespace ClaudeRsInstall {
+namespace MachineGodInstall {
     public static class PathIdentity {
         [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
         private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string path, uint access, uint share, System.IntPtr security, uint creation, uint flags, System.IntPtr template);
@@ -1282,7 +1282,7 @@ namespace ClaudeRsInstall {
 }
 '@
         }
-        $normalized = [ClaudeRsInstall.PathIdentity]::Resolve($normalized)
+        $normalized = [MachineGodInstall.PathIdentity]::Resolve($normalized)
     }
     if ($normalized.Length -gt ([IO.Path]::GetPathRoot($normalized)).Length) {
         $normalized = $normalized.TrimEnd([char[]]@('\', '/'))
@@ -1340,14 +1340,14 @@ function Set-UserPathRaw {
 
 function Send-EnvironmentChange {
     try {
-        if (-not ("ClaudeRsInstall.NativeMethods" -as [type])) {
-            Add-Type -Namespace ClaudeRsInstall -Name NativeMethods -MemberDefinition '[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);'
+        if (-not ("MachineGodInstall.NativeMethods" -as [type])) {
+            Add-Type -Namespace MachineGodInstall -Name NativeMethods -MemberDefinition '[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);'
         }
         $result = [UIntPtr]::Zero
         # HWND_BROADCAST WM_SETTINGCHANGE "Environment" so Explorer and new
         # shells re-read the user PATH without a logoff. Writing the registry
         # directly skips the broadcast SetEnvironmentVariable would have sent.
-        [void]([ClaudeRsInstall.NativeMethods]::SendMessageTimeout([IntPtr]0xFFFF, 0x001A, [UIntPtr]::Zero, "Environment", 2, 5000, [ref]$result))
+        [void]([MachineGodInstall.NativeMethods]::SendMessageTimeout([IntPtr]0xFFFF, 0x001A, [UIntPtr]::Zero, "Environment", 2, 5000, [ref]$result))
     } catch {
         # Best effort; a missed broadcast only delays PATH pickup until logon.
     }
@@ -1392,20 +1392,20 @@ function Prepend-ProcessPath {
     $env:Path = (@($Directory) + $remainingEntries) -join [IO.Path]::PathSeparator
 }
 
-function Invoke-InstalledClaudeRs {
+function Invoke-InstalledMachineGod {
     param([string[]]$CommandArgs)
-    $installedExe = Join-Path $InstallDir "claude-rs.exe"
+    $installedExe = Join-Path $InstallDir "machine-god-core.exe"
     & $installedExe @CommandArgs
 }
 
 function Assert-InstalledCommand {
-    $versionOutput = (Invoke-InstalledClaudeRs @("--version") | Out-String).Trim()
+    $versionOutput = (Invoke-InstalledMachineGod @("--version") | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($versionOutput)) {
-        Fail "installed claude-rs did not run successfully"
+        Fail "installed machine-god-core did not run successfully"
     }
-    Invoke-InstalledClaudeRs @("--help") | Out-Null
+    Invoke-InstalledMachineGod @("--help") | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Fail "installed claude-rs help check failed"
+        Fail "installed machine-god-core help check failed"
     }
     Complete-InstallerProgress "Verified $versionOutput"
 }
@@ -1416,7 +1416,7 @@ function Invoke-InstallDoctor {
     $previousPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $doctorLines = @(Invoke-InstalledClaudeRs @("doctor", "--strict") 2>&1 | ForEach-Object { "$_" })
+        $doctorLines = @(Invoke-InstalledMachineGod @("doctor", "--strict") 2>&1 | ForEach-Object { "$_" })
     } finally {
         $ErrorActionPreference = $previousPreference
     }
@@ -1449,15 +1449,15 @@ function Test-InstallDirectoryOverlap {
         $secondPath.StartsWith($firstPath, [StringComparison]::OrdinalIgnoreCase)
 }
 
-function Warn-OtherClaudeRsCommands {
+function Warn-OtherMachineGodCommands {
     param([string]$ExpectedCommand)
     $expectedPath = Get-NormalizedPath -Path $ExpectedCommand
     $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
-    $commands = @(Get-Command "claude-rs" -All -ErrorAction SilentlyContinue)
+    $commands = @(Get-Command "machine-god-core" -All -ErrorAction SilentlyContinue)
     foreach ($command in $commands) {
         if ($command.CommandType -ne [System.Management.Automation.CommandTypes]::Application -and
             $command.CommandType -ne [System.Management.Automation.CommandTypes]::ExternalScript) {
-            Write-WarnLine "A $($command.CommandType) named claude-rs takes precedence over the installed command" -Detail "Check its definition with: Get-Command claude-rs -All"
+            Write-WarnLine "A $($command.CommandType) named machine-god-core takes precedence over the installed command" -Detail "Check its definition with: Get-Command machine-god-core -All"
             continue
         }
         # Command discovery is a snapshot; an earlier cleanup may have removed
@@ -1483,7 +1483,7 @@ function Warn-OtherClaudeRsCommands {
                 }
             }
         } else {
-            Write-WarnLine "Another claude-rs is also on PATH: $candidatePath" -Detail @(
+            Write-WarnLine "Another machine-god-core is also on PATH: $candidatePath" -Detail @(
                 "Current installation: $expectedPath",
                 "Check PATH order or remove that copy using the tool that installed it."
             )
@@ -1498,7 +1498,7 @@ function Uninstall-ScriptInstall {
     $lock = Acquire-InstallLock -InstallParent $installParent
     try {
         if ((Test-Path -LiteralPath $Directory) -and -not (Test-ScriptInstallDirectory -Path $Directory)) {
-            Write-WarnLine "Not removing $Directory because it does not look like a claude-rs script install"
+            Write-WarnLine "Not removing $Directory because it does not look like a machine-god-core script install"
             return
         }
         if (Remove-UserPath -Directory $Directory) {
@@ -1515,7 +1515,7 @@ function Uninstall-ScriptInstall {
 }
 
 $flowLabel = if ($Uninstall) { "Uninstall" } elseif ($Update) { "Update" } else { "Installation" }
-$tempDir = Join-Path ([IO.Path]::GetTempPath()) "claude-rs-install-$PID"
+$tempDir = Join-Path ([IO.Path]::GetTempPath()) "machine-god-install-$PID"
 $lockStream = $null
 $pathChanged = $false
 $sameVersionReinstallApproved = $false
@@ -1533,7 +1533,7 @@ try {
     if ($Update) {
         Write-Intro "updater"
         if (-not (Test-ScriptInstallDirectory -Path $InstallDir)) {
-            Fail "-Update requires an existing claude-rs script install: $InstallDir"
+            Fail "-Update requires an existing machine-god-core script install: $InstallDir"
         }
     } else {
         Write-Intro "installer"
@@ -1565,9 +1565,9 @@ try {
         } elseif ([string]::Equals($existingInstall.Version, $selectedVersion, [StringComparison]::Ordinal)) {
             if (Confirm-SameVersionReinstall -Version $selectedVersion) {
                 $sameVersionReinstallApproved = $true
-                Write-Info "Reinstalling claude-rs $selectedVersion"
+                Write-Info "Reinstalling machine-god-core $selectedVersion"
             } else {
-                Write-Outro "claude-rs $selectedVersion is already installed; no changes made"
+                Write-Outro "machine-god-core $selectedVersion is already installed; no changes made"
                 return
             }
         }
@@ -1617,7 +1617,7 @@ try {
         if ($lockedInstall -and
             -not [string]::IsNullOrWhiteSpace($lockedInstall.Version) -and
             [string]::Equals($lockedInstall.Version, $selectedVersion, [StringComparison]::Ordinal)) {
-            Write-Outro "claude-rs $selectedVersion was installed by another installer; no changes made"
+            Write-Outro "machine-god-core $selectedVersion was installed by another installer; no changes made"
             return
         }
     }
@@ -1640,16 +1640,16 @@ try {
 
     Start-InstallerProgress "Verifying installed command"
     Assert-InstalledCommand
-    # Machine God launcher next to claude-rs.exe (same directory, already on PATH): first-run companion once, then claude-rs
+    # Machine God launcher next to machine-god-core.exe (same directory, already on PATH): first-run companion once, then machine-god-core
     $mgLines = @(
         '@echo off',
-        'if /i "%~1"=="interests" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0interest\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
-        'if /i "%~1"=="mailbox" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0mailbox\mailbox.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
-        'if /i "%~1"=="ais" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0fusion\ais.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
-        'if /i "%~1"=="grid" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0grid\cli.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
-        'if /i "%~1"=="improve" ( "%~dp0claude-rs-bridge-bun.exe" "%~dp0reflect\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
-        'if exist "%~dp0claude-rs-bridge-bun.exe" if exist "%~dp0firstrun\mg-firstrun.js" "%~dp0claude-rs-bridge-bun.exe" "%~dp0firstrun\mg-firstrun.js" %*',
-        '"%~dp0claude-rs.exe" %*'
+        'if /i "%~1"=="interests" ( "%~dp0machine-god-bridge-bun.exe" "%~dp0interest\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if /i "%~1"=="mailbox" ( "%~dp0machine-god-bridge-bun.exe" "%~dp0mailbox\mailbox.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if /i "%~1"=="ais" ( "%~dp0machine-god-bridge-bun.exe" "%~dp0fusion\ais.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if /i "%~1"=="grid" ( "%~dp0machine-god-bridge-bun.exe" "%~dp0grid\cli.js" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if /i "%~1"=="improve" ( "%~dp0machine-god-bridge-bun.exe" "%~dp0reflect\cli.ts" %2 %3 %4 %5 %6 %7 %8 %9 & exit /b )',
+        'if exist "%~dp0machine-god-bridge-bun.exe" if exist "%~dp0firstrun\mg-firstrun.js" "%~dp0machine-god-bridge-bun.exe" "%~dp0firstrun\mg-firstrun.js" %*',
+        '"%~dp0machine-god-core.exe" %*'
     )
     Set-Content -LiteralPath (Join-Path $InstallDir "machine-god.cmd") -Value $mgLines -Encoding Ascii
     if ($Verify) {
@@ -1659,7 +1659,7 @@ try {
 
     # Only offer to remove an existing npm install after the script install
     # has fully succeeded, so a failed install never leaves the user without
-    # claude-rs.
+    # machine-god-core.
     # Release the completed installation's lock before optional cleanup of
     # another copy, which can share the same parent directory.
     $lockStream.Dispose()
@@ -1668,21 +1668,21 @@ try {
         Resolve-NpmInstallChoice
     }
 
-    $expectedCommand = Join-Path $InstallDir "claude-rs.exe"
-    Warn-OtherClaudeRsCommands -ExpectedCommand $expectedCommand
+    $expectedCommand = Join-Path $InstallDir "machine-god-core.exe"
+    Warn-OtherMachineGodCommands -ExpectedCommand $expectedCommand
 
     if ($Update) {
-        Write-Outro "claude-rs is updated. Start claude-rs again to use v$selectedVersion."
-    } elseif ($Run -or ((-not $Yes) -and (Confirm-DefaultNo "Start claude-rs now?"))) {
-        Write-Outro "claude-rs $selectedVersion is installed"
-        Invoke-InstalledClaudeRs @()
+        Write-Outro "machine-god-core is updated. Start machine-god-core again to use v$selectedVersion."
+    } elseif ($Run -or ((-not $Yes) -and (Confirm-DefaultNo "Start machine-god-core now?"))) {
+        Write-Outro "machine-god-core $selectedVersion is installed"
+        Invoke-InstalledMachineGod @()
     } else {
         if ($NoModifyPath) {
-            Write-Note "Next steps" @("Run claude-rs directly:", "  $expectedCommand")
+            Write-Note "Next steps" @("Run machine-god-core directly:", "  $expectedCommand")
         } else {
-            Write-Note "Next steps" @("Start a new shell, then run:", "  claude-rs")
+            Write-Note "Next steps" @("Start a new shell, then run:", "  machine-god-core")
         }
-        Write-Outro "claude-rs $selectedVersion is installed"
+        Write-Outro "machine-god-core $selectedVersion is installed"
     }
 } catch {
     $failed = $true

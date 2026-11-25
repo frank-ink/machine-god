@@ -118,7 +118,7 @@ fn human_candidates_preserve_sources_states_and_rejected_package_metadata() {
         "npm_root_package",
         "npm root package",
         vec![wrong.clone()],
-        Some("claude-code-rust"),
+        Some("machine-god"),
         false,
     );
     let script = bridge_script_check(&BridgeScriptInspection {
@@ -161,7 +161,7 @@ fn human_candidates_preserve_sources_states_and_rejected_package_metadata() {
             && version.contains("chosen runtime")
     );
     let npm = section(&text, "npm installation");
-    assert!(npm.contains("[WARN]") && npm.contains("expected claude-code-rust"));
+    assert!(npm.contains("[WARN]") && npm.contains("expected machine-god"));
     let metadata = npm
         .lines()
         .find(|line| line.contains("candidate_0_name:"))
@@ -184,19 +184,19 @@ fn package_discovery_reports_selected_identity_and_useful_optional_failures() {
     let selected = dir.path().join("selected.json");
     let malformed = dir.path().join("malformed.json");
     fs::write(&unrelated, r#"{"name":"other-tool","version":"1.0.0"}"#).unwrap();
-    fs::write(&selected, r#"{"name":"claude-code-rust","version":"7.8.9"}"#).unwrap();
+    fs::write(&selected, r#"{"name":"machine-god","version":"7.8.9"}"#).unwrap();
     fs::write(&malformed, "{broken").unwrap();
     let check = package_json_check(
         "npm_root_package",
         "npm root package",
         vec![missing.clone(), unrelated.clone(), selected.clone()],
-        Some("claude-code-rust"),
+        Some("machine-god"),
         false,
     );
     assert_eq!(check.status, DoctorStatus::Pass);
     assert!(!check.hard_failure);
     assert_eq!(check.details["path"], selected.display().to_string());
-    assert_eq!(check.details["name"], "claude-code-rust");
+    assert_eq!(check.details["name"], "machine-god");
     assert_eq!(check.details["version"], "7.8.9");
     assert_eq!(check.details["candidate_1_name"], "other-tool");
     assert!(check.details["candidate_1"].contains(&unrelated.display().to_string()));
@@ -207,7 +207,7 @@ fn package_discovery_reports_selected_identity_and_useful_optional_failures() {
             "npm_root_package",
             "npm root package",
             vec![path.clone()],
-            Some("claude-code-rust"),
+            Some("machine-god"),
             false,
         );
         assert_eq!(check.status, DoctorStatus::Warn);

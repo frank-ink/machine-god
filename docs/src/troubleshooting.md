@@ -1,17 +1,17 @@
 # Troubleshooting
 
-Start with `claude-rs doctor`. It runs installation, runtime, config path, log path, npm metadata, and credential checks, and it names the failing boundary for most of the problems below.
+Start with `machine-god doctor`. It runs installation, runtime, config path, log path, npm metadata, and credential checks, and it names the failing boundary for most of the problems below.
 
 ```bash
-claude-rs doctor
-claude-rs doctor --json
+machine-god doctor
+machine-god doctor --json
 ```
 
 When you need the underlying detail, enable diagnostics and read the log. See [Diagnostics](diagnostics.md) for presets, log locations, and debug bundles.
 
 ```bash
-claude-rs logs
-claude-rs logs --tail 200
+machine-god logs
+machine-god logs --tail 200
 ```
 
 ## The App Will Not Start Or The Bridge Will Not Spawn
@@ -21,25 +21,25 @@ The TUI depends on the Agent SDK bridge, which runs as a child process under a p
 Check what the app actually resolved:
 
 ```bash
-claude-rs doctor --json
+machine-god doctor --json
 ```
 
-The `bridge_runtime`, `bridge_runtime_version`, and `bridge_script` checks show which runtime and bridge script the binary picked. A missing or unexpected path there is the usual cause: a source build without the bridge built, a partially extracted install, or a stale `CLAUDE_RS_AGENT_BRIDGE` override left in the environment.
+The `bridge_runtime`, `bridge_runtime_version`, and `bridge_script` checks show which runtime and bridge script the binary picked. A missing or unexpected path there is the usual cause: a source build without the bridge built, a partially extracted install, or a stale `MACHINE_GOD_AGENT_BRIDGE` override left in the environment.
 
 For a source build, the bridge has to be built before the app can spawn it. See [Development](development.md).
 
 To capture the bridge's own startup output, run with bridge logging enabled and inspect the log:
 
 ```bash
-claude-rs --enable-logs --diagnostics-preset bridge
-claude-rs logs --latest
+machine-god --enable-logs --diagnostics-preset bridge
+machine-god logs --latest
 ```
 
 ## Login And Authentication Failures
 
 If startup reports that required organization configuration is temporarily unavailable, check connectivity and retry. If access to organization configuration was refused, sign in with an allowed account or contact your organization administrator.
 
-Authentication is owned by the Claude Code CLI, not by this project. `claude-rs` reuses the credentials the CLI already holds.
+Authentication is owned by the Claude Code CLI, not by this project. `machine-god` reuses the credentials the CLI already holds.
 
 Sign in from inside the app with `/login`, or from a shell:
 
@@ -50,7 +50,7 @@ claude auth login
 If login appears to succeed but sessions still fail, confirm that the CLI itself works, then re-check the credential state:
 
 ```bash
-claude-rs doctor
+machine-god doctor
 ```
 
 Billing, model availability, and service limits are controlled by Anthropic and surface here as session errors rather than install problems.
@@ -60,33 +60,33 @@ Extra usage being enabled and extra usage being available are separate condition
 For the authentication and permission flow in the log, use the `session` preset:
 
 ```bash
-claude-rs --enable-logs --diagnostics-preset session
+machine-god --enable-logs --diagnostics-preset session
 ```
 
-## The Wrong `claude-rs` Runs
+## The Wrong `machine-god` Runs
 
 The script install and the npm install use different layouts, and neither owns the other's files. If both are present, `PATH` order decides which one runs, so an update can appear to do nothing.
 
 Multiple script installations can also coexist after installing into a [custom directory](installation.md#custom-install-locations). The installer shows the current and other locations, then offers `y Yes / N No` cleanup for recognized copies after the new installation passes verification. Check the named directory before confirming; a temporary test installation may be offering to remove your normal copy. Unknown copies receive manual guidance instead.
 
-List every `claude-rs` that is visible on macOS/Linux:
+List every `machine-god` that is visible on macOS/Linux:
 
 ```bash
-command -v claude-rs
-which -a claude-rs
+command -v machine-god
+which -a machine-god
 ```
 
 On Windows:
 
 ```powershell
-Get-Command claude-rs -All
+Get-Command machine-god -All
 ```
 
 Compare the resolved path with the install layout reported by:
 
 ```bash
-claude-rs --version
-claude-rs doctor
+machine-god --version
+machine-god doctor
 ```
 
 If the wrong one wins, remove the install you do not want, or reorder `PATH` so the one you want comes first. See [Switching Install Methods](installation.md#switching-install-methods) and [Uninstall](installation.md#uninstall).
@@ -97,19 +97,19 @@ If npm omitted optional dependencies, the launcher cannot find the native platfo
 
 ```bash
 npm config get omit
-npm install -g claude-code-rust
+npm install -g machine-god
 ```
 
 If the resolver reports a missing platform package, npm optional dependencies were likely omitted. Check `npm config get omit` and reinstall without `--omit=optional`.
 
 Linux npm packages currently require glibc. On musl-based distributions, [build from source](development.md) until a matching npm package is available.
 
-If `claude-rs` resolves to an older global shim, ensure your npm global bin directory comes first on `PATH` or remove the stale shim before retrying.
+If `machine-god` resolves to an older global shim, ensure your npm global bin directory comes first on `PATH` or remove the stale shim before retrying.
 
 ## Reporting A Problem
 
 For install failures, see [Reporting Install Problems](installation.md#reporting-install-problems). For anything else, see [Useful Issue Reports](diagnostics.md#useful-issue-reports) and attach a redacted bundle:
 
 ```bash
-claude-rs logs --bundle --yes
+machine-god logs --bundle --yes
 ```

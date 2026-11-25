@@ -6,16 +6,16 @@ This page is for maintainers changing installation or release packaging. For ins
 
 The npm install is split across a root command package and platform payload packages.
 
-The root package is `claude-code-rust`. It exposes the `claude-rs` command through the npm launcher and includes the built Agent SDK bridge under:
+The root package is `machine-god`. It exposes the `machine-god` command through the npm launcher and includes the built Agent SDK bridge under:
 
 ```text
-bin/claude-rs.js
+bin/machine-god.js
 agent-sdk/dist/bridge.js
 ```
 
 The platform packages are selected through root package optional dependencies. They include the native Rust binary and private Bun runtime. The exact package mapping lives in `scripts/shared/npm-package-config.mjs`; supported npm payloads currently cover Linux x64/arm64 glibc, Windows x64/arm64, and macOS x64/arm64.
 
-At runtime, npm's generated shim starts `bin/claude-rs.js`. The launcher selects the matching platform package, sets `CLAUDE_RS_AGENT_BRIDGE` to the root package bridge script, and spawns the native binary. The native binary resolves the bundled Bun runtime from the platform package `bin/` directory. No npm `postinstall` script, install-time binary download, or global Bun is required.
+At runtime, npm's generated shim starts `bin/machine-god.js`. The launcher selects the matching platform package, sets `MACHINE_GOD_AGENT_BRIDGE` to the root package bridge script, and spawns the native binary. The native binary resolves the bundled Bun runtime from the platform package `bin/` directory. No npm `postinstall` script, install-time binary download, or global Bun is required.
 
 ## Release Model
 
@@ -31,16 +31,16 @@ Release packaging is designed around immutable artifacts:
 - npm publication uses Trusted Publishing rather than a long-lived npm token.
 - The root package remains the user-facing npm install package and depends optionally on platform payload packages.
 
-Source builds are different: `cargo build` or `cargo install --path .` produce only the Rust binary. They do not build or install the JavaScript bridge or private Bun runtime. Build the bridge with Node.js 24/npm and provide it through the checkout fallback, `--bridge-script`, or `CLAUDE_RS_AGENT_BRIDGE`. Debug builds can use `CLAUDE_RS_AGENT_BRIDGE_RUNTIME` to point at a local Bun runtime; release npm installs use only the bundled runtime. See [Development](development.md) for the exact steps.
+Source builds are different: `cargo build` or `cargo install --path .` produce only the Rust binary. They do not build or install the JavaScript bridge or private Bun runtime. Build the bridge with Node.js 24/npm and provide it through the checkout fallback, `--bridge-script`, or `MACHINE_GOD_AGENT_BRIDGE`. Debug builds can use `MACHINE_GOD_AGENT_BRIDGE_RUNTIME` to point at a local Bun runtime; release npm installs use only the bundled runtime. See [Development](development.md) for the exact steps.
 
 ## Artifact invariants
 
 Important invariants:
 
 - The root npm package must not use `postinstall` or install-time binary downloads.
-- The root npm package owns the `claude-rs` bin through `bin/claude-rs.js`.
+- The root npm package owns the `machine-god` bin through `bin/machine-god.js`.
 - Native binaries and private Bun runtimes live in platform-specific optional npm packages.
-- Platform packages must not expose their own npm `claude-rs` bin; otherwise npm can link the payload package over the root resolver.
+- Platform packages must not expose their own npm `machine-god` bin; otherwise npm can link the payload package over the root resolver.
 - Platform packages must publish before the root package for a given version.
 - Release artifacts should be generated, verified, packed, and smoke-tested before publication.
 

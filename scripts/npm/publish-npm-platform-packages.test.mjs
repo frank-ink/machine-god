@@ -18,7 +18,7 @@ test("platformPublishPlan covers only platform packages", () => {
     plan.map((entry) => entry.packageName),
     PLATFORM_PACKAGES.map((entry) => entry.packageName),
   );
-  assert.equal(plan.some((entry) => entry.packageName === "claude-code-rust"), false);
+  assert.equal(plan.some((entry) => entry.packageName === "machine-god"), false);
 });
 
 test("npmPackageVersionExists returns true when npm reports the requested version", () => {
@@ -58,7 +58,7 @@ test("npmPackageVersionExists rejects unexpected npm lookup failures", () => {
 });
 
 test("publishPlatformPackages skips already published versions and publishes missing packages", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-publish-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-publish-"));
   try {
     const packDir = path.join(tempDir, "dist-pack");
     const ledgerDir = path.join(tempDir, "ledger");

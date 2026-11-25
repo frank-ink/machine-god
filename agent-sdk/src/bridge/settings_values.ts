@@ -71,7 +71,7 @@ export async function validateSettingValue(setting: SettingDescriptor, value: Js
 
   // The public SDK exposes resolution, not its schema. Resolve an isolated
   // candidate through that schema, without changing profiles or executing hooks.
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "claude-rs-value-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "machine-god-value-"));
   try {
     const checked = setting.kind === "json" && setting.editor ? validationValue(value, setting.editor) : value;
     const candidate = setting.key_path.reduceRight<Json>((child, key) => ({ [key]: child }), checked);

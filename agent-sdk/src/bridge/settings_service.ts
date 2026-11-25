@@ -136,7 +136,7 @@ async function writeTarget(
 ): Promise<"saved" | "unchanged" | "conflict"> {
   await fs.mkdir(path.dirname(file), { recursive: true });
   // Cooperative lock serializes our writers; byte rechecks detect edits from external editors.
-  const lockPath = `${file}.claude-rs.lock`;
+  const lockPath = `${file}.machine-god.lock`;
   const lock = await fs.open(lockPath, "wx", 0o600);
   let committed = false;
   try {

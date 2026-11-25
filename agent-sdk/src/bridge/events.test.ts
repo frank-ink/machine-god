@@ -24,7 +24,7 @@ function runWriterInChild(script: string, input: unknown): Promise<{
   const env = { ...process.env };
   delete env.NODE_OPTIONS;
   delete env.NODE_DEBUG;
-  delete env.CLAUDE_RS_BRIDGE_DIAGNOSTICS;
+  delete env.MACHINE_GOD_BRIDGE_DIAGNOSTICS;
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["--input-type=module", "-e", bootstrap], {
       cwd: fileURLToPath(new URL(".", import.meta.url)),

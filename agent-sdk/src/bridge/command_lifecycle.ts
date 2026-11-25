@@ -201,7 +201,7 @@ async function initialize(
     {
       event: "initialized",
       result: {
-        agent_name: "claude-rs-agent-bridge",
+        agent_name: "machine-god-agent-bridge",
         agent_version: "0.1.0",
         auth_methods: [
           {

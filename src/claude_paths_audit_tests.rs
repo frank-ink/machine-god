@@ -4,7 +4,7 @@
 use super::*;
 
 async fn in_child(name: &str) -> Option<PathBuf> {
-    if let Some(root) = std::env::var_os("CLAUDE_RS_AUDIT_ROOT") {
+    if let Some(root) = std::env::var_os("MACHINE_GOD_AUDIT_ROOT") {
         return Some(root.into());
     }
     let root = tempfile::tempdir().unwrap();

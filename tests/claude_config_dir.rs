@@ -66,7 +66,7 @@ impl ProfileFixture {
     }
 
     async fn run(&self, args: &[&str], profile: Option<&Path>) -> Output {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
         command
             .current_dir(&self.project)
             .arg("--bridge-script")
@@ -76,7 +76,7 @@ impl ProfileFixture {
             .args(args)
             .env("HOME", &self.home)
             .env("USERPROFILE", &self.home)
-            .env("CLAUDE_RS_CONFIG_DIR", self.root.path().join("app-profile"))
+            .env("MACHINE_GOD_CONFIG_DIR", self.root.path().join("app-profile"))
             .env_remove("CLAUDE_CODE_PROJECT_DIR_NAME")
             .env("NO_COLOR", "1")
             .env_remove("FORCE_COLOR")
@@ -222,7 +222,7 @@ async fn config_commands_inspect_only_the_selected_profile() {
         let report: Value = serde_json::from_str(success(&output)).unwrap();
         f.assert_report(&report, documents);
         if args[1] == "export" {
-            assert_eq!(report["schema"], "claude-rs-config-export/v1");
+            assert_eq!(report["schema"], "machine-god-config-export/v1");
         }
     }
     assert_eq!(f.snapshot(), before);
@@ -239,7 +239,7 @@ async fn selected_profile_export_writes_requested_artifact_and_refuses_overwrite
     success(&output);
     let bytes = std::fs::read(&target).unwrap();
     let report: Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(report["schema"], "claude-rs-config-export/v1");
+    assert_eq!(report["schema"], "machine-god-config-export/v1");
     f.assert_report(&report, true);
     let output = f.selected(&args).await;
     assert_eq!(output.status.code(), Some(1));

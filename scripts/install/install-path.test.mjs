@@ -7,7 +7,7 @@ import { runTerminalSession } from "./terminal-session.mjs";
 const installerSource = fs.readFileSync(new URL("./install.sh", import.meta.url), "utf8").replace(/\r\n/gu, "\n");
 const helpers = [
   "canonical_path", "path_entries", "commands_on_path", "path_has_bin_dir", "path_starts_with_bin_dir",
-  "launcher_contents", "machine_god_launcher_contents", "write_machine_god_launcher", "write_launcher", "is_script_install_dir", "warn_other_claude_rs_commands",
+  "launcher_contents", "machine_god_launcher_contents", "write_machine_god_launcher", "write_launcher", "is_script_install_dir", "warn_other_machine_god_commands",
   "script_install_directory_for_command", "install_directory_overlaps", "uninstall_script_install",
   "acquire_lock", "man_source_dir", "man_link_dir", "remove_man_pages_if_owned", "resolve_npm_install_choice",
   "remove_managed_path_block", "remove_managed_path_blocks", "zsh_profile_file", "zsh_rc_file",
@@ -42,20 +42,20 @@ HOME="$sandbox/home"
 mkdir "$HOME"
 install_dir="$sandbox/current app"
 bin_dir="$sandbox/bin"
-binary_name=claude-rs
+binary_name=machine-god-core
 other_dir="$sandbox/older copy's app"
 unknown_dir="$sandbox/unknown"
 other_bin="$sandbox/other bin"
 second_other_bin="$sandbox/second other bin"
 mkdir -p "$install_dir" "$bin_dir" "$other_dir" "$unknown_dir" "$sandbox/link"
 for directory in "$install_dir" "$other_dir" "$unknown_dir"; do
-  printf '#!/bin/sh\nexit 0\n' > "$directory/claude-rs"
-  chmod +x "$directory/claude-rs"
+  printf '#!/bin/sh\nexit 0\n' > "$directory/machine-god-core"
+  chmod +x "$directory/machine-god-core"
 done
-printf '{"name":"claude-code-rust","version":"1.2.3"}\n' > "$other_dir/package.json"
-touch "$other_dir/claude-rs-bridge-bun"
-printf '{"name":"claude-code-rust","version":"1.2.3"}\n' > "$install_dir/package.json"
-touch "$install_dir/claude-rs-bridge-bun"
+printf '{"name":"machine-god","version":"1.2.3"}\n' > "$other_dir/package.json"
+touch "$other_dir/machine-god-bridge-bun"
+printf '{"name":"machine-god","version":"1.2.3"}\n' > "$install_dir/package.json"
+touch "$install_dir/machine-god-bridge-bun"
 write_launcher
 current_install_dir="$install_dir"
 current_bin_dir="$bin_dir"
@@ -68,21 +68,21 @@ install_dir="$current_install_dir"
 bin_dir="$current_bin_dir"
 # Both managed profile blocks coexist; cleanup must preserve the current one.
 {
-  printf '# claude-rs PATH start\n'
+  printf '# machine-god-core PATH start\n'
   managed_path_lines
-  printf '# claude-rs PATH end\n'
+  printf '# machine-god-core PATH end\n'
   bin_dir="$other_bin"
-  printf '# claude-rs PATH start\n'
+  printf '# machine-god-core PATH start\n'
   managed_path_lines
-  printf '# claude-rs PATH end\n'
+  printf '# machine-god-core PATH end\n'
 } > "$HOME/.profile"
 bin_dir="$current_bin_dir"
 ln -s bin "$sandbox/alias"
-ln -s ../bin/claude-rs "$sandbox/link/claude-rs"
+ln -s ../bin/machine-god-core "$sandbox/link/machine-god-core"
 PATH="$bin_dir:$sandbox/alias:$sandbox/link:$install_dir:$bin_dir/.:$system_path"
-[ -z "$(warn_other_claude_rs_commands)" ]
-printf '#!/bin/sh\nexit 0\n' > "$install_dir/claude-rs"
-[ -z "$(warn_other_claude_rs_commands)" ]
+[ -z "$(warn_other_machine_god_commands)" ]
+printf '#!/bin/sh\nexit 0\n' > "$install_dir/machine-god-core"
+[ -z "$(warn_other_machine_god_commands)" ]
 path_has_bin_dir
 path_starts_with_bin_dir
 PATH="$sandbox/alias:$system_path"
@@ -101,13 +101,13 @@ PATH="$system_path:"
 path_has_bin_dir
 PATH="$bin_dir:$other_dir:$other_bin:$second_other_bin:$other_dir/.:$unknown_dir:$system_path"
 printf 'COPIES_BEGIN\n'
-warn_other_claude_rs_commands
+warn_other_machine_god_commands
 printf 'COPIES_END\n'
-alias claude-rs='echo shadowed'
+alias machine-god-core='echo shadowed'
 printf 'ALIAS_BEGIN\n'
-warn_other_claude_rs_commands
+warn_other_machine_god_commands
 printf 'ALIAS_END\n'
-unalias claude-rs
+unalias machine-god-core
 
 # The real cleanup workflow removes only an explicitly confirmed installation.
 answer=0
@@ -119,9 +119,9 @@ confirm_default_no() {
 }
 yes=0
 printf 'DECLINED_BEGIN\n'
-warn_other_claude_rs_commands
+warn_other_machine_god_commands
 printf 'DECLINED_END\n'
-[ -f "$other_dir/claude-rs" ] && [ -f "$other_bin/claude-rs" ]
+[ -f "$other_dir/machine-god-core" ] && [ -f "$other_bin/machine-god-core" ]
 answer=1
 for mode in yes update non_interactive; do
   yes=0
@@ -132,39 +132,39 @@ for mode in yes update non_interactive; do
     update) update=1 ;;
     non_interactive) non_interactive=1 ;;
   esac
-  output=$(warn_other_claude_rs_commands)
+  output=$(warn_other_machine_god_commands)
   if printf '%s' "$output" | grep -q PROMPT; then exit 1; fi
-  [ -f "$other_dir/claude-rs" ]
+  [ -f "$other_dir/machine-god-core" ]
 done
 yes=0
 update=0
 non_interactive=0
-mkdir "$sandbox/.claude-rs-install.lock"
-output=$(warn_other_claude_rs_commands 2> "$sandbox/lock-error")
+mkdir "$sandbox/.machine-god-install.lock"
+output=$(warn_other_machine_god_commands 2> "$sandbox/lock-error")
 printf '%s' "$output" | grep -q 'Could not uninstall'
-[ -d "$sandbox/.claude-rs-install.lock" ] && [ -f "$other_dir/claude-rs" ]
-rmdir "$sandbox/.claude-rs-install.lock"
+[ -d "$sandbox/.machine-god-install.lock" ] && [ -f "$other_dir/machine-god-core" ]
+rmdir "$sandbox/.machine-god-install.lock"
 
 mkdir -p "$install_dir/share/man/man1" "$other_dir/share/man/man1" "$sandbox/share/man/man1"
-touch "$install_dir/share/man/man1/claude-rs.1" "$other_dir/share/man/man1/claude-rs-old.1"
-ln -s "$install_dir/share/man/man1/claude-rs.1" "$sandbox/share/man/man1/claude-rs.1"
-ln -s "$other_dir/share/man/man1/claude-rs-old.1" "$sandbox/share/man/man1/claude-rs-old.1"
+touch "$install_dir/share/man/man1/machine-god-core.1" "$other_dir/share/man/man1/machine-god-old.1"
+ln -s "$install_dir/share/man/man1/machine-god-core.1" "$sandbox/share/man/man1/machine-god-core.1"
+ln -s "$other_dir/share/man/man1/machine-god-old.1" "$sandbox/share/man/man1/machine-god-old.1"
 printf 'ACCEPTED_BEGIN\n'
-warn_other_claude_rs_commands
+warn_other_machine_god_commands
 printf 'ACCEPTED_END\n'
-[ ! -e "$other_dir" ] && [ ! -e "$other_bin/claude-rs" ] && [ ! -e "$second_other_bin/claude-rs" ]
-[ -f "$install_dir/claude-rs" ] && [ -f "$bin_dir/claude-rs" ] && [ -f "$unknown_dir/claude-rs" ]
-[ -L "$sandbox/share/man/man1/claude-rs.1" ] && [ ! -L "$sandbox/share/man/man1/claude-rs-old.1" ]
+[ ! -e "$other_dir" ] && [ ! -e "$other_bin/machine-god-core" ] && [ ! -e "$second_other_bin/machine-god-core" ]
+[ -f "$install_dir/machine-god-core" ] && [ -f "$bin_dir/machine-god-core" ] && [ -f "$unknown_dir/machine-god-core" ]
+[ -L "$sandbox/share/man/man1/machine-god-core.1" ] && [ ! -L "$sandbox/share/man/man1/machine-god-old.1" ]
 grep -F -e "$current_bin_dir" "$HOME/.profile" >/dev/null
 if grep -F -e "$other_bin" "$HOME/.profile" >/dev/null; then exit 1; fi
-[ ! -d "$sandbox/.claude-rs-install.lock" ]
+[ ! -d "$sandbox/.machine-god-install.lock" ]
 output=$(uninstall_script_install "$unknown_dir")
-[ -f "$unknown_dir/claude-rs" ]
+[ -f "$unknown_dir/machine-god-core" ]
 install_directory_overlaps / "$install_dir"
 install_directory_overlaps "$install_dir/child" "$install_dir"
 
 # npm remains a separate, identified owner with its own opt-in removal flow.
-root_package=claude-code-rust
+root_package=machine-god
 npm_root="$sandbox/npm"
 keep_npm=0
 remove_npm=0
@@ -198,10 +198,10 @@ printf '%s' "$output" | grep -q NPM_REMOVED
 
 # Explicit uninstall still cleans its own launcher, manual, and profile block.
 uninstall_script_install
-[ ! -e "$install_dir" ] && [ ! -e "$bin_dir/claude-rs" ]
-[ ! -L "$sandbox/share/man/man1/claude-rs.1" ]
-if grep -q '# claude-rs PATH start' "$HOME/.profile"; then exit 1; fi
-[ -f "$unknown_dir/claude-rs" ]
+[ ! -e "$install_dir" ] && [ ! -e "$bin_dir/machine-god-core" ]
+[ ! -L "$sandbox/share/man/man1/machine-god-core.1" ]
+if grep -q '# machine-god-core PATH start' "$HOME/.profile"; then exit 1; fi
+[ -f "$unknown_dir/machine-god-core" ]
 `;
   const result = spawnSync("sh", ["-c", harness], { encoding: "utf8", timeout: 20000 });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
@@ -227,7 +227,7 @@ test("Unix cleanup prompt restores terminal state when cancelled", { skip: proce
   const promptHelpers = [
     "canonical_path", "path_entries", "commands_on_path", "launcher_contents",
     "is_script_install_dir", "script_install_directory_for_command", "install_directory_overlaps",
-    "warn_other_claude_rs_commands", "stop_download_process", "cleanup", "on_signal",
+    "warn_other_machine_god_commands", "stop_download_process", "cleanup", "on_signal",
   ].map(installerFunction).join("\n");
   const harness = `${installerPreamble}\n${promptHelpers}\n` + String.raw`
 non_interactive=0
@@ -242,10 +242,10 @@ bin_dir="$tmpdir/bin"
 other_dir="$tmpdir/other"
 mkdir -p "$install_dir" "$bin_dir" "$other_dir"
 for app_dir in "$install_dir" "$other_dir"; do
-  printf '#!/bin/sh\nexit 0\n' > "$app_dir/claude-rs"
-  chmod +x "$app_dir/claude-rs"
-  touch "$app_dir/claude-rs-bridge-bun"
-  printf '{"name":"claude-code-rust"}\n' > "$app_dir/package.json"
+  printf '#!/bin/sh\nexit 0\n' > "$app_dir/machine-god-core"
+  chmod +x "$app_dir/machine-god-core"
+  touch "$app_dir/machine-god-bridge-bun"
+  printf '{"name":"machine-god"}\n' > "$app_dir/package.json"
 done
 PATH="$other_dir:$PATH"
 before=$(stty -g < /dev/tty)
@@ -257,7 +257,7 @@ finish() {
 }
 trap 'finish "$?"' EXIT
 trap 'on_signal 130' INT
-warn_other_claude_rs_commands
+warn_other_machine_god_commands
 echo UNEXPECTED_COMPLETION
 `;
   const { status, output } = await runTerminalSession(harness, (shown, terminal) => {

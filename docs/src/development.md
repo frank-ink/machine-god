@@ -20,7 +20,7 @@ Run these commands in a shell with Git, Cargo, npm and Bun available:
 
 ```bash
 git clone https://github.com/gschaidergabriel/machine-god.git
-cd claude-code-rust
+cd machine-god
 npm ci
 npm run build --prefix agent-sdk
 cargo run -- --help
@@ -51,7 +51,7 @@ Build the bridge and native binary from the repository root:
 
 ```bash
 npm run build --prefix agent-sdk
-cargo build --release --locked --bin claude-rs
+cargo build --release --locked --bin machine-god
 ```
 
 Release-mode source binaries do not use the debug PATH fallback for Bun. Place the runtime beside the binary under its bundled name and pass the bridge script explicitly.
@@ -59,15 +59,15 @@ Release-mode source binaries do not use the debug PATH fallback for Bun. Place t
 On macOS/Linux:
 
 ```bash
-cp "$(command -v bun)" ./target/release/claude-rs-bridge-bun
-./target/release/claude-rs --bridge-script ./agent-sdk/dist/bridge.js
+cp "$(command -v bun)" ./target/release/machine-god-bridge-bun
+./target/release/machine-god --bridge-script ./agent-sdk/dist/bridge.js
 ```
 
 On Windows PowerShell:
 
 ```powershell
-Copy-Item (Get-Command bun).Source .\target\release\claude-rs-bridge-bun.exe
-.\target\release\claude-rs.exe --bridge-script .\agent-sdk\dist\bridge.js
+Copy-Item (Get-Command bun).Source .\target\release\machine-god-bridge-bun.exe
+.\target\release\machine-god.exe --bridge-script .\agent-sdk\dist\bridge.js
 ```
 
 `cargo install --path .` installs only the Rust binary. It does not install the bridge, private Bun runtime or platform package layout. To test a packaged installation, follow [Packaging](packaging.md#validate-packaging-changes).
@@ -77,21 +77,21 @@ Copy-Item (Get-Command bun).Source .\target\release\claude-rs-bridge-bun.exe
 Prefer an explicit script path when running a manually built binary:
 
 ```bash
-claude-rs --bridge-script /path/to/claude-code-rust/agent-sdk/dist/bridge.js
+machine-god --bridge-script /path/to/machine-god/agent-sdk/dist/bridge.js
 ```
 
-Replace the example path with the built file. `CLAUDE_RS_AGENT_BRIDGE` is the environment alternative. Debug builds also accept `CLAUDE_RS_AGENT_BRIDGE_RUNTIME` to select a Bun executable. For a single source run on macOS/Linux:
+Replace the example path with the built file. `MACHINE_GOD_AGENT_BRIDGE` is the environment alternative. Debug builds also accept `MACHINE_GOD_AGENT_BRIDGE_RUNTIME` to select a Bun executable. For a single source run on macOS/Linux:
 
 ```bash
-CLAUDE_RS_AGENT_BRIDGE_RUNTIME="$(command -v bun)" cargo run
+MACHINE_GOD_AGENT_BRIDGE_RUNTIME="$(command -v bun)" cargo run
 ```
 
 On PowerShell, set an override only for the development session and remove it when finished:
 
 ```powershell
-$env:CLAUDE_RS_AGENT_BRIDGE_RUNTIME = (Get-Command bun).Source
+$env:MACHINE_GOD_AGENT_BRIDGE_RUNTIME = (Get-Command bun).Source
 cargo run
-Remove-Item Env:\CLAUDE_RS_AGENT_BRIDGE_RUNTIME
+Remove-Item Env:\MACHINE_GOD_AGENT_BRIDGE_RUNTIME
 ```
 
-Release npm installs ignore the runtime override and use the bundled `claude-rs-bridge-bun` executable from the platform package. Remove stale bridge-script overrides when returning to an installed release.
+Release npm installs ignore the runtime override and use the bundled `machine-god-bridge-bun` executable from the platform package. Remove stale bridge-script overrides when returning to an installed release.

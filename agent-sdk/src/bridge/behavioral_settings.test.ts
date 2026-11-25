@@ -13,7 +13,7 @@ let root: string;
 let cwd: string;
 const oldProfile = process.env.CLAUDE_CONFIG_DIR;
 beforeEach(async () => {
-  root = await fs.mkdtemp(path.join(os.tmpdir(), "claude-rs-behavior-"));
+  root = await fs.mkdtemp(path.join(os.tmpdir(), "machine-god-behavior-"));
   cwd = path.join(root, "project");
   process.env.CLAUDE_CONFIG_DIR = path.join(root, "profile");
   await fs.mkdir(path.join(cwd, ".claude"), { recursive: true });
@@ -502,7 +502,7 @@ test("credential references remain editable data without reading files or exposi
   const secretFile = path.join(root, "real-credential.txt");
   const fileSecret = "A154_FIXTURE_FILE_SECRET_7139";
   const envSecret = "A154_FIXTURE_ENV_SECRET_8264";
-  const envName = "CLAUDE_RS_AUDIT_CREDENTIAL";
+  const envName = "MACHINE_GOD_AUDIT_CREDENTIAL";
   const original = `token=${fileSecret}\n`;
   await fs.writeFile(secretFile, original);
   const initial = {

@@ -13,7 +13,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const ROOT_NPM_PACKAGE_NAME: &str = "claude-code-rust";
+const ROOT_NPM_PACKAGE_NAME: &str = "machine-god";
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct DoctorReport {
@@ -103,7 +103,7 @@ fn write_human_report(
     report: &DoctorReport,
     style: HumanStyle,
 ) -> std::io::Result<()> {
-    writeln!(writer, "{}", style.title("claude-rs doctor"))?;
+    writeln!(writer, "{}", style.title("machine-god doctor"))?;
     writeln!(writer, "{} {}", style.detail_label("Version:"), report.version)?;
     writeln!(
         writer,

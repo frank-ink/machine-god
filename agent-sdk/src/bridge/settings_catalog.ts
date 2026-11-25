@@ -6,7 +6,7 @@ import { settingsLayout } from "./settings_layout.js";
 const ALL_SCOPES: SettingsScope[] = ["user", "project", "local"];
 type Definition = [string, string, string, SettingDescriptor["kind"], string[]?, SettingsScope[]?, string?];
 const DEFINITIONS: Definition[] = [
-  ["updates.autoInstall", "Automatic updates", "Install new claude-rs versions after a normal exit without an update window. Off keeps the update window. Update checks continue in both modes. Default: Off.", "boolean", undefined, ["user"]],
+  ["updates.autoInstall", "Automatic updates", "Install new machine-god versions after a normal exit without an update window. Off keeps the update window. Update checks continue in both modes. Default: Off.", "boolean", undefined, ["user"]],
   ["autoScrollEnabled", "Auto-scroll", "Follow new output. Page Up pauses following; Ctrl+End returns to live output.", "boolean"],
   ["showTurnDuration", "Show turn duration", "Show total elapsed time for completed responses.", "boolean"],
   ["showMessageTimestamps", "Show message timestamps", "Show message times. Locally observed times are marked when Claude supplies no timestamp.", "boolean"],

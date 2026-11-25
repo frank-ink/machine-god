@@ -104,7 +104,7 @@ function generateInstallArchive(platformPackage) {
   const archiveFormat = installArchiveFormat(platformPackage);
   const appRootName = installArchiveBaseName(platformPackage, version);
   const archivePath = path.join(outDir, archiveName);
-  const tempParent = fs.mkdtempSync(path.join(os.tmpdir(), `claude-rs-install-${platformPackage.dir}-`));
+  const tempParent = fs.mkdtempSync(path.join(os.tmpdir(), `machine-god-install-${platformPackage.dir}-`));
   const appRoot = path.join(tempParent, appRootName);
 
   try {
@@ -147,7 +147,7 @@ function generateManPages(appRoot) {
   fs.mkdirSync(outDir, { recursive: true });
   if (options.mockBinaries) {
     // Layout fixtures only; real release manuals always come from the CLI.
-    fs.writeFileSync(path.join(outDir, "claude-rs.1"), '.TH CLAUDE-RS 1\n.SH NAME\nclaude-rs \\- mock manual for archive layout tests\n');
+    fs.writeFileSync(path.join(outDir, "machine-god-core.1"), '.TH CLAUDE-RS 1\n.SH NAME\nmachine-god-core \\- mock manual for archive layout tests\n');
     return;
   }
   const host = PLATFORM_PACKAGES.find((entry) => entry.os.includes(process.platform) && entry.cpu.includes(process.arch));
@@ -234,7 +234,7 @@ function copyBinaries(platformPackage, appRoot) {
   const runtimeDestination = path.join(appRoot, platformPackage.bundledRuntimeName);
 
   if (options.mockBinaries) {
-    writeMockBinary(platformPackage, binaryDestination, "claude-rs 0.0.0-mock");
+    writeMockBinary(platformPackage, binaryDestination, "machine-god-core 0.0.0-mock");
     writeMockBinary(platformPackage, runtimeDestination, bunRuntimeManifest.version);
     return;
   }

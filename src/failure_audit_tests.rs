@@ -15,27 +15,27 @@ fn error_reports_associate_status_recovery_and_safe_detail_with_isolated_logs() 
     let temp = tempfile::tempdir().unwrap();
     let paths = paths(temp.path());
     fs::create_dir_all(&paths.runtime_dir).unwrap();
-    let selected = paths.runtime_dir.join("claude-rs-20260101T000000Z-p1-rabc.log");
+    let selected = paths.runtime_dir.join("machine-god-20260101T000000Z-p1-rabc.log");
     for has_log in [false, true] {
         if has_log {
             fs::write(&selected, b"safe log").unwrap();
         }
         for (error, category, code, next) in [
-            (AppError::BridgeTimeout, "bridge_timeout", "22", "claude-rs doctor --strict"),
+            (AppError::BridgeTimeout, "bridge_timeout", "22", "machine-god doctor --strict"),
             (
                 AppError::BridgeInitializationFailed,
                 "bridge_initialization",
                 "22",
-                "claude-rs logs --bundle --yes",
+                "machine-god logs --bundle --yes",
             ),
             (
                 AppError::BridgeStdoutClosed,
                 "bridge_stdout_closed",
                 "22",
-                "claude-rs logs --bundle --yes",
+                "machine-god logs --bundle --yes",
             ),
             (AppError::AuthRequired, "auth", "24", "claude auth login"),
-            (AppError::SessionNotFound, "session", "23", "claude-rs resume"),
+            (AppError::SessionNotFound, "session", "23", "machine-god resume"),
         ] {
             for detail in [None, Some("before api_key=raw-report-secret after")] {
                 let mut output = Vec::new();
@@ -73,8 +73,8 @@ fn error_reports_associate_status_recovery_and_safe_detail_with_isolated_logs() 
 
 #[test]
 fn panic_worker() {
-    let Ok(scenario) = std::env::var("CLAUDE_RS_AUDIT_CASE") else { return };
-    let root = PathBuf::from(std::env::var_os("CLAUDE_RS_AUDIT_ROOT").unwrap());
+    let Ok(scenario) = std::env::var("MACHINE_GOD_AUDIT_CASE") else { return };
+    let root = PathBuf::from(std::env::var_os("MACHINE_GOD_AUDIT_ROOT").unwrap());
     let chosen = paths(&root);
     assert!(chosen.root_dir.is_absolute());
     let metadata = last_crash_metadata_path(&chosen);
@@ -125,7 +125,7 @@ fn panic_worker() {
 fn assert_crash(root: &Path, stderr: &[u8], expected: &str) {
     let bytes = fs::read(root.join("last-crash.json")).unwrap();
     let report: Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(report["schema"], "claude-rs-crash/v1");
+    assert_eq!(report["schema"], "machine-god-crash/v1");
     assert_eq!(report["kind"], "panic");
     assert_eq!(report["message"], expected);
     assert!(report["location"].as_str().unwrap().contains("failure_audit_tests.rs:"));
@@ -133,8 +133,8 @@ fn assert_crash(root: &Path, stderr: &[u8], expected: &str) {
     assert_eq!(report["platform"]["os"], std::env::consts::OS);
     assert_eq!(report["platform"]["arch"], std::env::consts::ARCH);
     assert!(!report["created_at"].as_str().unwrap().is_empty());
-    assert_eq!(report["diagnostics_bundle_command"], "claude-rs logs --bundle --yes");
-    let selected = root.join("runtime").join("claude-rs-20260101T000000Z-p1-rabc.log");
+    assert_eq!(report["diagnostics_bundle_command"], "machine-god logs --bundle --yes");
+    let selected = root.join("runtime").join("machine-god-20260101T000000Z-p1-rabc.log");
     if selected.exists() {
         assert_eq!(report["latest_log_path"], selected.to_str().unwrap());
     } else {
@@ -143,7 +143,7 @@ fn assert_crash(root: &Path, stderr: &[u8], expected: &str) {
     let text = std::str::from_utf8(stderr).unwrap();
     assert_eq!(field(text, "category"), Some("crash"));
     assert_eq!(field(text, "message"), Some(expected));
-    assert_eq!(field(text, "next_step"), Some("claude-rs logs --bundle --yes"));
+    assert_eq!(field(text, "next_step"), Some("machine-god logs --bundle --yes"));
     for output in [text, String::from_utf8_lossy(&bytes).as_ref()] {
         assert!(!output.contains("raw-panic-secret"));
     }
@@ -159,7 +159,7 @@ async fn installed_panic_hook_redacts_raw_payloads_and_replaces_prior_metadata()
         let root = tempfile::tempdir().unwrap();
         fs::write(root.path().join("last-crash.json"), "prior crash").unwrap();
         fs::create_dir(root.path().join("runtime")).unwrap();
-        fs::write(root.path().join("runtime/claude-rs-20260101T000000Z-p1-rabc.log"), "safe log")
+        fs::write(root.path().join("runtime/machine-god-20260101T000000Z-p1-rabc.log"), "safe log")
             .unwrap();
         let output =
             run(command("failure::audit_tests::panic_worker", root.path(), scenario)).await;
@@ -221,7 +221,7 @@ async fn panic_report_survives_metadata_write_failure_without_damaging_neighbors
     let text = String::from_utf8(output.stderr).unwrap();
     assert_eq!(field(&text, "category"), Some("crash"));
     assert_eq!(field(&text, "message"), Some("safe panic before api_key=[redacted] after"));
-    assert_eq!(field(&text, "next_step"), Some("claude-rs logs --bundle --yes"));
+    assert_eq!(field(&text, "next_step"), Some("machine-god logs --bundle --yes"));
     assert!(!text.contains("raw-panic-secret"));
     assert_eq!(fs::read(blocker).unwrap(), b"blocker sentinel");
     assert_eq!(fs::read(neighbor).unwrap(), b"neighbor sentinel");

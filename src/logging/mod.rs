@@ -45,16 +45,16 @@ pub mod targets {
     pub const BRIDGE_SDK: &str = "bridge.sdk";
 }
 
-const BRIDGE_LOG_SCHEMA: &str = "claude-rs-log/v1";
-const BASELINE_LOG_SCHEMA: &str = "claude-rs-baseline/v1";
+const BRIDGE_LOG_SCHEMA: &str = "machine-god-log/v1";
+const BASELINE_LOG_SCHEMA: &str = "machine-god-baseline/v1";
 const BRIDGE_LINE_PREVIEW_LIMIT: usize = 240;
 /// Longest string a default (baseline) log record carries for one field, in characters.
 /// The bridge already bounds and redacts what it sends; this caps native fields too.
 const BASELINE_VALUE_LIMIT: usize = 2048;
-const DEFAULT_LOG_DIR: &str = "claude-code-rust";
-const DEFAULT_LOG_FILE_NAME: &str = "claude-rs.log";
+const DEFAULT_LOG_DIR: &str = "machine-god";
+const DEFAULT_LOG_FILE_NAME: &str = "machine-god.log";
 const DEFAULT_RUNTIME_LOG_SUBDIR: &str = "runtime";
-const DEFAULT_RUNTIME_LOG_PREFIX: &str = "claude-rs";
+const DEFAULT_RUNTIME_LOG_PREFIX: &str = "machine-god";
 const RUNTIME_LOG_EXTENSION: &str = "log";
 const LOG_ROTATION_MAX_BYTES: u64 = 10 * 1024 * 1024;
 const LOG_ROTATION_MAX_FILES: usize = 5;
@@ -1177,7 +1177,7 @@ mod tests {
     // write them to a log the user never opted into, while the failure context survives.
     #[test]
     fn default_log_drops_paths_and_ids_from_bridge_fields() {
-        let warning = r#"{"schema":"claude-rs-log/v1","level":"warn","target":"app.session","event_name":"sdk_mirror_error_received","message":"SDK transcript mirror error received","outcome":"failure","session_id":"sess-1111","request_id":"req-2222","fields":{"error_message":"mirror failed","cwd":"/Users/alice/private-project","project_key":"-Users-alice-private-project","mirror_session_id":"mirror-3333","subpath":"subagents/agent-4444","resume_session_at":"msg-5555","hook_id":"hook-6666"}}"#;
+        let warning = r#"{"schema":"machine-god-log/v1","level":"warn","target":"app.session","event_name":"sdk_mirror_error_received","message":"SDK transcript mirror error received","outcome":"failure","session_id":"sess-1111","request_id":"req-2222","fields":{"error_message":"mirror failed","cwd":"/Users/alice/private-project","project_key":"-Users-alice-private-project","mirror_session_id":"mirror-3333","subpath":"subagents/agent-4444","resume_session_at":"msg-5555","hook_id":"hook-6666"}}"#;
         let records = baseline_records(|| emit_bridge_stderr_line(warning));
 
         assert_eq!(records.len(), 1, "{records:?}");
@@ -1200,14 +1200,14 @@ mod tests {
     #[test]
     fn generated_default_log_name_is_timestamped_and_filesystem_safe() {
         let name = generated_log_file_name(
-            "claude-rs",
+            "machine-god",
             "log",
             datetime!(2026-06-14 7:59:24 UTC),
             12345,
             "8f3a2c1",
         );
 
-        assert_eq!(name, "claude-rs-20260614T075924Z-p12345-r8f3a2c1.log");
+        assert_eq!(name, "machine-god-20260614T075924Z-p12345-r8f3a2c1.log");
         assert!(!name.contains(':'));
     }
 }

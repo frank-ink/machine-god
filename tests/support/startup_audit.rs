@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::{Parser, error::ErrorKind};
-use claude_code_rust::Cli;
+use machine_god::Cli;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -32,7 +32,7 @@ impl Fixture {
     }
 
     fn command(&self, script: &Path) -> tokio::process::Command {
-        let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut cmd = tokio::process::Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
         cmd.current_dir(self.root.path())
             .arg("--bridge-script")
             .arg(script)
@@ -40,9 +40,9 @@ impl Fixture {
             .arg(&self.log)
             .arg("--no-update-check")
             .env("CLAUDE_CONFIG_DIR", &self.profile)
-            .env("CLAUDE_RS_CONFIG_DIR", &self.app_profile)
+            .env("MACHINE_GOD_CONFIG_DIR", &self.app_profile)
             .env_remove("RUST_LOG")
-            .env_remove("CLAUDE_RS_AGENT_BRIDGE")
+            .env_remove("MACHINE_GOD_AGENT_BRIDGE")
             .stdin(std::process::Stdio::null())
             .kill_on_drop(true);
         for (key, child) in [
@@ -91,10 +91,10 @@ fn invalid_launch_values_identify_the_option_and_accept_corrected_inputs() {
         ("--agent", "", "reviewer", ErrorKind::InvalidValue),
         ("--name", "", "Review", ErrorKind::ValueValidation),
     ] {
-        let error = Cli::try_parse_from(["claude-rs", flag, bad]).unwrap_err();
+        let error = Cli::try_parse_from(["machine-god", flag, bad]).unwrap_err();
         assert_eq!(error.kind(), kind, "{flag}: {error}");
         assert!(error.to_string().contains(flag));
-        Cli::try_parse_from(["claude-rs", flag, good]).unwrap().validate().unwrap();
+        Cli::try_parse_from(["machine-god", flag, good]).unwrap().validate().unwrap();
     }
     for (args, targets, corrected) in [
         (
@@ -108,14 +108,14 @@ fn invalid_launch_values_identify_the_option_and_accept_corrected_inputs() {
             vec!["resume", "session-1"],
         ),
     ] {
-        let error = Cli::try_parse_from(["claude-rs"].into_iter().chain(args))
+        let error = Cli::try_parse_from(["machine-god"].into_iter().chain(args))
             .and_then(|cli| cli.validate())
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::ArgumentConflict);
         for target in targets {
             assert!(error.to_string().contains(target));
         }
-        Cli::try_parse_from(["claude-rs"].into_iter().chain(corrected))
+        Cli::try_parse_from(["machine-god"].into_iter().chain(corrected))
             .unwrap()
             .validate()
             .unwrap();
@@ -126,14 +126,14 @@ fn invalid_launch_values_identify_the_option_and_accept_corrected_inputs() {
 async fn each_completion_registers_the_requested_shell_without_startup_writes() {
     for (shell, registration, option) in [
         ("bash", "complete -F ", "--permission-mode"),
-        ("zsh", "#compdef claude-rs", "--permission-mode"),
-        ("fish", "complete -c claude-rs", "-l permission-mode"),
+        ("zsh", "#compdef machine-god", "--permission-mode"),
+        ("fish", "complete -c machine-god", "-l permission-mode"),
         (
             "powershell",
-            "Register-ArgumentCompleter -Native -CommandName 'claude-rs'",
+            "Register-ArgumentCompleter -Native -CommandName 'machine-god'",
             "--permission-mode",
         ),
-        ("elvish", "set edit:completion:arg-completer[claude-rs]", "--permission-mode"),
+        ("elvish", "set edit:completion:arg-completer[machine-god]", "--permission-mode"),
     ] {
         let fixture = Fixture::new();
         let missing = fixture.root.path().join("missing-bridge.js");
@@ -143,7 +143,7 @@ async fn each_completion_registers_the_requested_shell_without_startup_writes() 
         let script = String::from_utf8(output.stdout).unwrap();
         assert!(script.contains(registration) && script.contains(option), "{shell}");
         assert!(
-            script.lines().any(|line| line.contains(registration) && line.contains("claude-rs"))
+            script.lines().any(|line| line.contains(registration) && line.contains("machine-god"))
         );
         fixture.assert_preserved(false);
     }
@@ -164,9 +164,9 @@ async fn manuals_identify_their_command_and_options_without_startup_writes() {
     assert!(output.status.success());
     assert!(output.stderr.is_empty());
     for (file, command, option) in [
-        ("claude-rs.1", "claude-rs", "--permission-mode"),
-        ("claude-rs-config-show.1", "claude-rs config show", "--json"),
-        ("claude-rs-completions.1", "claude-rs completions", "SHELL"),
+        ("machine-god.1", "machine-god", "--permission-mode"),
+        ("machine-god-config-show.1", "machine-god config show", "--json"),
+        ("machine-god-completions.1", "machine-god completions", "SHELL"),
     ] {
         let manual = std::fs::read_to_string(directory.join(file)).unwrap().replace("\\-", "-");
         assert!(
@@ -179,7 +179,7 @@ async fn manuals_identify_their_command_and_options_without_startup_writes() {
         assert!(section(&manual, "SYNOPSIS").contains(option));
         assert!(section(&manual, "OPTIONS").contains(option));
     }
-    assert!(!directory.join("claude-rs-man.1").exists());
+    assert!(!directory.join("machine-god-man.1").exists());
     fixture.assert_preserved(false);
 }
 
@@ -335,7 +335,7 @@ async fn startup_and_doctor_independently_identify_script_access_failures() {
         assert!(!error.contains("does not exist"));
         for strict in [false, true] {
             let mut command = fixture.command(script);
-            command.args(["doctor", "--json"]).env("CLAUDE_RS_AGENT_BRIDGE_RUNTIME", &runtime);
+            command.args(["doctor", "--json"]).env("MACHINE_GOD_AGENT_BRIDGE_RUNTIME", &runtime);
             if strict {
                 command.arg("--strict");
             }

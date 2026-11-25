@@ -50,22 +50,22 @@ impl AppError {
     pub fn user_message(&self) -> &'static str {
         match self {
             Self::BridgeRuntimeNotFound => {
-                "Bundled bridge runtime not found. Reinstall claude-rs or run `claude-rs doctor --strict`."
+                "Bundled bridge runtime not found. Reinstall machine-god or run `machine-god doctor --strict`."
             }
             Self::BridgeSpawnFailed => {
-                "Agent bridge process failed to start. Run `claude-rs doctor --strict` to inspect the runtime and bridge script."
+                "Agent bridge process failed to start. Run `machine-god doctor --strict` to inspect the runtime and bridge script."
             }
             Self::BridgeInitializationFailed => {
-                "Agent bridge failed during initialization. Run `claude-rs logs --bundle --yes` to collect diagnostics."
+                "Agent bridge failed during initialization. Run `machine-god logs --bundle --yes` to collect diagnostics."
             }
             Self::BridgeStdoutClosed => {
-                "Agent bridge exited before completing the protocol. Run `claude-rs logs --latest` for details."
+                "Agent bridge exited before completing the protocol. Run `machine-god logs --latest` for details."
             }
             Self::BridgeSdkFailure => {
-                "Agent SDK bridge reported a failure. Run `claude-rs logs --bundle --yes` to collect diagnostics."
+                "Agent SDK bridge reported a failure. Run `machine-god logs --bundle --yes` to collect diagnostics."
             }
             Self::BridgeTimeout => {
-                "Agent bridge did not initialize before the timeout. Run `claude-rs doctor --strict` and retry with bridge diagnostics enabled."
+                "Agent bridge did not initialize before the timeout. Run `machine-god doctor --strict` and retry with bridge diagnostics enabled."
             }
             Self::AdapterCrashed => "Agent bridge process crashed or failed to start.",
             Self::ConnectionFailed => {
@@ -112,12 +112,12 @@ impl AppError {
             Self::BridgeRuntimeNotFound
             | Self::BridgeSpawnFailed
             | Self::AdapterCrashed
-            | Self::BridgeTimeout => "claude-rs doctor --strict",
+            | Self::BridgeTimeout => "machine-god doctor --strict",
             Self::BridgeInitializationFailed
             | Self::BridgeStdoutClosed
             | Self::BridgeSdkFailure
-            | Self::ConnectionFailed => "claude-rs logs --bundle --yes",
-            Self::SessionNotFound => "claude-rs resume",
+            | Self::ConnectionFailed => "machine-god logs --bundle --yes",
+            Self::SessionNotFound => "machine-god resume",
             Self::AuthRequired => "claude auth login",
         }
     }

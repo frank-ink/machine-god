@@ -1,0 +1,60 @@
+{
+  "$schema": "docs/zero/contract_env.schema.json",
+  "schema_version": 1,
+  "description": "Machine-readable environment contract for FranKenstein 3.0. Precedence and field names are verified against plugins/frankenstein3/scripts/star/f3_pfade.py and plugins/frankenstein3/README.md. Every entry of sources is a repo-root-relative path written in the canonical ../../<repo-root-relative> form and resolved from this file's directory (docs/zero). Tests fail closed: a missing or unreadable contract is an error, never a skip.",
+  "precedence": [
+    "FRANK3_DATA",
+    "CLAUDE_PLUGIN_DATA",
+    "XDG_DATA_HOME",
+    "HOME"
+  ],
+  "data_dir_precedence": [
+    "FRANK3_DATA",
+    "CLAUDE_PLUGIN_DATA",
+    "XDG_DATA_HOME",
+    "HOME"
+  ],
+  "hook_env_writes": [
+    "FRANK3_DATA",
+    "CLAUDE_PLUGIN_DATA",
+    "F3_DB_PATH"
+  ],
+  "ambient_passthrough": [
+    "F3_DRY_RUN",
+    "XDG_DATA_HOME",
+    "HOME"
+  ],
+  "admissibility_space": {
+    "kind": "AdmissibilitySpace",
+    "path_variables": [
+      "F3_DB_PATH",
+      "FRANK3_DATA",
+      "CLAUDE_PLUGIN_DATA",
+      "XDG_DATA_HOME",
+      "HOME"
+    ],
+    "mode_flags": [
+      "F3_DRY_RUN"
+    ],
+    "resolution_rules": {
+      "F3_DB_PATH": "file path to the database file; it never selects the data directory",
+      "FRANK3_DATA": "canonical data root directory",
+      "CLAUDE_PLUGIN_DATA": "Claude Code plugin data directory",
+      "XDG_DATA_HOME": "XDG base directory; frankenstein3 subdirectory appended",
+      "HOME": "legacy fallback; ~/.local/share/frankenstein3 appended"
+    },
+    "invariants": [
+      "F3_DRY_RUN never participates in path precedence",
+      "Exactly one data directory is selected (first match wins)",
+      "Missing or unreadable contract is a hard error",
+      "F3_DB_PATH resolves the database file only and never selects the data directory"
+    ]
+  },
+  "sources": {
+    "install_sh": "../../plugins/frankenstein3/install.sh",
+    "status_py": "../../plugins/frankenstein3/tests/status.py",
+    "path_resolution": "../../plugins/frankenstein3/scripts/star/f3_pfade.py",
+    "rust": "../../src/zero",
+    "typescript": "../../agent-sdk/src/zero"
+  }
+}

@@ -101,7 +101,7 @@ mod tests {
               "capability": "retina",
               "status": "MEASURED",
               "evidence_ref": "test:zero::features_ground::tests::explain_capability_in_german@WORKTREE",
-              "gate": "cargo test -p claude_rs zero::features"
+              "gate": "cargo test -p machine_god zero::features"
             },
             {
               "capability": "smartphone_link",

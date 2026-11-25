@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Drift check between the `claude-rs` CLI and the CLI Options table in the manual.
+//! Drift check between the `machine-god` CLI and the CLI Options table in the manual.
 //!
 //! Long flag names must match, without duplicates. Editorial grouping and prose
 //! in the Purpose column are independent of the parser's declaration order.
 
 use clap::CommandFactory;
-use claude_code_rust::Cli;
+use machine_god::Cli;
 
 /// Long flags clap generates on its own. They are intentionally not in the table.
 const IMPLICIT_ARGS: &[&str] = &["help", "version"];
@@ -77,13 +77,13 @@ fn docs_cli_options_table_matches_clap() {
     for flag in &expected {
         assert!(
             documented.contains(flag),
-            "--{flag} is a `claude-rs` option but is missing from the CLI Options table in docs/src/cli.md"
+            "--{flag} is a `machine-god` option but is missing from the CLI Options table in docs/src/cli.md"
         );
     }
     for flag in &documented {
         assert!(
             expected.contains(flag),
-            "--{flag} is listed in the CLI Options table in docs/src/cli.md but is not a `claude-rs` option"
+            "--{flag} is listed in the CLI Options table in docs/src/cli.md but is not a `machine-god` option"
         );
     }
     let unique: std::collections::HashSet<_> = documented.iter().collect();

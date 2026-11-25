@@ -1,6 +1,6 @@
-# Contributing to claude-code-rust
+# Contributing to machine-god
 
-Thank you for considering contributing to claude-code-rust! This document provides guidelines and information for contributors.
+Thank you for considering contributing to machine-god! This document provides guidelines and information for contributors.
 
 ## Code of Conduct
 

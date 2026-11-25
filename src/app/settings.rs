@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-const SETTINGS_DIR_NAME: &str = "claude-code-rust";
+const SETTINGS_DIR_NAME: &str = "machine-god";
 const SETTINGS_FILE: &str = "settings.json";
 const UPDATE_SOURCE_GITHUB_RELEASE: &str = "github_release";
 const GITHUB_RELEASE_BASE_URL: &str = "https://github.com/gschaidergabriel/machine-god/releases/tag";
@@ -91,7 +91,7 @@ pub fn save_global_settings(path: &Path, settings: &AppSettings) -> Result<(), S
 
 pub fn global_settings_path() -> Option<PathBuf> {
     settings_path_from(
-        std::env::var_os("CLAUDE_RS_CONFIG_DIR").as_deref(),
+        std::env::var_os("MACHINE_GOD_CONFIG_DIR").as_deref(),
         dirs::config_dir().as_deref(),
     )
 }

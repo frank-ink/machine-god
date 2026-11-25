@@ -65,10 +65,10 @@ fn unusable_and_current_error_panels_report_a_cause_and_accept_corrected_data() 
 
 #[tokio::test]
 async fn native_cli_resolution_preserves_argv_cwd_streams_and_failure_status() {
-    if let Some(root) = std::env::var_os("CLAUDE_RS_AUDIT_ROOT") {
+    if let Some(root) = std::env::var_os("MACHINE_GOD_AUDIT_ROOT") {
         let root = PathBuf::from(root);
         let project = root.join("selected project");
-        if std::env::var("CLAUDE_RS_AUDIT_CASE").unwrap() == "missing" {
+        if std::env::var("MACHINE_GOD_AUDIT_CASE").unwrap() == "missing" {
             assert!(
                 Probe::system()
                     .fetch_snapshot(project.to_str().unwrap().into())

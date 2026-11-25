@@ -5,7 +5,7 @@
 # Install
 
 One command. It downloads the matching release for your system, checks its SHA-256 checksum and puts
-`claude-rs` and `machine-god` on your PATH. No admin rights needed.
+`machine-god` on your PATH. No admin rights needed.
 
 **Linux / macOS** (Terminal):
 
@@ -30,7 +30,7 @@ All releases: [github.com/gschaidergabriel/machine-god/releases](https://github.
 
 # First start, step by step
 
-1. **Start it.** `machine-god` (or `claude-rs`, same program) opens the Machine God terminal UI with the banner
+1. **Start it.** `machine-god` opens the Machine God terminal UI with the banner
    above. Your conversation stays in your terminal's own scrollback.
 2. **Choose where the thinking happens.** Machine God talks to models through Anthropic's Agent SDK.
    You need one of these:
@@ -38,7 +38,7 @@ All releases: [github.com/gschaidergabriel/machine-god/releases](https://github.
      run `claude /login` once (or type `/login` inside Machine God). Same account, models and limits as Claude Code.
    - **Free pool via Omnipool:** if an Omnipool install is found on this machine, Machine God starts it and routes
      turns through free model providers automatically; no key is typed or stored by Machine God. Switch off with
-     `CLAUDE_RS_OMNIPOOL=0`, open its web app with `/api`. *Omnipool is not yet publicly distributed (planned).*
+     `MACHINE_GOD_OMNIPOOL=0`, open its web app with `/api`. *Omnipool is not yet publicly distributed (planned).*
 3. **Ask something.** Type a message and press Enter. `/help` lists all commands, `/model` switches models,
    `/usage` shows your usage, `/status` shows the session state.
 4. **Update later** by running the same install command again.
@@ -158,7 +158,7 @@ server, and with `machine-god grid sync now`. Imported lines are validated and t
 
 **Honest limits.**
 - Other vendors' **connectors, plugins and skills only run inside that vendor's product**. ChatGPT's connectors, Claude's MCP servers and skills (the ones
-  claude-rs already has), Gemini's extensions cannot be borrowed. The GRID delegates the whole task to the AI that has them (for example a task that
+  Machine God already has), Gemini's extensions cannot be borrowed. The GRID delegates the whole task to the AI that has them (for example a task that
   needs your calendar goes to ChatGPT through the bridge, which uses its own connectors); it does not call those tools itself.
 - "One entity" means one memory, one persona and one routing layer. The AIs stay separate models; each only sees what the preamble and your request contain.
 - Every request sends the persona and up to five recalled memories to whichever AI is asked (a cloud provider sees them). Use a local model for private things.
@@ -198,7 +198,7 @@ Machine God is a fork of [claude-code-rust](https://github.com/srothgan/claude-c
 
 # Details
 
-## Claude Code Rust
+## Machine God
 
 An alternative terminal frontend for Claude Code, written in Rust. Your conversation stays in your terminal's own scrollback, without flicker.
 
@@ -209,10 +209,10 @@ An alternative terminal frontend for Claude Code, written in Rust. Your conversa
 
 ### About
 
-Claude Code Rust (`claude-rs`) is a terminal UI for Claude Code built on [Ratatui](https://ratatui.rs/). It runs your sessions through Anthropic's official Agent SDK via a local bridge, with the same account, models, tools, file edits, permissions, MCP servers, skills and session history as Claude Code itself. Only the interface is different.
+Machine God (`machine-god`) is a terminal UI for Claude Code built on [Ratatui](https://ratatui.rs/). It runs your sessions through Anthropic's official Agent SDK via a local bridge, with the same account, models, tools, file edits, permissions, MCP servers, skills and session history as Claude Code itself. Only the interface is different.
 
 <p align="center">
-  <img src="assets/demo.gif" alt="Claude Code Rust explaining the terminal problems its native Rust interface solves" width="900">
+  <img src="assets/demo.gif" alt="Machine God explaining the terminal problems its native Rust interface solves" width="900">
 </p>
 
 ### Prerequisite
@@ -239,10 +239,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm 'https://raw.githubu
 <summary><b>Already have Node.js 24+? Use npm instead</b></summary>
 
 ```bash
-npm install -g claude-code-rust
+npm install -g machine-god
 ```
 
-<sub>The package ships prebuilt platform binaries and its own Bun runtime for the Agent SDK bridge, so no Rust toolchain, Bun install, or `postinstall` script is needed. Node.js 24+ is still required to run the `claude-rs` launcher.</sub>
+<sub>The package ships prebuilt platform binaries and its own Bun runtime for the Agent SDK bridge, so no Rust toolchain, Bun install, or `postinstall` script is needed. Node.js 24+ is still required to run the `machine-god` launcher.</sub>
 
 </details>
 
@@ -251,9 +251,9 @@ See the [installation guide](https://gschaidergabriel.github.io/machine-god/inst
 ### Usage
 
 ```bash
-claude-rs
-claude-rs --model opus --permission-mode plan "Review this project"
-claude-rs --continue
+machine-god
+machine-god --model opus --permission-mode plan "Review this project"
+machine-god --continue
 ```
 
 Follow [Your first session](https://gschaidergabriel.github.io/machine-god/usage.html) for a complete walkthrough. See the [CLI reference](https://gschaidergabriel.github.io/machine-god/cli.html) for startup flags, shell completions and man pages.
@@ -262,9 +262,9 @@ Follow [Your first session](https://gschaidergabriel.github.io/machine-god/usage
 
 Stock Claude Code offers two renderers, and each one gives something up. The classic renderer keeps the conversation in your terminal's scrollback but redraws it as output streams, which can flicker, jump the scroll position, or duplicate output in long sessions. The [fullscreen renderer](https://code.claude.com/docs/en/fullscreen) fixes that by moving the conversation to the alternate screen, where your terminal's search, tmux copy mode and native text selection no longer see it.
 
-Claude Code Rust renders inline. Finished messages and tool output are written into your terminal's scrollback once, and only the live area at the bottom (the streaming reply, the composer and the footer) is redrawn.
+Machine God renders inline. Finished messages and tool output are written into your terminal's scrollback once, and only the live area at the bottom (the streaming reply, the composer and the footer) is redrawn.
 
-| | Stock classic | Stock fullscreen | Claude Code Rust |
+| | Stock classic | Stock fullscreen | Machine God |
 | --- | --- | --- | --- |
 | Conversation lives in | Terminal scrollback | Alternate screen | Terminal scrollback |
 | Flicker while streaming | Can flicker | No | No |
@@ -286,7 +286,7 @@ It is not a feature-for-feature copy of Claude Code. Some stock features are una
 - **Core Claude Code workflow:** tool calls, inline edit diffs, permission prompts, plan mode, subagents and background tasks, MCP authorization, skills and SDK slash commands.
 - **Session tools:** a searchable `/resume` picker with forking, `/rewind`, `/compact`, `/export` to Markdown, and `/btw` side questions while a turn runs.
 - **Fullscreen views when you want them:** a Git diff viewer (`/diff`), subagent view (`/agents`), settings (`/config`), status, usage and help. These open on demand and close back to the inline chat.
-- **Supportability:** `claude-rs doctor`, redacted debug bundles, shell completions and man pages.
+- **Supportability:** `machine-god doctor`, redacted debug bundles, shell completions and man pages.
 
 ### Documentation
 
@@ -322,7 +322,7 @@ This project is licensed under the [Apache License 2.0](LICENSE). Apache-2.0 was
 
 This project is not affiliated with, endorsed by, or supported by Anthropic.
 
-A quick note on where this project stands, since I know people worry about this kind of thing: claude-code-rust is a terminal UI that I wrote from scratch in Rust. It is not a fork, copy or port of the latest Claude Code source leak. It talks to Anthropic's official [Agent SDK](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/agent-sdk) as a runtime dependency instead, the same way any other third-party tool would. No Anthropic source code was read or used as reference at any point during development.
+A quick note on where this project stands, since I know people worry about this kind of thing: machine-god is a terminal UI that I wrote from scratch in Rust. It is not a fork, copy or port of the latest Claude Code source leak. It talks to Anthropic's official [Agent SDK](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/agent-sdk) as a runtime dependency instead, the same way any other third-party tool would. No Anthropic source code was read or used as reference at any point during development.
 
 The project authenticates through your existing Claude Code account via the Agent SDK, and the Agent SDK's terms allow building on top of it. Billing, credits, limits, and overage behavior are controlled by Anthropic, including any future changes Anthropic may make to how Agent SDK usage is metered. Other community projects do the same. As far as I can tell, using this project is fine, but I am a single maintainer, not a lawyer. If anything changes on Anthropic's end, I will update this section and adjust the project accordingly.
 

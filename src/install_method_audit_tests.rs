@@ -7,9 +7,9 @@ fn write(path: &Path, bytes: &str) {
 #[test]
 fn archive_ownership_requires_each_file_and_the_root_identity() {
     #[cfg(windows)]
-    let runtime = "claude-rs-bridge-bun.exe";
+    let runtime = "machine-god-bridge-bun.exe";
     #[cfg(not(windows))]
-    let runtime = "claude-rs-bridge-bun";
+    let runtime = "machine-god-bridge-bun";
     for defect in [
         "none",
         "runtime-missing",
@@ -22,7 +22,7 @@ fn archive_ownership_requires_each_file_and_the_root_identity() {
     ] {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path().join("selected install root");
-        let exe = root.join("claude-rs");
+        let exe = root.join("machine-god");
         write(&exe, "binary");
         for (name, prefix) in [(runtime, "runtime"), ("agent-sdk/dist/bridge.js", "bridge")] {
             if defect == format!("{prefix}-missing") {
@@ -38,7 +38,7 @@ fn archive_ownership_requires_each_file_and_the_root_identity() {
             "package-missing" => {}
             "package-malformed" => write(&root.join("package.json"), "{broken"),
             "package-wrong" => write(&root.join("package.json"), r#"{"name":"unowned"}"#),
-            _ => write(&root.join("package.json"), r#"{"name":"claude-code-rust"}"#),
+            _ => write(&root.join("package.json"), r#"{"name":"machine-god"}"#),
         }
         assert_eq!(
             detect_install_method_for_exe(&exe),
@@ -73,7 +73,7 @@ fn npm_ownership_comes_from_supported_identity_and_bin_location() {
     ] {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path().join("node_modules/@gschaidergabriel/machine-god-win32-x64-msvc");
-        let exe = root.join(if bin { "bin/claude-rs" } else { "claude-rs" });
+        let exe = root.join(if bin { "bin/machine-god" } else { "machine-god" });
         write(&exe, "binary");
         if let Some(identity) = identity {
             write(&root.join("package.json"), identity);

@@ -138,7 +138,7 @@ Assert-Equal "512.0 KiB / 1.0 MiB" $transferProgress.Sizes "Download size detail
 Assert-Equal "256.0 KiB/s  ETA 00:02" $transferProgress.Rate "Download rate or ETA changed"
 $originalConsoleOut = [Console]::Out
 
-$downloadSandbox = Join-Path ([IO.Path]::GetTempPath()) "claude-rs-download-test-$PID"
+$downloadSandbox = Join-Path ([IO.Path]::GetTempPath()) "machine-god-download-test-$PID"
 $downloadSource = Join-Path $downloadSandbox "source.bin"
 $downloadDestination = Join-Path $downloadSandbox "destination.bin"
 New-Item -ItemType Directory -Path $downloadSandbox -Force | Out-Null
@@ -183,7 +183,7 @@ Assert-True $spinnerOutput.Contains("`r|  Downloading release archive") "Inline 
 Assert-True $spinnerOutput.Contains("`r/  Downloading release archive") "Inline spinner did not render its slash frame"
 Assert-True $spinnerOutput.Contains("`r-  Downloading release archive") "Inline spinner did not render its dash frame"
 Assert-True $spinnerOutput.Contains("`r\  Downloading release archive") "Inline spinner did not render its backslash frame"
-Assert-True (-not $spinnerOutput.Contains("Installing claude-rs")) "Inline spinner rendered a host-style progress banner"
+Assert-True (-not $spinnerOutput.Contains("Installing machine-god-core")) "Inline spinner rendered a host-style progress banner"
 Assert-True (-not $script:InstallerProgressActive) "Real inline spinner remained active after stop"
 Assert-True ($null -eq $script:InstallerProgressWorker) "Real inline spinner retained its worker after stop"
 Assert-Equal "SilentlyContinue" $ProgressPreference "Real inline spinner changed the outer progress preference"

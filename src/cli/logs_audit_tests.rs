@@ -15,7 +15,7 @@ impl Fixture {
         let root_dir = dir.path().join("diagnostics");
         let runtime_dir = root_dir.join("runtime");
         fs::create_dir_all(&runtime_dir).unwrap();
-        let legacy_log_path = root_dir.join("claude-rs.log");
+        let legacy_log_path = root_dir.join("machine-god.log");
         Self {
             dir,
             paths: crate::logging::DiagnosticsPaths { root_dir, runtime_dir, legacy_log_path },
@@ -59,8 +59,8 @@ fn latest_output_selects_metadata_recency_then_legacy_without_false_paths() {
     for mode in ["runtime", "legacy", "empty", "unrelated", "absent"] {
         let f = Fixture::new();
         let expected = if mode == "runtime" {
-            f.log("claude-rs-20260101T000000Z-p1-raaa.log", "older", 100);
-            let newest = f.log("claude-rs-20250101T000000Z-p1-rbbb.log", "newest", 200);
+            f.log("machine-god-20260101T000000Z-p1-raaa.log", "older", 100);
+            let newest = f.log("machine-god-20250101T000000Z-p1-rbbb.log", "newest", 200);
             fs::write(&f.paths.legacy_log_path, "legacy competitor").unwrap();
             Some(newest)
         } else if mode != "absent" {
@@ -85,7 +85,7 @@ fn latest_output_selects_metadata_recency_then_legacy_without_false_paths() {
         } else {
             assert_eq!(code, 1);
             assert!(out.is_empty());
-            assert!(String::from_utf8(err).unwrap().contains("No claude-rs log"));
+            assert!(String::from_utf8(err).unwrap().contains("No machine-god log"));
         }
     }
 }
@@ -94,7 +94,7 @@ fn latest_output_selects_metadata_recency_then_legacy_without_false_paths() {
 fn summary_associates_each_location_and_latest_status_with_its_path() {
     for populated in [false, true] {
         let f = Fixture::new();
-        let selected = f.paths.runtime_dir.join("claude-rs-20250101T000000Z-p1-rabc.log");
+        let selected = f.paths.runtime_dir.join("machine-god-20250101T000000Z-p1-rabc.log");
         if populated {
             f.log(selected.file_name().unwrap().to_str().unwrap(), "selected", 100);
             fs::write(&f.paths.legacy_log_path, "legacy").unwrap();
@@ -119,10 +119,10 @@ fn summary_associates_each_location_and_latest_status_with_its_path() {
             assert!(!text.contains("[FOUND]"));
         }
         for command in [
-            "claude-rs logs --path",
-            "claude-rs logs --latest",
-            "claude-rs logs --tail 200",
-            "claude-rs logs --bundle --yes",
+            "machine-god logs --path",
+            "machine-god logs --latest",
+            "machine-god logs --tail 200",
+            "machine-god logs --bundle --yes",
         ] {
             assert!(text.contains(command));
         }
@@ -142,8 +142,8 @@ fn tail_preserves_exact_requested_suffix_and_never_falls_back_from_an_empty_runt
         ("", 3, ""),
     ] {
         let f = Fixture::new();
-        let older = f.log("claude-rs-20260101T000000Z-p1-raaa.log", "wrong older", 100);
-        let selected = f.log("claude-rs-20250101T000000Z-p1-rbbb.log", contents, 200);
+        let older = f.log("machine-god-20260101T000000Z-p1-raaa.log", "wrong older", 100);
+        let selected = f.log("machine-god-20250101T000000Z-p1-rbbb.log", contents, 200);
         fs::write(&f.paths.legacy_log_path, "wrong legacy").unwrap();
         let (mut out, mut err) = (Vec::new(), Vec::new());
         assert_eq!(
@@ -164,7 +164,7 @@ fn tail_preserves_exact_requested_suffix_and_never_falls_back_from_an_empty_runt
         1
     );
     assert!(out.is_empty());
-    assert!(String::from_utf8(err).unwrap().contains("No claude-rs log"));
+    assert!(String::from_utf8(err).unwrap().contains("No machine-god log"));
 }
 
 #[test]
@@ -172,7 +172,7 @@ fn bundle_selection_keeps_recent_families_and_bounds_orphans_by_metadata() {
     let f = Fixture::new();
     let mut expected = BTreeSet::new();
     for n in 1..=7 {
-        let name = format!("claude-rs-20250101T000000Z-p{n}-rabc.log");
+        let name = format!("machine-god-20250101T000000Z-p{n}-rabc.log");
         let base = f.log(&name, "base", n * 100);
         let rotated =
             f.log(&format!("{name}.1"), "rotation", if n == 1 { 9000 } else { n * 100 + 1 });
@@ -181,7 +181,7 @@ fn bundle_selection_keeps_recent_families_and_bounds_orphans_by_metadata() {
             expected.insert(rotated);
         }
     }
-    f.log("claude-rs-20250101T000000Z-p9-rabc.log.1", "orphan", 9999);
+    f.log("machine-god-20250101T000000Z-p9-rabc.log.1", "orphan", 9999);
     f.log("other.log", "unrelated", 9999);
     fs::create_dir(f.paths.runtime_dir.join("directory")).unwrap();
     assert_eq!(
@@ -195,7 +195,7 @@ fn bundle_selection_keeps_recent_families_and_bounds_orphans_by_metadata() {
     let mut expected = BTreeSet::new();
     assert!(select_bundle_runtime_logs(&f.paths.runtime_dir).unwrap().is_empty());
     for n in 1..=7 {
-        let path = f.log(&format!("claude-rs-20250101T000000Z-p{n}-rabc.log.1"), "orphan", n * 100);
+        let path = f.log(&format!("machine-god-20250101T000000Z-p{n}-rabc.log.1"), "orphan", n * 100);
         if n >= 3 {
             expected.insert(path);
         }
@@ -218,9 +218,9 @@ fn archive_preserves_selected_safe_records_and_excludes_private_sources() {
             "{\"target\":\"app.agent\",\"event_name\":\"captured_bridge_stderr\",\"message\":\"stderr Bearer captured-secret\"}\n",
             "{\"target\":\"app.session\",\"event_name\":\"unrelated-app\",\"message\":\"keep app\"}\nnot JSON\n42\n"
         );
-        let base = f.log("claude-rs-20250101T000000Z-p1-rabc.log", log, 100);
+        let base = f.log("machine-god-20250101T000000Z-p1-rabc.log", log, 100);
         let rotation = f.log(
-            "claude-rs-20250101T000000Z-p1-rabc.log.1",
+            "machine-god-20250101T000000Z-p1-rabc.log.1",
             "rotated safe token=rotation-secret",
             99,
         );
@@ -257,13 +257,13 @@ fn archive_preserves_selected_safe_records_and_excludes_private_sources() {
                 serde_json::json!({"target":"app.agent","event_name":"captured_bridge_stderr","message":"stderr Bearer [redacted]"})
             ]
         );
-        let raw = &archive["logs/runtime/claude-rs-20250101T000000Z-p1-rabc.log"];
+        let raw = &archive["logs/runtime/machine-god-20250101T000000Z-p1-rabc.log"];
         assert!(raw.contains("keep app") && raw.contains("not JSON"));
         assert_eq!(
-            archive["logs/runtime/claude-rs-20250101T000000Z-p1-rabc.log.1"],
+            archive["logs/runtime/machine-god-20250101T000000Z-p1-rabc.log.1"],
             "rotated safe token=[redacted]"
         );
-        assert_eq!(archive["logs/legacy/claude-rs.log"], "legacy safe token=[redacted]");
+        assert_eq!(archive["logs/legacy/machine-god.log"], "legacy safe token=[redacted]");
         if crash {
             let value: Value =
                 serde_json::from_str(&archive[crate::failure::LAST_CRASH_FILE_NAME]).unwrap();
@@ -309,7 +309,7 @@ fn archive_preserves_selected_safe_records_and_excludes_private_sources() {
 #[test]
 fn failed_source_read_cleans_partial_bundle_and_retry_preserves_source_data() {
     let f = Fixture::new();
-    let input = f.log("claude-rs-20250101T000000Z-p1-rabc.log", "safe token=private", 100);
+    let input = f.log("machine-god-20250101T000000Z-p1-rabc.log", "safe token=private", 100);
     let plan = f.plan();
     fs::remove_file(&input).unwrap();
     let sentinel = plan.output_path.parent().unwrap().join("unrelated");
@@ -330,7 +330,7 @@ fn failed_source_read_cleans_partial_bundle_and_retry_preserves_source_data() {
     fs::write(&input, "safe token=private").unwrap();
     create_bundle_with(&f.paths, &plan, || Ok(observations()), publish_bundle).unwrap();
     assert_eq!(
-        entries(&plan.output_path)["logs/runtime/claude-rs-20250101T000000Z-p1-rabc.log"],
+        entries(&plan.output_path)["logs/runtime/machine-god-20250101T000000Z-p1-rabc.log"],
         "safe token=[redacted]"
     );
     assert_eq!(fs::read_to_string(input).unwrap(), "safe token=private");
@@ -340,7 +340,7 @@ fn failed_source_read_cleans_partial_bundle_and_retry_preserves_source_data() {
 fn publication_failure_cleans_temporary_archive_and_does_not_overwrite_a_racing_target() {
     for racing_target in [false, true] {
         let f = Fixture::new();
-        let source = f.log("claude-rs-20250101T000000Z-p1-rabc.log", "safe source", 100);
+        let source = f.log("machine-god-20250101T000000Z-p1-rabc.log", "safe source", 100);
         let plan = f.plan();
         let result = create_bundle_with(
             &f.paths,
@@ -399,16 +399,16 @@ fn assert_archive_metadata(
         "doctor.json".into(),
         "paths.json".into(),
         "logs/bridge-diagnostics.jsonl".into(),
-        "logs/runtime/claude-rs-20250101T000000Z-p1-rabc.log".into(),
-        "logs/runtime/claude-rs-20250101T000000Z-p1-rabc.log.1".into(),
-        "logs/legacy/claude-rs.log".into(),
+        "logs/runtime/machine-god-20250101T000000Z-p1-rabc.log".into(),
+        "logs/runtime/machine-god-20250101T000000Z-p1-rabc.log.1".into(),
+        "logs/legacy/machine-god.log".into(),
     ]);
     if crash {
         expected.insert(crate::failure::LAST_CRASH_FILE_NAME.into());
     }
     assert_eq!(archive.keys().cloned().collect::<BTreeSet<_>>(), expected);
     let manifest: Value = serde_json::from_str(&archive["manifest.json"]).unwrap();
-    assert_eq!(manifest["schema"], "claude-rs-debug-bundle/v2");
+    assert_eq!(manifest["schema"], "machine-god-debug-bundle/v2");
     assert_eq!(manifest["output_path"], plan.output_path.display().to_string());
     assert_eq!(
         manifest["included_files"]

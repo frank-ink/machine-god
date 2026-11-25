@@ -10,7 +10,7 @@ pub(crate) fn paths(root: &Path) -> DiagnosticsPaths {
     DiagnosticsPaths {
         root_dir: root.into(),
         runtime_dir: root.join("runtime"),
-        legacy_log_path: root.join("claude-rs.log"),
+        legacy_log_path: root.join("machine-god.log"),
     }
 }
 
@@ -19,8 +19,8 @@ pub(crate) fn command(test: &str, root: &Path, scenario: &str) -> Command {
     let mut command = Command::new(std::env::current_exe().unwrap());
     command
         .args(["--exact", test, "--nocapture", "--test-threads=1"])
-        .env("CLAUDE_RS_AUDIT_ROOT", root)
-        .env("CLAUDE_RS_AUDIT_CASE", scenario)
+        .env("MACHINE_GOD_AUDIT_ROOT", root)
+        .env("MACHINE_GOD_AUDIT_CASE", scenario)
         .env_remove("RUST_LOG")
         .env_remove("RUST_BACKTRACE")
         .stdin(Stdio::null())

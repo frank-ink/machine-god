@@ -7,10 +7,10 @@ Use this walkthrough to ask a question about a project, continue the conversatio
 Open a terminal in your project directory and run:
 
 ```bash
-claude-rs
+machine-god
 ```
 
-The directory you start in is the session's working directory. Check the location shown by the app before proceeding. To select a different directory at launch, use `claude-rs -C path/to/project` with your own path.
+The directory you start in is the session's working directory. Check the location shown by the app before proceeding. To select a different directory at launch, use `machine-god -C path/to/project` with your own path.
 
 If the app asks whether to trust the project, review the directory before accepting. If authentication is required, use the sign-in flow offered by the app or run `claude auth login` from your shell and start again. See [login troubleshooting](troubleshooting.md#login-and-authentication-failures) if sign-in does not complete.
 
@@ -47,14 +47,14 @@ After the response completes, press `Ctrl+Q` to quit. When a session was establi
 From the same project directory, run:
 
 ```bash
-claude-rs --resume
+machine-god --resume
 ```
 
-Choose the conversation you just used and press `Enter`. Its saved history should appear, and you can ask another question. The picker searches by name, session ID, or branch. To continue the most recent conversation directly, use `claude-rs --continue`; if none exists, that command starts a new session.
+Choose the conversation you just used and press `Enter`. Its saved history should appear, and you can ask another question. The picker searches by name, session ID, or branch. To continue the most recent conversation directly, use `machine-god --continue`; if none exists, that command starts a new session.
 
 ## Next steps
 
 - [Work with conversations](conversations.md): resume, fork, review Git changes, copy responses, export, and inspect subagents.
-- [Configure claude-rs](configure.md): save preferences and distinguish them from current-session choices.
+- [Configure machine-god](configure.md): save preferences and distinguish them from current-session choices.
 - [Use MCP servers and plugins](integrations.md): inspect connections and load local plugins.
 - [CLI reference](cli.md): launch flags, shell completions, and local manuals.

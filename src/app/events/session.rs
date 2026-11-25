@@ -307,7 +307,7 @@ fn startup_failure_message(reason: &str) -> &'static str {
             "Worktree verification failed temporarily. A manual retry may succeed."
         }
         "cli_version_too_old" => {
-            "The bundled Claude Code runtime is too old. Update claude-rs to a release containing a newer runtime."
+            "The bundled Claude Code runtime is too old. Update machine-god to a release containing a newer runtime."
         }
         "bypass_root" => {
             "Bypass-permissions mode cannot run as root. Use a non-root account or another permission mode."
@@ -761,7 +761,7 @@ mod tests {
             ("session_held_by_background", "Stop that process or allow it to finish"),
             ("worktree_resume_refused", "SDK guidance in diagnostic logs"),
             ("worktree_unverified", "manual retry may succeed"),
-            ("cli_version_too_old", "Update claude-rs to a release containing a newer runtime"),
+            ("cli_version_too_old", "Update machine-god to a release containing a newer runtime"),
             ("bypass_root", "cannot run as root"),
             ("sandbox_required_unavailable", "sandbox"),
             ("initialize_not_first", "initialization"),

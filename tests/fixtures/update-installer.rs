@@ -106,7 +106,7 @@ fn main() {
     for arg in &args {
         journal.push_str(&format!("arg={arg}\n"));
     }
-    for (k, v) in env::vars().filter(|(k, _)| k.starts_with("CLAUDE_RS_")) {
+    for (k, v) in env::vars().filter(|(k, _)| k.starts_with("MACHINE_GOD_")) {
         journal.push_str(&format!("{k}={v}\n"));
     }
     fs::write(path("UPDATE_JOURNAL"), &journal).unwrap();

@@ -6,10 +6,10 @@
 - [Install](installation.md)
 - [Your first session](usage.md)
 
-# Using claude-rs
+# Using machine-god
 
 - [Work with conversations](conversations.md)
-- [Configure claude-rs](configure.md)
+- [Configure machine-god](configure.md)
 - [Use MCP servers and plugins](integrations.md)
 - [Troubleshoot problems](troubleshooting.md)
 - [Collect diagnostics](diagnostics.md)

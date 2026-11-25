@@ -32,7 +32,7 @@ function stageFakeRuntime(distPlatformDir, platformPackage) {
 }
 
 test("verifyStagedBunRuntimes accepts artifact tree rooted at dist-platform", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-staged-runtime-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-staged-runtime-"));
   try {
     const distPlatformDir = path.join(tempDir, "dist-platform");
     for (const platformPackage of PLATFORM_PACKAGES) {
@@ -50,7 +50,7 @@ test("verifyStagedBunRuntimes accepts artifact tree rooted at dist-platform", ()
 });
 
 test("verifyStagedBunRuntimes rejects generic bun filenames in package bin dirs", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-staged-runtime-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-staged-runtime-"));
   try {
     const distPlatformDir = path.join(tempDir, "dist-platform");
     const platformPackage = PLATFORM_PACKAGES.find((entry) => entry.dir === "linux-x64-gnu");
@@ -73,7 +73,7 @@ test("verifyStagedBunRuntimes rejects generic bun filenames in package bin dirs"
 });
 
 test("verifyStagedBunRuntimes rejects root-level artifact extraction shape", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-staged-runtime-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-staged-runtime-"));
   try {
     const platformPackage = PLATFORM_PACKAGES.find((entry) => entry.dir === "darwin-arm64");
     stageFakeRuntime(tempDir, platformPackage);
@@ -94,7 +94,7 @@ test("verifyStagedBunRuntimes rejects root-level artifact extraction shape", () 
 });
 
 test("verifyStagedBunRuntimes rejects staged runtime hash mismatch", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-staged-runtime-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-staged-runtime-"));
   try {
     const distPlatformDir = path.join(tempDir, "dist-platform");
     const platformPackage = PLATFORM_PACKAGES.find((entry) => entry.dir === "linux-x64-gnu");

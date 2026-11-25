@@ -71,11 +71,11 @@ fn optional_expiry_preserves_exact_second_and_millisecond_instants() {
 
 #[tokio::test]
 async fn selected_profile_credentials_are_reloaded_without_fallback_or_creation() {
-    if let Some(root) = std::env::var_os("CLAUDE_RS_AUDIT_ROOT") {
+    if let Some(root) = std::env::var_os("MACHINE_GOD_AUDIT_ROOT") {
         let root = PathBuf::from(root);
         #[cfg(unix)]
         assert_eq!(dirs::home_dir(), Some(root.join("home")));
-        let selected = std::env::var("CLAUDE_RS_AUDIT_CASE").unwrap();
+        let selected = std::env::var("MACHINE_GOD_AUDIT_CASE").unwrap();
         let (token, other) =
             if selected == "first" { ("first-token", "second") } else { ("second-token", "first") };
         let path = root.join(&selected).join(".credentials.json");

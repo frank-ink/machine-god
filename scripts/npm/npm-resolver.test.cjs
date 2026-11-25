@@ -7,7 +7,7 @@ const {
   resolveInstall,
   selectTarget,
   supportedPlatformsText
-} = require("../../bin/claude-rs.js");
+} = require("../../bin/machine-god.js");
 
 function processLike(platform, arch, glibcVersionRuntime) {
   return {
@@ -66,7 +66,7 @@ test("resolveInstall returns binary and bridge paths when package payload is com
   const packageJsonPath = path.join("node_modules", "@srothgan", "claude-code-rust-darwin-arm64", "package.json");
   const resolved = resolveInstall({
     processLike: processLike("darwin", "arm64", undefined),
-    dirname: path.join("node_modules", "claude-code-rust", "bin"),
+    dirname: path.join("node_modules", "machine-god", "bin"),
     requireResolve(request) {
       assert.equal(request, "@gschaidergabriel/machine-god-darwin-arm64/package.json");
       return packageJsonPath;
@@ -80,7 +80,7 @@ test("resolveInstall returns binary and bridge paths when package payload is com
   assert.equal(resolved.binaryPath, path.join("node_modules", "@srothgan", "claude-code-rust-darwin-arm64", "bin", "claude-rs"));
   assert.equal(
     resolved.bundledBridgeScript,
-    path.join("node_modules", "claude-code-rust", "agent-sdk", "dist", "bridge.js")
+    path.join("node_modules", "machine-god", "agent-sdk", "dist", "bridge.js")
   );
 });
 

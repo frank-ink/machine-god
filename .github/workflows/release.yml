@@ -94,33 +94,33 @@ jobs:
           - runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             package_dir: linux-x64-gnu
-            exe: claude-rs
-            asset: claude-code-rust-x86_64-unknown-linux-gnu
+            exe: machine-god-core
+            asset: machine-god-x86_64-unknown-linux-gnu
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             package_dir: linux-arm64-gnu
-            exe: claude-rs
-            asset: claude-code-rust-aarch64-unknown-linux-gnu
+            exe: machine-god-core
+            asset: machine-god-aarch64-unknown-linux-gnu
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
             package_dir: win32-x64-msvc
-            exe: claude-rs.exe
-            asset: claude-code-rust-x86_64-pc-windows-msvc.exe
+            exe: machine-god-core.exe
+            asset: machine-god-x86_64-pc-windows-msvc.exe
           - runner: windows-11-arm
             target: aarch64-pc-windows-msvc
             package_dir: win32-arm64-msvc
-            exe: claude-rs.exe
-            asset: claude-code-rust-aarch64-pc-windows-msvc.exe
+            exe: machine-god-core.exe
+            asset: machine-god-aarch64-pc-windows-msvc.exe
           - runner: macos-15-intel
             target: x86_64-apple-darwin
             package_dir: darwin-x64
-            exe: claude-rs
-            asset: claude-code-rust-x86_64-apple-darwin
+            exe: machine-god-core
+            asset: machine-god-x86_64-apple-darwin
           - runner: macos-15
             target: aarch64-apple-darwin
             package_dir: darwin-arm64
-            exe: claude-rs
-            asset: claude-code-rust-aarch64-apple-darwin
+            exe: machine-god-core
+            asset: machine-god-aarch64-apple-darwin
     with:
       runner: ${{ matrix.runner }}
       target: ${{ matrix.target }}
@@ -151,7 +151,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: bundled-bun-runtimes
-          path: dist-platform/*/bin/claude-rs-bridge-bun*
+          path: dist-platform/*/bin/machine-god-bridge-bun*
           if-no-files-found: error
 
   assemble-npm-packages:
@@ -189,7 +189,7 @@ jobs:
       - name: Restore executable bits for downloaded Unix artifacts
         run: |
           set -euo pipefail
-          find dist-platform -type f \( -name 'claude-rs' -o -name 'claude-rs-bridge-bun' \) -exec chmod 755 {} +
+          find dist-platform -type f \( -name 'machine-god-core' -o -name 'machine-god-bridge-bun' \) -exec chmod 755 {} +
 
       - name: Install dependencies
         run: npm ci
@@ -237,7 +237,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ needs.verify.outputs.version }}"
           mapfile -t public_assets < <(find dist-install -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | sort)
-          public_assets+=("claude-code-rust-${VERSION}-release-bundle.tar.gz")
+          public_assets+=("machine-god-${VERSION}-release-bundle.tar.gz")
           sha256sum "${public_assets[@]}" > SHA256SUMS
           cat SHA256SUMS
 
@@ -247,7 +247,7 @@ jobs:
           subject-path: |
             dist-install/*.tar.gz
             dist-install/*.zip
-            claude-code-rust-${{ needs.verify.outputs.version }}-release-bundle.tar.gz
+            machine-god-${{ needs.verify.outputs.version }}-release-bundle.tar.gz
             SHA256SUMS
 
       - name: Upload release package set
@@ -259,7 +259,7 @@ jobs:
             dist-npm/manifests/
             dist-pack/
             dist-install/
-            claude-code-rust-${{ needs.verify.outputs.version }}-release-bundle.tar.gz
+            machine-god-${{ needs.verify.outputs.version }}-release-bundle.tar.gz
             release-manifest.json
             SHA256SUMS
             SHA256SUMS.internal
@@ -312,7 +312,7 @@ jobs:
           TAG="${{ needs.verify.outputs.tag }}"
           VERSION="${{ needs.verify.outputs.version }}"
           mapfile -t release_assets < <(find dist-install -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | sort)
-          release_assets+=("claude-code-rust-${VERSION}-release-bundle.tar.gz")
+          release_assets+=("machine-god-${VERSION}-release-bundle.tar.gz")
           release_assets+=(SHA256SUMS)
           gh release create "$TAG" "${release_assets[@]}" \
             --verify-tag \

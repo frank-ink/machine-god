@@ -8,7 +8,7 @@ use std::path::Path;
 pub(super) fn isolated_app(cwd: &Path, home: &Path) -> App {
     use clap::Parser;
     let cli = Cli::try_parse_from([
-        std::ffi::OsStr::new("claude-rs"),
+        std::ffi::OsStr::new("machine-god"),
         std::ffi::OsStr::new("--no-update-check"),
         std::ffi::OsStr::new("--dir"),
         cwd.as_os_str(),

@@ -39,7 +39,7 @@ async function main() {
   assertHostCanSmokePlatform(platformPackage);
 
   const cargoPackage = readCargoPackageMetadata(path.join(repoRoot, "Cargo.toml"));
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-npm-smoke-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-npm-smoke-"));
   const npmEnv = isolatedNpmEnvironment(tempDir);
   const packedPackages = options.useExistingTarballs
     ? findExistingPackageTarballs({ packDir, cargoPackage })
@@ -174,7 +174,7 @@ async function smokeInstall({
 }) {
   writeJson(path.join(projectDir, "package.json"), {
     private: true,
-    name: "claude-rs-npm-smoke",
+    name: "machine-god-npm-smoke",
     version: "0.0.0"
   });
 
@@ -464,7 +464,7 @@ export function sanitizedNpmEnvironment(baseEnv = process.env) {
 }
 
 function assertMockOutput(output, commandName) {
-  if (!output.includes("claude-rs 0.0.0-mock")) {
+  if (!output.includes("machine-god-core 0.0.0-mock")) {
     throw new Error(`${commandName} did not run the mock binary. Output:\n${output}`);
   }
 }
@@ -498,11 +498,11 @@ function assertInstalledPlatformPackageDirLayout(packageDir, platformPackage) {
 function assertInstalledRootPackageLayout(nodeModulesDir) {
   const packageDir = path.join(nodeModulesDir, ROOT_PACKAGE_NAME);
   const packageJson = readJson(path.join(packageDir, "package.json"));
-  const expectedBin = { "claude-rs": "bin/claude-rs.js" };
+  const expectedBin = { "machine-god": "bin/machine-god.js" };
   if (JSON.stringify(packageJson.bin) !== JSON.stringify(expectedBin)) {
     throw new Error(`Installed root package did not expose the resolver bin: ${JSON.stringify(packageJson.bin)}`);
   }
-  const launcherPath = path.join(packageDir, "bin", "claude-rs.js");
+  const launcherPath = path.join(packageDir, "bin", "machine-god.js");
   if (!fs.existsSync(launcherPath)) {
     throw new Error(`Installed root resolver is missing: ${launcherPath}`);
   }
@@ -584,21 +584,21 @@ function globalBinDir(prefix) {
 function assertSingleGlobalBin(prefix) {
   const binDir = globalBinDir(prefix);
   const entries = fs.existsSync(binDir)
-    ? fs.readdirSync(binDir).filter((entry) => entry === "claude-rs" || entry.startsWith("claude-rs."))
+    ? fs.readdirSync(binDir).filter((entry) => entry === "machine-god-core" || entry.startsWith("machine-god-core."))
     : [];
 
   const allowedEntries =
     process.platform === "win32"
-      ? new Set(["claude-rs", "claude-rs.cmd", "claude-rs.ps1"])
-      : new Set(["claude-rs"]);
+      ? new Set(["machine-god-core", "machine-god-core.cmd", "machine-god-core.ps1"])
+      : new Set(["machine-god-core"]);
   for (const entry of entries) {
     if (!allowedEntries.has(entry)) {
-      throw new Error(`Unexpected global claude-rs bin entry after install: ${entry}`);
+      throw new Error(`Unexpected global machine-god-core bin entry after install: ${entry}`);
     }
   }
-  const requiredEntry = process.platform === "win32" ? "claude-rs.cmd" : "claude-rs";
+  const requiredEntry = process.platform === "win32" ? "machine-god-core.cmd" : "machine-god-core";
   if (!entries.includes(requiredEntry)) {
-    throw new Error(`Missing global claude-rs bin entry: ${path.join(binDir, requiredEntry)}`);
+    throw new Error(`Missing global machine-god-core bin entry: ${path.join(binDir, requiredEntry)}`);
   }
   return path.join(binDir, requiredEntry);
 }
@@ -608,9 +608,9 @@ function assertGlobalBinsRemoved(prefix) {
   if (!fs.existsSync(binDir)) {
     return;
   }
-  const entries = fs.readdirSync(binDir).filter((entry) => entry === "claude-rs" || entry.startsWith("claude-rs."));
+  const entries = fs.readdirSync(binDir).filter((entry) => entry === "machine-god-core" || entry.startsWith("machine-god-core."));
   if (entries.length > 0) {
-    throw new Error(`Global claude-rs bin entries remained after uninstall: ${entries.join(", ")}`);
+    throw new Error(`Global machine-god-core bin entries remained after uninstall: ${entries.join(", ")}`);
   }
 }
 
@@ -625,7 +625,7 @@ function installedLauncherCommands(projectDir) {
         args: (commandArgs) => [
           "/d",
           "/c",
-          ["call", path.join(binDir, "claude-rs.cmd"), ...commandArgs]
+          ["call", path.join(binDir, "machine-god-core.cmd"), ...commandArgs]
             .map((arg, index) => (index === 0 ? arg : quoteCmdArg(arg)))
             .join(" ")
         ]
@@ -638,7 +638,7 @@ function installedLauncherCommands(projectDir) {
           "-ExecutionPolicy",
           "Bypass",
           "-File",
-          path.join(binDir, "claude-rs.ps1"),
+          path.join(binDir, "machine-god-core.ps1"),
           ...commandArgs
         ]
       }
@@ -648,7 +648,7 @@ function installedLauncherCommands(projectDir) {
   return [
     {
       label: "npm symlink",
-      command: path.join(binDir, "claude-rs"),
+      command: path.join(binDir, "machine-god-core"),
       args: (commandArgs) => commandArgs
     }
   ];
@@ -665,7 +665,7 @@ function globalLauncherCommands(prefix) {
         args: (commandArgs) => [
           "/d",
           "/c",
-          ["call", path.join(binDir, "claude-rs.cmd"), ...commandArgs]
+          ["call", path.join(binDir, "machine-god-core.cmd"), ...commandArgs]
             .map((arg, index) => (index === 0 ? arg : quoteCmdArg(arg)))
             .join(" ")
         ]
@@ -678,7 +678,7 @@ function globalLauncherCommands(prefix) {
           "-ExecutionPolicy",
           "Bypass",
           "-File",
-          path.join(binDir, "claude-rs.ps1"),
+          path.join(binDir, "machine-god-core.ps1"),
           ...commandArgs
         ]
       }
@@ -688,7 +688,7 @@ function globalLauncherCommands(prefix) {
   return [
     {
       label: "global npm bin",
-      command: path.join(binDir, "claude-rs"),
+      command: path.join(binDir, "machine-god-core"),
       args: (commandArgs) => commandArgs
     }
   ];
@@ -720,7 +720,7 @@ function runInstalledCommand(installedCommand, args, cwd, env) {
     const stdout = bufferToString(error.stdout);
     const stderr = bufferToString(error.stderr);
     throw new Error(
-      `Installed claude-rs command failed via ${installedCommand.label}: ${args.join(" ")}\n` +
+      `Installed machine-god-core command failed via ${installedCommand.label}: ${args.join(" ")}\n` +
         `status: ${error.status ?? "unknown"}\n` +
         `stdout:\n${stdout}\n` +
         `stderr:\n${stderr}`
@@ -774,7 +774,7 @@ function assertDoctorReportsBridgeScript(report, label) {
     path.join("node_modules", ROOT_PACKAGE_NAME, "agent-sdk", "dist", "bridge.js")
   );
   const resolvedPath = normalizePath(scriptCheck.message);
-  const envPath = normalizePath(scriptCheck.details?.CLAUDE_RS_AGENT_BRIDGE ?? "");
+  const envPath = normalizePath(scriptCheck.details?.MACHINE_GOD_AGENT_BRIDGE ?? "");
   if (!resolvedPath.includes(expectedBridgePath) || !envPath.includes(expectedBridgePath)) {
     throw new Error(
       `${label} bridge_script path did not point at the installed root package: ` +
@@ -1029,10 +1029,10 @@ function printCommandOutput(commandName, output) {
   const stdout = output.stdout.trim();
   const stderr = output.stderr.trim();
   if (stdout) {
-    console.log(`claude-rs ${commandName} stdout:\n${stdout}`);
+    console.log(`machine-god-core ${commandName} stdout:\n${stdout}`);
   }
   if (stderr) {
-    console.log(`claude-rs ${commandName} stderr:\n${stderr}`);
+    console.log(`machine-god-core ${commandName} stderr:\n${stderr}`);
   }
 }
 
@@ -1189,7 +1189,7 @@ Options:
                         Install tarballs that already exist in --pack-dir instead of packing dist-npm.
   --registry-smoke      Serve tarballs from a temp registry and npm install -g the root package.
   --real-binary         Require --version and --help to exit successfully without mock output checks.
-  --no-system-runtime   Strip directories containing bun from PATH when running claude-rs.
+  --no-system-runtime   Strip directories containing bun from PATH when running machine-god-core.
   --keep-temp           Keep the temporary smoke project for inspection.
   -h, --help            Show this help.
 `);

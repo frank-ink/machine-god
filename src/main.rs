@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::Parser;
-use claude_code_rust::Cli;
-use claude_code_rust::app::PostExitAction;
-use claude_code_rust::error::AppError;
+use machine_god::Cli;
+use machine_god::app::PostExitAction;
+use machine_god::error::AppError;
 use std::time::Instant;
 use tracing::info_span;
 
 #[allow(clippy::exit)]
 fn main() {
-    claude_code_rust::failure::install_panic_hook();
+    machine_god::failure::install_panic_hook();
     match run() {
         Ok(0) => {}
         Ok(code) => std::process::exit(code),
@@ -18,7 +18,7 @@ fn main() {
                 let mut stderr = std::io::stderr().lock();
                 let detail = format!("{err:#}");
                 if let Err(report_error) =
-                    claude_code_rust::failure::write_app_error_report_with_detail(
+                    machine_god::failure::write_app_error_report_with_detail(
                         &mut stderr,
                         &app_error,
                         Some(&detail),
@@ -41,7 +41,7 @@ fn run() -> anyhow::Result<i32> {
         error.print()?;
         return Ok(error.exit_code());
     }
-    if let Some(exit_code) = claude_code_rust::cli::run_support_command(
+    if let Some(exit_code) = machine_god::cli::run_support_command(
         &cli,
         &mut std::io::stdout().lock(),
         &mut std::io::stderr().lock(),
@@ -58,10 +58,10 @@ fn run() -> anyhow::Result<i32> {
         }
     };
 
-    let _logging = claude_code_rust::logging::LoggingRuntime::init(&cli)?;
+    let _logging = machine_god::logging::LoggingRuntime::init(&cli)?;
     {
         let startup_bootstrap_span = info_span!(
-            target: claude_code_rust::logging::targets::APP_LIFECYCLE,
+            target: machine_god::logging::targets::APP_LIFECYCLE,
             "startup_bootstrap",
             resume_requested = cli.startup_launch().resume_requested(),
             explicit_bridge_script = cli.bridge_script.is_some(),
@@ -69,10 +69,10 @@ fn run() -> anyhow::Result<i32> {
         let _entered = startup_bootstrap_span.enter();
         let resolve_started = Instant::now();
         let bridge_launcher =
-            claude_code_rust::agent::bridge::resolve_bridge_launcher(cli.bridge_script.as_deref())?;
+            machine_god::agent::bridge::resolve_bridge_launcher(cli.bridge_script.as_deref())?;
         let duration_ms = u64::try_from(resolve_started.elapsed().as_millis()).unwrap_or(u64::MAX);
         tracing::info!(
-            target: claude_code_rust::logging::targets::BRIDGE_LIFECYCLE,
+            target: machine_god::logging::targets::BRIDGE_LIFECYCLE,
             event_name = "bridge_launcher_resolved",
             message = "resolved agent bridge launcher",
             duration_ms,
@@ -85,12 +85,12 @@ fn run() -> anyhow::Result<i32> {
 
     let exit_code = rt.block_on(local_set.run_until(async move {
         // Phase 1: create app in Connecting state (instant, no I/O)
-        let mut app = claude_code_rust::app::create_app(&cli, session_config);
+        let mut app = machine_god::app::create_app(&cli, session_config);
 
         // Phase 2: start non-session startup work + TUI.
         // The bridge itself is started from the TUI loop only after trust is accepted.
-        claude_code_rust::app::start_update_check(&app, &cli);
-        let result = claude_code_rust::app::run_tui(&mut app).await;
+        machine_god::app::start_update_check(&app, &cli);
+        let result = machine_god::app::run_tui(&mut app).await;
         let post_exit_action = app.post_exit_action.take();
         maybe_print_resume_hint(&app);
 
@@ -105,7 +105,7 @@ fn run() -> anyhow::Result<i32> {
         if let Some(action) = post_exit_action {
             return Ok(run_post_exit_action(&app, action));
         }
-        if let Some(action) = claude_code_rust::app::automatic_update_action(&app, &cli) {
+        if let Some(action) = machine_god::app::automatic_update_action(&app, &cli) {
             start_automatic_update(&app, action);
         }
 
@@ -115,19 +115,19 @@ fn run() -> anyhow::Result<i32> {
     Ok(exit_code)
 }
 
-fn run_post_exit_action(app: &claude_code_rust::app::App, action: PostExitAction) -> i32 {
+fn run_post_exit_action(app: &machine_god::app::App, action: PostExitAction) -> i32 {
     match action {
         PostExitAction::InstallUpdate { latest_version, method } => {
-            claude_code_rust::app::run_update_install(app, &latest_version, &method)
+            machine_god::app::run_update_install(app, &latest_version, &method)
         }
     }
 }
 
 /// Automatic installs run in a detached worker so the shell prompt returns at once.
-fn start_automatic_update(app: &claude_code_rust::app::App, action: PostExitAction) {
+fn start_automatic_update(app: &machine_god::app::App, action: PostExitAction) {
     match action {
         PostExitAction::InstallUpdate { latest_version, method } => {
-            claude_code_rust::app::start_background_update_install(app, &latest_version, &method);
+            machine_god::app::start_background_update_install(app, &latest_version, &method);
         }
     }
 }
@@ -136,11 +136,11 @@ fn extract_app_error(err: &anyhow::Error) -> Option<AppError> {
     err.chain().find_map(|cause| cause.downcast_ref::<AppError>().cloned())
 }
 
-fn maybe_print_resume_hint(app: &claude_code_rust::app::App) {
+fn maybe_print_resume_hint(app: &machine_god::app::App) {
     let mut stderr = std::io::stderr().lock();
     if let Err(err) = write_resume_hint_for_app(&mut stderr, app) {
         tracing::warn!(
-            target: claude_code_rust::logging::targets::APP_LIFECYCLE,
+            target: machine_god::logging::targets::APP_LIFECYCLE,
             event_name = "resume_hint_write_failed",
             message = "failed to write resume hint",
             outcome = "failure",
@@ -151,7 +151,7 @@ fn maybe_print_resume_hint(app: &claude_code_rust::app::App) {
 
 fn write_resume_hint_for_app(
     mut writer: impl std::io::Write,
-    app: &claude_code_rust::app::App,
+    app: &machine_god::app::App,
 ) -> std::io::Result<()> {
     let Some(session_id) = app.session_runtime.resumable_session_id() else {
         return Ok(());
@@ -163,19 +163,19 @@ fn write_resume_hint(
     mut writer: impl std::io::Write,
     session_id: impl std::fmt::Display,
 ) -> std::io::Result<()> {
-    writeln!(writer, "\r\nResume this session: claude-rs resume {session_id}")
+    writeln!(writer, "\r\nResume this session: machine-god resume {session_id}")
 }
 
 #[cfg(test)]
 mod tests {
     use super::write_resume_hint_for_app;
-    use claude_code_rust::app::App;
+    use machine_god::app::App;
 
     #[tokio::test]
     async fn resume_hint_consumes_established_replaced_and_retained_session_identity() {
-        use claude_code_rust::agent::{events::ClientEvent, model};
-        use claude_code_rust::app::handle_client_event;
-        const CHILD: &str = "CLAUDE_RS_RESUME_HINT_CHILD";
+        use machine_god::agent::{events::ClientEvent, model};
+        use machine_god::app::handle_client_event;
+        const CHILD: &str = "MACHINE_GOD_RESUME_HINT_CHILD";
         if std::env::var_os(CHILD).is_none() {
             let isolated = tempfile::tempdir().unwrap();
             let output = tokio::time::timeout(
@@ -236,8 +236,8 @@ mod tests {
                 write_resume_hint_for_app(&mut bytes, &app).unwrap();
                 let text = String::from_utf8(bytes).unwrap();
                 assert!(text.starts_with("\r\n") && text.ends_with('\n'));
-                let line = text.lines().find(|line| line.contains("claude-rs resume ")).unwrap();
-                assert_eq!(line.split_once("claude-rs resume ").unwrap().1, id);
+                let line = text.lines().find(|line| line.contains("machine-god resume ")).unwrap();
+                assert_eq!(line.split_once("machine-god resume ").unwrap().1, id);
                 if replacement {
                     assert!(!text.contains("first-session"));
                 }

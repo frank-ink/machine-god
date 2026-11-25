@@ -18,7 +18,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use time::{OffsetDateTime, macros::format_description};
 
-const EXPORT_SCHEMA: &str = "claude-rs-config-export/v1";
+const EXPORT_SCHEMA: &str = "machine-god-config-export/v1";
 const HUMAN_DOCUMENT_PREVIEW_LINES: usize = 24;
 
 pub fn run(
@@ -159,7 +159,7 @@ fn write_path_human(
     inspection: &InspectedConfigDocuments,
     style: HumanStyle,
 ) -> anyhow::Result<()> {
-    writeln!(stdout, "{}", style.title("claude-rs config"))?;
+    writeln!(stdout, "{}", style.title("machine-god config"))?;
     writeln!(stdout, "{} {}", style.detail_label("Summary:"), summary_counts(inspection))?;
     writeln!(stdout)?;
     writeln!(stdout, "{}", style.heading("Locations"))?;
@@ -173,7 +173,7 @@ fn write_path_human(
         "{}",
         style.command_block(
             "show",
-            "claude-rs config show",
+            "machine-god config show",
             "Show a concise redacted config summary"
         )
     )?;
@@ -182,7 +182,7 @@ fn write_path_human(
         "{}",
         style.command_block(
             "export",
-            "claude-rs config export --output config.json",
+            "machine-god config export --output config.json",
             "Write a redacted support export"
         )
     )?;
@@ -194,7 +194,7 @@ fn write_show_human(
     report: &ShowReport,
     style: HumanStyle,
 ) -> anyhow::Result<()> {
-    writeln!(stdout, "{}", style.title("claude-rs config"))?;
+    writeln!(stdout, "{}", style.title("machine-god config"))?;
     writeln!(stdout, "{} {}", style.detail_label("Summary:"), report.summary.as_human())?;
     writeln!(stdout)?;
     writeln!(stdout, "{}", style.heading("Documents"))?;
@@ -279,7 +279,7 @@ fn write_document_summary(
     )?;
     writeln!(
         stdout,
-        "      - {} claude-rs config show --json",
+        "      - {} machine-god config show --json",
         style.detail_label("Full redacted JSON:")
     )?;
     Ok(())

@@ -56,12 +56,12 @@ impl DiagnosticsPreset {
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "claude-rs",
+    name = "machine-god",
     version = env!("CARGO_PKG_VERSION"),
-    about = "Machine God: native terminal agent (claude-rs fork)"
+    about = "Machine God: native terminal agent (machine-god fork)"
 )]
 #[command(
-    after_help = "Examples:\n  claude-rs --enable-logs --diagnostics-preset session\n  claude-rs --enable-logs --diagnostics-preset render"
+    after_help = "Examples:\n  machine-god --enable-logs --diagnostics-preset session\n  machine-god --enable-logs --diagnostics-preset render"
 )]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Cli {
@@ -103,7 +103,7 @@ pub struct Cli {
     /// Enable detailed info-level diagnostics in addition to the always-on warning/error baseline.
     ///
     /// The baseline log already records warnings and errors from the app, the bridge and the SDK.
-    /// Run `claude-rs logs` to find it.
+    /// Run `machine-god logs` to find it.
     #[arg(long)]
     pub enable_logs: bool,
 
@@ -562,10 +562,10 @@ mod tests {
 
     #[test]
     fn session_names_lose_control_characters_and_must_keep_visible_text() {
-        let cli = Cli::try_parse_from(["claude-rs", "-n", "Release\u{7} prep "]).expect("name");
+        let cli = Cli::try_parse_from(["machine-god", "-n", "Release\u{7} prep "]).expect("name");
         assert_eq!(cli.session_options.name.as_deref(), Some("Release prep"));
         for name in ["", "\u{1b}\t "] {
-            assert!(Cli::try_parse_from(["claude-rs", "--name", name]).is_err(), "{name:?}");
+            assert!(Cli::try_parse_from(["machine-god", "--name", name]).is_err(), "{name:?}");
         }
     }
 
@@ -575,14 +575,14 @@ mod tests {
         std::fs::create_dir(project.path().join("docs")).expect("docs");
         let dir = project.path().to_str().expect("UTF-8 path");
         let cli =
-            Cli::try_parse_from(["claude-rs", "-C", dir, "--add-dir", "docs"]).expect("parse");
+            Cli::try_parse_from(["machine-god", "-C", dir, "--add-dir", "docs"]).expect("parse");
         let config = cli.resolve_session_config().expect("resolved");
         assert_eq!(
             config.additional_directories,
             [project.path().join("docs").to_str().expect("UTF-8 path")]
         );
         let cli =
-            Cli::try_parse_from(["claude-rs", "-C", dir, "--add-dir", "absent"]).expect("parse");
+            Cli::try_parse_from(["machine-god", "-C", dir, "--add-dir", "absent"]).expect("parse");
         let error = cli.resolve_session_config().expect_err("missing directory");
         assert_eq!(error.kind(), clap::error::ErrorKind::ValueValidation);
     }
@@ -592,7 +592,7 @@ mod tests {
         use clap::error::ErrorKind;
         let modes: &[&[&str]] = &[&["--path"], &["--latest"], &["--tail", "2"], &["--bundle"]];
         for (index, mode) in modes.iter().enumerate() {
-            let mut args = vec!["claude-rs", "logs"];
+            let mut args = vec!["machine-god", "logs"];
             args.extend_from_slice(mode);
             assert!(Cli::try_parse_from(&args).is_ok());
             for other in &modes[index + 1..] {
@@ -605,12 +605,12 @@ mod tests {
             }
         }
         let error =
-            Cli::try_parse_from(["claude-rs", "logs", "--output", "selected.zip"]).unwrap_err();
+            Cli::try_parse_from(["machine-god", "logs", "--output", "selected.zip"]).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::MissingRequiredArgument);
         assert!(error.to_string().contains("--bundle"));
         assert!(
             Cli::try_parse_from([
-                "claude-rs",
+                "machine-god",
                 "logs",
                 "--bundle",
                 "--yes",

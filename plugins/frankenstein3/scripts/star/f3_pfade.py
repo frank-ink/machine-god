@@ -3,14 +3,16 @@
 CODE        = Ordner dieser Datei (im Plugin, nur lesen)
 PLUGIN_ROOT = $PLUGIN_ROOT, sonst Wurzel des entpackten Plugins (gefunden via .claude-plugin/plugin.json)
 DATA        = $FRANK3_DATA, sonst $CLAUDE_PLUGIN_DATA, sonst $XDG_DATA_HOME/frankenstein3, sonst $HOME/.local/share/frankenstein3  (Laufzeit, schreibbar)
-DB          = DATA/unified.db  (wird beim ersten Start aus daten/schema_leer.sql frisch angelegt)
+DB          = DATA/unified.db  (wird beim ersten Start aus schema_leer.sql frisch angelegt)
 LOG         = DATA/hook.log
 Nichts hier liest oder schreibt ~/.claude/star oder ~/.local/share/agentzero.
 
 GRF/ClayCode:
-  R_t = (PLUGIN_ROOT, DATA, DB, LOG)  -- aufloesbarer Zustand
+  R_t = (PLUGIN_ROOT, DATA, DB, LOG)  -- aufloesbarer Zustand, lazy neu gemessen pro Zugriff
   E_t = os.environ                    -- Evidenz (Environment)
-  F   = _plugin_root() / _data_dir()  -- reine Funktionen der Umgebung
+  F   = _resolve_data_dir() / _resolve_db_path()  -- reine Funktionen der Umgebung
+  F3_DB_PATH = bestehender Dateipfad mit DB-Suffix => genau diese Datei (nicht Parent + unified.db)
+  F3_DB_PATH = bestehendes Verzeichnis => <verzeichnis>/unified.db
   Die Modulkonstanten werden erst beim Zugriff berechnet (PEP 562), damit ein
   Import nie von einem fehlerhaften Environment abhaengt und die Aufloesung
   jederzeit gegen die aktuelle Umgebung messbar bleibt.
@@ -20,6 +22,12 @@ Invarianten (ClayCode):
   - DATA wird niemals aus PLUGIN_ROOT abgeleitet (Code != Daten).
   - Relative Werte in FRANK3_DATA|CLAUDE_PLUGIN_DATA|XDG_DATA_HOME|PLUGIN_ROOT loesen PfadeError aus.
   - ON_VIOLATION -> TriggerEmergencyDeescalation (hier: PfadeError, Aufruf bricht ab).
+  - F3_DB_PATH auf existierende DB-Datei liefert diese Datei unveraenderlich (ON_VIOLATION -> PfadeError).
+  - F3_DB_PATH auf existierendes Verzeichnis haengt unified.db an (ON_VIOLATION -> PfadeError).
+  - get_db_path() hat keinen data_dir-Parameter mehr (toter Parameter entfernt).
+    Ein expliziter DB-Override geht ausschliesslich ueber F3_DB_PATH.
+  - DRY-RUN ISOLATION: When F3_DRY_RUN=1, resolver MUST return F3_DB_PATH target
+    (or error if F3_DB_PATH unset), ignoring FRANK3_DATA/CLAUDE_PLUGIN_DATA/XDG/HOME.
 """
 from __future__ import annotations
 
@@ -33,17 +41,21 @@ CODE = Path(__file__).resolve().parent
 #: Name des Datenverzeichnisses unter XDG_DATA_HOME bzw. im lokalen Share.
 DATA_DIR_NAME = "frankenstein3"
 
+#: Dateiendungen, die einen Pfad als explizite SQLite-Datenbank-Datei kennzeichnen.
+DB_FILE_SUFFIXES = frozenset({".db", ".sqlite", ".sqlite3", ".db3"})
+
 
 class PfadeError(Exception):
     """Fehler bei Pfadaufloesung (relative Pfade, fehlende Marker, etc.)."""
-    pass
 
 
 def _resolve_absolute(path_str: str, var_name: str) -> Path:
     """Expandiert ~, macht absolut, weist relative Pfade zurueck."""
     p = Path(path_str).expanduser()
     if not p.is_absolute():
-        raise PfadeError(f"{var_name}: relativer Pfad nicht erlaubt: {path_str!r} (muss absolut sein oder ~ enthalten)")
+        raise PfadeError(
+            f"{var_name}: relativer Pfad nicht erlaubt: {path_str!r} (muss absolut sein oder ~ enthalten)"
+        )
     return p.resolve()
 
 
@@ -61,7 +73,9 @@ def _find_plugin_root(start: Path) -> Path:
         if current.parent == current:  # Wurzel erreicht
             break
         current = current.parent
-    raise PfadeError(f"Plugin-Wurzel nicht gefunden: .claude-plugin/plugin.json nicht in Elternverzeichnissen von {start}")
+    raise PfadeError(
+        f"Plugin-Wurzel nicht gefunden: .claude-plugin/plugin.json nicht in Elternverzeichnissen von {start}"
+    )
 
 
 def _plugin_root() -> Path:
@@ -75,7 +89,12 @@ def _plugin_root() -> Path:
     return _find_plugin_root(CODE)
 
 
-def _data_dir() -> Path:
+def resolve_plugin_root() -> Path:
+    """Public alias for _plugin_root(), kept for status.py compatibility."""
+    return _plugin_root()
+
+
+def _resolve_data_dir() -> Path:
     """Ermittelt das Datenverzeichnis nach XDG Base Directory Specification (UNIFIED PRECEDENCE):
     1. $FRANK3_DATA (absolut)
     2. $CLAUDE_PLUGIN_DATA (absolut)
@@ -84,7 +103,13 @@ def _data_dir() -> Path:
 
     This precedence MUST match install.sh's resolve_data_dir() exactly.
     PLUGIN_ROOT is NEVER used for data directory resolution.
+    Single source of truth used by _resolve_db_path() and all callers.
     """
+    # DRY-RUN ISOLATION: In dry-run mode, data directory resolution is bypassed
+    # entirely by _resolve_db_path(). This function is still called by check()
+    # and other non-DB-path callers, so it retains normal behavior.
+    # The dry-run guard lives in _resolve_db_path() where DB path is resolved.
+
     # 1. FRANK3_DATA (highest priority, explicit user override)
     v = os.environ.get("FRANK3_DATA", "").strip()
     if v:
@@ -101,11 +126,105 @@ def _data_dir() -> Path:
         p = Path(xdg).expanduser()
         if not p.is_absolute():
             raise PfadeError(f"XDG_DATA_HOME: relativer Pfad nicht erlaubt: {xdg!r}")
-        return p.resolve() / DATA_DIR_NAME
+        return (p.resolve() / DATA_DIR_NAME).resolve()
 
     # 4. ~/.local/share/frankenstein3 (XDG default)
     home = Path.home()
     return (home / ".local" / "share" / DATA_DIR_NAME).resolve()
+
+
+def _data_dir() -> Path:
+    """Public alias for _resolve_data_dir(), kept for compatibility."""
+    return _resolve_data_dir()
+
+
+def resolve_data_dir() -> Path:
+    """Public alias for _resolve_data_dir(), kept for status.py compatibility."""
+    return _resolve_data_dir()
+
+
+def _resolve_db_path() -> Path:
+    """Single source of truth for DB path resolution.
+
+    Precedence (highest first):
+      1. DRY-RUN ISOLATION: F3_DRY_RUN=1 requires F3_DB_PATH set, returns it (ignores all other vars)
+      2. F3_DB_PATH (explicit override, must be absolute or ~)
+         - existing directory      -> <dir>/unified.db
+         - existing file           -> that exact file (never parent + unified.db)
+         - missing, DB suffix      -> that exact file (intended new database file)
+         - missing, other suffix   -> <path>/unified.db (treated as directory)
+      3. _resolve_data_dir() / "unified.db"
+
+    Fail-closed on relative F3_DB_PATH.
+    """
+    # DRY-RUN ISOLATION GUARD: When F3_DRY_RUN=1, resolver MUST return F3_DB_PATH
+    # target (or error if F3_DB_PATH unset), ignoring FRANK3_DATA/CLAUDE_PLUGIN_DATA/XDG/HOME.
+    if is_dry_run():
+        f3_db = os.environ.get("F3_DB_PATH", "").strip()
+        if not f3_db:
+            raise PfadeError(
+                "F3_DRY_RUN=1 requires F3_DB_PATH to be set (absolute path or ~). "
+                "Dry-run isolation forbids falling back to FRANK3_DATA/CLAUDE_PLUGIN_DATA/XDG/HOME."
+            )
+        p = _resolve_absolute(f3_db, "F3_DB_PATH")
+        if p.is_dir():
+            return (p / "unified.db").resolve()
+        if p.is_file():
+            return p.resolve()
+        if p.suffix.lower() in DB_FILE_SUFFIXES:
+            return p.resolve()
+        return (p / "unified.db").resolve()
+
+    # 1. F3_DB_PATH takes absolute precedence (normal mode)
+    f3_db = os.environ.get("F3_DB_PATH", "").strip()
+    if f3_db:
+        p = _resolve_absolute(f3_db, "F3_DB_PATH")
+        if p.is_dir():
+            return (p / "unified.db").resolve()
+        if p.is_file():
+            return p.resolve()
+        if p.suffix.lower() in DB_FILE_SUFFIXES:
+            return p.resolve()
+        return (p / "unified.db").resolve()
+
+    # 2. Fall through to unified data directory precedence
+    return (_resolve_data_dir() / "unified.db").resolve()
+
+
+def get_db_path(data_dir: Path | None = None) -> Path:
+    """Resolve the unified.db path.
+
+    Der totere data_dir-Parameter wurde entfernt: get_db_path() nimmt kein
+    Argument mehr. Ein uebergebenes Argument wird abgelehnt, damit kein
+    falscher Pfad stillschweigend verwendet wird. Ein expliziter DB-Override
+    geht ausschliesslich ueber die Umgebungsvariable F3_DB_PATH.
+    """
+    if data_dir is not None:
+        raise PfadeError(
+            "get_db_path() takes no argument; explicit DB override only via F3_DB_PATH"
+        )
+    return _resolve_db_path()
+
+
+def get_schema_path(plugin_root: Path) -> Path:
+    """Return the path to the empty schema SQL file."""
+    return plugin_root / "daten" / "schema_leer.sql"
+
+
+# Unified truthy set for F3_DRY_RUN (matches install.sh's _normalize_f3_dry_run):
+#   truthy  = {'1', 'true', 'yes', 'on'}  (case-insensitive)
+#   falsy   = {'0', 'false', 'no', 'off', ''} (case-insensitive)
+# Unknown values are treated as falsy (fail-closed).
+_TRUTHY_DRY_RUN = frozenset({"1", "true", "yes", "on"})
+
+
+def is_dry_run() -> bool:
+    """Return True when F3_DRY_RUN is set to a truthy value.
+
+    Used by ensure_db() and callers to skip any real database writes.
+    """
+    raw = os.environ.get("F3_DRY_RUN", "").strip().lower()
+    return raw in _TRUTHY_DRY_RUN
 
 
 # Oeffentliche API (klein geschrieben, wie im Akzeptanztest erwartet)
@@ -116,7 +235,7 @@ def plugin_root() -> Path:
 
 def data_dir() -> Path:
     """Oeffentlicher Zugriff auf das Datenverzeichnis (UNIFIED PRECEDENCE)."""
-    return _data_dir()
+    return _resolve_data_dir()
 
 
 def check() -> str:
@@ -143,7 +262,7 @@ def check() -> str:
     else:
         lines.append(f"PLUGIN_ROOT=<marker .claude-plugin/plugin.json> -> {_home_relative(root)}")
 
-    data = _data_dir()
+    data = _resolve_data_dir()
     if os.environ.get("FRANK3_DATA", "").strip():
         src = "$FRANK3_DATA"
     elif os.environ.get("CLAUDE_PLUGIN_DATA", "").strip():
@@ -168,13 +287,13 @@ _LAZY_CONSTANTS = ("PLUGIN_ROOT", "DATA", "DB", "LOG")
 def __getattr__(name: str) -> Path:
     if name == "PLUGIN_ROOT":
         return _plugin_root()
-    if name in ("DATA", "DB", "LOG"):
-        data = _data_dir()
-        if name == "DATA":
-            return data
-        if name == "DB":
-            return data / "unified.db"
-        return data / "hook.log"
+    if name == "DATA":
+        return _resolve_data_dir()
+    if name == "DB":
+        # Use unified resolver for DB attribute access
+        return _resolve_db_path()
+    if name == "LOG":
+        return _resolve_data_dir() / "hook.log"
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -184,8 +303,12 @@ def __dir__() -> list:
 
 def ensure_db() -> Path:
     """Legt DATA und eine frische unified.db aus schema_leer.sql an, falls sie fehlt. Idempotent, fail-silent."""
-    data = _data_dir()
-    db = data / "unified.db"
+    if is_dry_run():
+        # In dry-run mode never create or touch the real database.
+        # Return the resolved DB path (which respects F3_DB_PATH for fixture DBs)
+        return _resolve_db_path()
+    data = _resolve_data_dir()
+    db = _resolve_db_path()
     try:
         data.mkdir(parents=True, exist_ok=True)
         if db.exists() and db.stat().st_size > 0:
@@ -270,7 +393,7 @@ if __name__ == "__main__":
             home = _isolated_home(root)
             with _patched_env(HOME=str(home), FRANK3_DATA="relative/path"):
                 try:
-                    _data_dir()
+                    _resolve_data_dir()
                     assert False, "expected PfadeError"
                 except PfadeError as e:
                     assert "relativer Pfad nicht erlaubt" in str(e)
@@ -283,7 +406,7 @@ if __name__ == "__main__":
             xdg = root / "xdg"
             xdg.mkdir()
             with _patched_env(HOME=str(home), XDG_DATA_HOME=str(xdg)):
-                data = _data_dir()
+                data = _resolve_data_dir()
                 expected = (xdg / "frankenstein3").resolve()
                 assert data == expected, f"expected {expected}, got {data}"
             print("OK: XDG_DATA_HOME resolution works")
@@ -293,7 +416,7 @@ if __name__ == "__main__":
             root = Path(tmp)
             home = _isolated_home(root)
             with _patched_env(HOME=str(home)):
-                data = _data_dir()
+                data = _resolve_data_dir()
                 expected = (home / ".local" / "share" / "frankenstein3").resolve()
                 assert data == expected, f"expected {expected}, got {data}"
             print("OK: default path matches installer location")
@@ -303,8 +426,6 @@ if __name__ == "__main__":
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             test_plugin = root / "frankenstein3"
-            # We can't easily run install.sh here without copying, so we test the logic directly
-            # by verifying the precedence order matches what install.sh documents
             home = _isolated_home(root)
             frank = root / "frank"
             frank.mkdir()
@@ -315,13 +436,13 @@ if __name__ == "__main__":
 
             # Test each precedence level in isolation
             with _patched_env(HOME=str(home), PLUGIN_ROOT=str(test_plugin), FRANK3_DATA=str(frank)):
-                assert _data_dir() == frank.resolve()
+                assert _resolve_data_dir() == frank.resolve()
             with _patched_env(HOME=str(home), PLUGIN_ROOT=str(test_plugin), CLAUDE_PLUGIN_DATA=str(claude)):
-                assert _data_dir() == claude.resolve()
+                assert _resolve_data_dir() == claude.resolve()
             with _patched_env(HOME=str(home), PLUGIN_ROOT=str(test_plugin), XDG_DATA_HOME=str(xdg)):
-                assert _data_dir() == (xdg / "frankenstein3").resolve()
+                assert _resolve_data_dir() == (xdg / "frankenstein3").resolve()
             with _patched_env(HOME=str(home), PLUGIN_ROOT=str(test_plugin)):
-                assert _data_dir() == (home / ".local" / "share" / "frankenstein3").resolve()
+                assert _resolve_data_dir() == (home / ".local" / "share" / "frankenstein3").resolve()
             print("OK: installer runtime unified resolution matches")
 
     def test_installer_runtime_unified_with_frank3_data():
@@ -331,7 +452,7 @@ if __name__ == "__main__":
             frank = root / "frank"
             frank.mkdir()
             with _patched_env(HOME=str(home), FRANK3_DATA=str(frank), CLAUDE_PLUGIN_DATA=str(root / "claude"), XDG_DATA_HOME=str(root / "xdg")):
-                assert _data_dir() == frank.resolve()
+                assert _resolve_data_dir() == frank.resolve()
             print("OK: FRANK3_DATA wins over others")
 
     def test_installer_runtime_unified_with_claude_plugin_data():
@@ -341,7 +462,7 @@ if __name__ == "__main__":
             claude = root / "claude"
             claude.mkdir()
             with _patched_env(HOME=str(home), CLAUDE_PLUGIN_DATA=str(claude), XDG_DATA_HOME=str(root / "xdg")):
-                assert _data_dir() == claude.resolve()
+                assert _resolve_data_dir() == claude.resolve()
             print("OK: CLAUDE_PLUGIN_DATA wins when FRANK3_DATA absent")
 
     def test_installer_runtime_unified_with_xdg():
@@ -351,7 +472,7 @@ if __name__ == "__main__":
             xdg = root / "xdg"
             xdg.mkdir()
             with _patched_env(HOME=str(home), XDG_DATA_HOME=str(xdg)):
-                assert _data_dir() == (xdg / "frankenstein3").resolve()
+                assert _resolve_data_dir() == (xdg / "frankenstein3").resolve()
             print("OK: XDG_DATA_HOME wins when higher vars absent")
 
     def test_installer_never_writes_under_plugin_root():
@@ -364,7 +485,7 @@ if __name__ == "__main__":
             (plugin / ".claude-plugin" / "plugin.json").write_text('{"name": "test"}', encoding="utf-8")
             home = _isolated_home(root)
             with _patched_env(HOME=str(home), PLUGIN_ROOT=str(plugin)):
-                data = _data_dir()
+                data = _resolve_data_dir()
                 # data must not be inside plugin root
                 try:
                     data.relative_to(plugin.resolve())
@@ -381,8 +502,7 @@ if __name__ == "__main__":
             home = _isolated_home(root)
             with _patched_env(HOME=str(home)):
                 output = check()
-                # Should not contain absolute home paths
-                assert "/home/" not in output or output.count("/home/") == 0, f"found /home/ in output: {output}"
+                assert "/home/" not in output, f"found /home/ in output: {output}"
                 assert "/Users/" not in output, f"found /Users/ in output: {output}"
                 # Should use ~ notation for paths under home
                 assert "~/" in output, f"expected ~/ notation in output: {output}"
@@ -473,6 +593,273 @@ if __name__ == "__main__":
                 assert "DATA=$HOME/.local/share/frankenstein3" in output, f"expected HOME default src, got: {output}"
             print("OK: check() src label matches precedence branch")
 
+    def test_get_db_path_rejects_argument():
+        """get_db_path() must reject an explicit data_dir argument."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            with _patched_env(HOME=str(home)):
+                try:
+                    get_db_path(home / "some" / "dir")
+                    assert False, "expected PfadeError"
+                except PfadeError as e:
+                    assert "takes no argument" in str(e)
+            print("OK: get_db_path rejects explicit argument")
+
+    def test_get_db_path_respects_f3_db_path():
+        """get_db_path() must honor F3_DB_PATH over the derived DATA/unified.db."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture" / "unified.db"
+            fixture_db.parent.mkdir(parents=True, exist_ok=True)
+            with _patched_env(HOME=str(home), F3_DB_PATH=str(fixture_db)):
+                assert get_db_path() == fixture_db.resolve()
+            print("OK: get_db_path reads F3_DB_PATH")
+
+    def test_is_dry_run_reads_f3_dry_run():
+        """is_dry_run must read F3_DRY_RUN using the unified truthy set."""
+        with _patched_env(F3_DRY_RUN="1"):
+            assert is_dry_run() is True
+        with _patched_env(F3_DRY_RUN="true"):
+            assert is_dry_run() is True
+        with _patched_env(F3_DRY_RUN="yes"):
+            assert is_dry_run() is True
+        with _patched_env(F3_DRY_RUN="on"):
+            assert is_dry_run() is True
+        with _patched_env(F3_DRY_RUN="0"):
+            assert is_dry_run() is False
+        with _patched_env(F3_DRY_RUN="false"):
+            assert is_dry_run() is False
+        with _patched_env(F3_DRY_RUN="no"):
+            assert is_dry_run() is False
+        with _patched_env(F3_DRY_RUN=""):
+            assert is_dry_run() is False
+        with _patched_env(F3_DRY_RUN=None):
+            assert is_dry_run() is False
+        # Case insensitivity
+        with _patched_env(F3_DRY_RUN="TRUE"):
+            assert is_dry_run() is True
+        with _patched_env(F3_DRY_RUN="FALSE"):
+            assert is_dry_run() is False
+        # Unknown values are falsy (fail-closed)
+        with _patched_env(F3_DRY_RUN="maybe"):
+            assert is_dry_run() is False
+        print("OK: is_dry_run reads F3_DRY_RUN with unified truthy set")
+
+    def test_ensure_db_skips_in_dry_run():
+        """ensure_db must not create the real DB when F3_DRY_RUN is set."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            real_db = home / ".local" / "share" / "frankenstein3" / "unified.db"
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1"):
+                result = ensure_db()
+                # Should return the path but not create the file
+                assert not real_db.exists(), f"ensure_db created real DB in dry-run: {real_db}"
+            print("OK: ensure_db skips real DB in dry-run")
+
+    # --- New tests for unified DB path resolution ---
+    def test_resolve_db_path_f3_db_path_highest():
+        """_resolve_db_path: F3_DB_PATH wins over everything."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture = root / "fixture.db"
+            frank = root / "frank"
+            frank.mkdir()
+            with _patched_env(HOME=str(home), F3_DB_PATH=str(fixture), FRANK3_DATA=str(frank)):
+                assert _resolve_db_path() == fixture.resolve()
+            print("OK: _resolve_db_path F3_DB_PATH highest")
+
+    def test_resolve_db_path_frank3_data_second():
+        """_resolve_db_path: FRANK3_DATA/unified.db when F3_DB_PATH not set."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            frank = root / "frank"
+            frank.mkdir()
+            with _patched_env(HOME=str(home), FRANK3_DATA=str(frank), CLAUDE_PLUGIN_DATA=str(root / "claude")):
+                assert _resolve_db_path() == (frank / "unified.db").resolve()
+            print("OK: _resolve_db_path FRANK3_DATA second")
+
+    def test_resolve_db_path_claude_plugin_data_third():
+        """_resolve_db_path: CLAUDE_PLUGIN_DATA/unified.db when higher not set."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            claude = root / "claude"
+            claude.mkdir()
+            with _patched_env(HOME=str(home), CLAUDE_PLUGIN_DATA=str(claude), XDG_DATA_HOME=str(root / "xdg")):
+                assert _resolve_db_path() == (claude / "unified.db").resolve()
+            print("OK: _resolve_db_path CLAUDE_PLUGIN_DATA third")
+
+    def test_resolve_db_path_xdg_fourth():
+        """_resolve_db_path: XDG_DATA_HOME/frankenstein3/unified.db when higher not set."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            xdg = root / "xdg"
+            xdg.mkdir()
+            with _patched_env(HOME=str(home), XDG_DATA_HOME=str(xdg)):
+                assert _resolve_db_path() == (xdg / "frankenstein3" / "unified.db").resolve()
+            print("OK: _resolve_db_path XDG fourth")
+
+    def test_resolve_db_path_home_fifth():
+        """_resolve_db_path: ~/.local/share/frankenstein3/unified.db as final fallback."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            with _patched_env(HOME=str(home)):
+                assert _resolve_db_path() == (home / ".local" / "share" / "frankenstein3" / "unified.db").resolve()
+            print("OK: _resolve_db_path HOME fifth")
+
+    def test_resolve_db_path_relative_f3_db_path_raises():
+        """_resolve_db_path must raise PfadeError on relative F3_DB_PATH."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            with _patched_env(HOME=str(home), F3_DB_PATH="relative/path"):
+                try:
+                    _resolve_db_path()
+                    assert False, "expected PfadeError"
+                except PfadeError as e:
+                    assert "relativer Pfad nicht erlaubt" in str(e)
+                    assert "F3_DB_PATH" in str(e)
+            print("OK: _resolve_db_path rejects relative F3_DB_PATH")
+
+    def test_get_db_path_uses_unified_resolver():
+        """get_db_path() must delegate to _resolve_db_path (rejects data_dir param)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture = root / "fixture.db"
+            frank = root / "frank"
+            frank.mkdir()
+            with _patched_env(HOME=str(home), F3_DB_PATH=str(fixture), FRANK3_DATA=str(frank)):
+                # Calling with an argument must be rejected
+                try:
+                    get_db_path(frank)
+                    assert False, "expected PfadeError"
+                except PfadeError:
+                    pass
+                # No argument returns the unified resolver
+                assert get_db_path() == fixture.resolve()
+            print("OK: get_db_path uses unified resolver")
+
+    # --- DRY-RUN ISOLATION TESTS ---
+    def test_dry_run_requires_f3_db_path():
+        """F3_DRY_RUN=1 without F3_DB_PATH must raise PfadeError (isolation guard)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            frank = root / "frank"
+            frank.mkdir()
+            # FRANK3_DATA is set but F3_DB_PATH is not - should fail in dry-run
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", FRANK3_DATA=str(frank)):
+                try:
+                    _resolve_db_path()
+                    assert False, "expected PfadeError: dry-run requires F3_DB_PATH"
+                except PfadeError as e:
+                    assert "F3_DRY_RUN=1 requires F3_DB_PATH" in str(e)
+            print("OK: dry-run requires F3_DB_PATH")
+
+    def test_dry_run_returns_f3_db_path_ignores_frank3_data():
+        """F3_DRY_RUN=1 with F3_DB_PATH returns fixture, ignores FRANK3_DATA."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture" / "test.db"
+            fixture_db.parent.mkdir(parents=True, exist_ok=True)
+            frank = root / "frank"
+            frank.mkdir()
+            # Both FRANK3_DATA and F3_DB_PATH set, but dry-run should use F3_DB_PATH only
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", F3_DB_PATH=str(fixture_db), FRANK3_DATA=str(frank)):
+                result = _resolve_db_path()
+                assert result == fixture_db.resolve(), f"expected {fixture_db.resolve()}, got {result}"
+                # Verify it did NOT use FRANK3_DATA path
+                assert result != (frank / "unified.db").resolve()
+            print("OK: dry-run returns F3_DB_PATH, ignores FRANK3_DATA")
+
+    def test_dry_run_returns_f3_db_path_ignores_claude_plugin_data():
+        """F3_DRY_RUN=1 with F3_DB_PATH returns fixture, ignores CLAUDE_PLUGIN_DATA."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture" / "test.db"
+            fixture_db.parent.mkdir(parents=True, exist_ok=True)
+            claude = root / "claude"
+            claude.mkdir()
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", F3_DB_PATH=str(fixture_db), CLAUDE_PLUGIN_DATA=str(claude)):
+                result = _resolve_db_path()
+                assert result == fixture_db.resolve()
+                assert result != (claude / "unified.db").resolve()
+            print("OK: dry-run returns F3_DB_PATH, ignores CLAUDE_PLUGIN_DATA")
+
+    def test_dry_run_returns_f3_db_path_ignores_xdg():
+        """F3_DRY_RUN=1 with F3_DB_PATH returns fixture, ignores XDG_DATA_HOME."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture" / "test.db"
+            fixture_db.parent.mkdir(parents=True, exist_ok=True)
+            xdg = root / "xdg"
+            xdg.mkdir()
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", F3_DB_PATH=str(fixture_db), XDG_DATA_HOME=str(xdg)):
+                result = _resolve_db_path()
+                assert result == fixture_db.resolve()
+                assert result != (xdg / "frankenstein3" / "unified.db").resolve()
+            print("OK: dry-run returns F3_DB_PATH, ignores XDG_DATA_HOME")
+
+    def test_dry_run_returns_f3_db_path_ignores_home():
+        """F3_DRY_RUN=1 with F3_DB_PATH returns fixture, ignores HOME default."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture" / "test.db"
+            fixture_db.parent.mkdir(parents=True, exist_ok=True)
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", F3_DB_PATH=str(fixture_db)):
+                result = _resolve_db_path()
+                assert result == fixture_db.resolve()
+                assert result != (home / ".local" / "share" / "frankenstein3" / "unified.db").resolve()
+            print("OK: dry-run returns F3_DB_PATH, ignores HOME default")
+
+    def test_dry_run_with_f3_db_path_as_directory():
+        """F3_DRY_RUN=1 with F3_DB_PATH as directory returns <dir>/unified.db."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_dir = root / "fixture_dir"
+            fixture_dir.mkdir()
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", F3_DB_PATH=str(fixture_dir)):
+                result = _resolve_db_path()
+                assert result == (fixture_dir / "unified.db").resolve()
+            print("OK: dry-run with F3_DB_PATH as directory")
+
+    def test_dry_run_with_f3_db_path_as_new_file():
+        """F3_DRY_RUN=1 with F3_DB_PATH as new .db file returns that exact file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture" / "new.db"
+            fixture_db.parent.mkdir(parents=True, exist_ok=True)
+            with _patched_env(HOME=str(home), F3_DRY_RUN="1", F3_DB_PATH=str(fixture_db)):
+                result = _resolve_db_path()
+                assert result == fixture_db.resolve()
+            print("OK: dry-run with F3_DB_PATH as new .db file")
+
+    def test_dry_run_case_insensitive():
+        """F3_DRY_RUN truthy values (TRUE, Yes, ON) all trigger isolation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = _isolated_home(root)
+            fixture_db = root / "fixture.db"
+            for val in ("TRUE", "Yes", "ON", "true", "yes", "on", "1"):
+                with _patched_env(HOME=str(home), F3_DRY_RUN=val, F3_DB_PATH=str(fixture_db)):
+                    result = _resolve_db_path()
+                    assert result == fixture_db.resolve(), f"failed for F3_DRY_RUN={val}"
+        print("OK: dry-run case insensitive truthy values")
+
     # Run all tests
     test_plugin_root_finds_marker()
     test_plugin_root_env_absolute()
@@ -490,4 +877,23 @@ if __name__ == "__main__":
     test_check_relative_xdg_data_home_raises()
     test_check_relative_plugin_root_raises()
     test_check_src_label_matches_precedence()
-    print("\nAll 17 tests passed!")
+    test_get_db_path_rejects_argument()
+    test_get_db_path_respects_f3_db_path()
+    test_is_dry_run_reads_f3_dry_run()
+    test_ensure_db_skips_in_dry_run()
+    test_resolve_db_path_f3_db_path_highest()
+    test_resolve_db_path_frank3_data_second()
+    test_resolve_db_path_claude_plugin_data_third()
+    test_resolve_db_path_xdg_fourth()
+    test_resolve_db_path_home_fifth()
+    test_resolve_db_path_relative_f3_db_path_raises()
+    test_get_db_path_uses_unified_resolver()
+    test_dry_run_requires_f3_db_path()
+    test_dry_run_returns_f3_db_path_ignores_frank3_data()
+    test_dry_run_returns_f3_db_path_ignores_claude_plugin_data()
+    test_dry_run_returns_f3_db_path_ignores_xdg()
+    test_dry_run_returns_f3_db_path_ignores_home()
+    test_dry_run_with_f3_db_path_as_directory()
+    test_dry_run_with_f3_db_path_as_new_file()
+    test_dry_run_case_insensitive()
+    print("\nAll tests passed!")

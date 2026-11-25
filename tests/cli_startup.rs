@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::Parser;
-use claude_code_rust::{Cli, StartupLaunch};
+use machine_god::{Cli, StartupLaunch};
 #[cfg(unix)]
 use std::process::Command;
 
@@ -11,36 +11,36 @@ mod audit_tests;
 #[test]
 fn interactive_startup_flags_normalize_to_one_launch() {
     let cases = [
-        (vec!["claude-rs"], StartupLaunch::NewSession, None),
+        (vec!["machine-god"], StartupLaunch::NewSession, None),
         (
-            vec!["claude-rs", "explain this project"],
+            vec!["machine-god", "explain this project"],
             StartupLaunch::NewSession,
             Some("explain this project"),
         ),
-        (vec!["claude-rs", "--resume"], StartupLaunch::SessionPicker, None),
+        (vec!["machine-god", "--resume"], StartupLaunch::SessionPicker, None),
         (
-            vec!["claude-rs", "--resume", "--", "initial prompt"],
+            vec!["machine-god", "--resume", "--", "initial prompt"],
             StartupLaunch::SessionPicker,
             Some("initial prompt"),
         ),
         (
-            vec!["claude-rs", "--resume=session-1", "initial prompt"],
+            vec!["machine-god", "--resume=session-1", "initial prompt"],
             StartupLaunch::ResumeSession { session_id: "session-1".into() },
             Some("initial prompt"),
         ),
         (
-            vec!["claude-rs", "-r", "session-1", "continue reviewing"],
+            vec!["machine-god", "-r", "session-1", "continue reviewing"],
             StartupLaunch::ResumeSession { session_id: "session-1".into() },
             Some("continue reviewing"),
         ),
         (
-            vec!["claude-rs", "resume", "session-1", "continue reviewing"],
+            vec!["machine-god", "resume", "session-1", "continue reviewing"],
             StartupLaunch::ResumeSession { session_id: "session-1".into() },
             Some("continue reviewing"),
         ),
-        (vec!["claude-rs", "resume"], StartupLaunch::SessionPicker, None),
+        (vec!["machine-god", "resume"], StartupLaunch::SessionPicker, None),
         (
-            vec!["claude-rs", "-c", "continue reviewing"],
+            vec!["machine-god", "-c", "continue reviewing"],
             StartupLaunch::ContinueSession,
             Some("continue reviewing"),
         ),
@@ -72,7 +72,7 @@ fn session_options_support_existing_resume_syntax() {
         "Experiment",
     ];
     for before in [true, false] {
-        let mut args = vec!["claude-rs", "--dir", project.path().to_str().unwrap()];
+        let mut args = vec!["machine-god", "--dir", project.path().to_str().unwrap()];
         if before {
             args.extend(options);
         }
@@ -90,7 +90,7 @@ fn session_options_support_existing_resume_syntax() {
         assert_eq!(cli.session_options.model.as_deref(), Some("opus"));
         assert_eq!(
             cli.session_options.effort,
-            Some(claude_code_rust::agent::model::EffortLevel::Max)
+            Some(machine_god::agent::model::EffortLevel::Max)
         );
         assert_eq!(cli.session_options.permission_mode.unwrap().as_stored(), "plan");
         assert_eq!(cli.session_options.agent.as_deref(), Some("reviewer"));
@@ -110,12 +110,12 @@ fn run_with_scratch_profile(
     cwd: &std::path::Path,
 ) -> (tempfile::TempDir, std::process::Output) {
     let profile = tempfile::tempdir().expect("profile directory");
-    let output = Command::new(env!("CARGO_BIN_EXE_claude-rs"))
+    let output = Command::new(env!("CARGO_BIN_EXE_machine-god-core"))
         .args(args)
         .current_dir(cwd)
         .env("CLAUDE_CONFIG_DIR", profile.path())
         .output()
-        .expect("run claude-rs");
+        .expect("run machine-god");
     (profile, output)
 }
 
@@ -128,7 +128,7 @@ fn launch_paths_that_exist_are_accepted_for_every_interactive_launch() {
         ["-C".as_ref(), scratch.path().as_os_str(), "--bridge-script".as_ref(), script.as_os_str()];
     for selection in [&[][..], &["--resume"][..], &["--continue"][..], &["resume", "session-1"][..]]
     {
-        let mut args: Vec<&std::ffi::OsStr> = vec!["claude-rs".as_ref()];
+        let mut args: Vec<&std::ffi::OsStr> = vec!["machine-god".as_ref()];
         if selection.first() == Some(&"resume") {
             args.extend(paths);
             args.extend(selection.iter().map(std::ffi::OsStr::new));
@@ -209,7 +209,7 @@ fn a_dir_needs_both_read_and_search_permission() {
         assert!(error.contains(&dir.display().to_string()), "{error}");
         assert_eq!(std::fs::read_dir(profile.path()).expect("profile").count(), 0);
     }
-    let cli = Cli::try_parse_from(["claude-rs".as_ref(), "-C".as_ref(), both.as_os_str()])
+    let cli = Cli::try_parse_from(["machine-god".as_ref(), "-C".as_ref(), both.as_os_str()])
         .expect("parse");
     cli.validate().unwrap_or_else(|error| panic!("read and search: {error}"));
 }
@@ -225,7 +225,7 @@ fn a_dir_behind_an_unsearchable_parent_is_reported_as_inaccessible_not_missing()
         return;
     }
     let project = parent.join("project");
-    let error = Cli::try_parse_from(["claude-rs".as_ref(), "-C".as_ref(), project.as_os_str()])
+    let error = Cli::try_parse_from(["machine-god".as_ref(), "-C".as_ref(), project.as_os_str()])
         .expect("parse")
         .validate()
         .expect_err("dir behind a locked parent")
@@ -242,7 +242,7 @@ async fn explicit_logging_failure_exits_one_before_bridge_startup_and_preserves_
     let blocker = root.path().join("blocker");
     std::fs::write(&blocker, b"keep blocker").unwrap();
     let target = blocker.join("explicit.log");
-    let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+    let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
     command
         .current_dir(root.path())
         .arg("--bridge-script")
@@ -252,7 +252,7 @@ async fn explicit_logging_failure_exits_one_before_bridge_startup_and_preserves_
         .arg("--no-update-check")
         .env_remove("RUST_LOG")
         .env("CLAUDE_CONFIG_DIR", root.path().join("profile"))
-        .env("CLAUDE_RS_CONFIG_DIR", root.path().join("app-profile"))
+        .env("MACHINE_GOD_CONFIG_DIR", root.path().join("app-profile"))
         .stdin(std::process::Stdio::null())
         .kill_on_drop(true);
     let output = tokio::time::timeout(std::time::Duration::from_secs(20), command.output())
@@ -264,7 +264,7 @@ async fn explicit_logging_failure_exits_one_before_bridge_startup_and_preserves_
     let error = String::from_utf8(output.stderr).unwrap();
     assert!(error.contains("failed to create log directory"));
     assert!(error.contains(blocker.to_str().unwrap()));
-    assert!(!error.contains("claude-rs resume"));
+    assert!(!error.contains("machine-god resume"));
     assert_eq!(std::fs::read(blocker).unwrap(), b"keep blocker");
     assert_eq!(std::fs::read(script).unwrap(), b"throw new Error('must never run');");
     assert!(!root.path().join("app-profile").exists());
@@ -287,7 +287,7 @@ async fn wrapped_startup_errors_keep_their_typed_exit_and_report_without_startin
         std::fs::write(&script, b"throw new Error('must never run');").unwrap();
         let missing =
             root.path().join(if missing_runtime { "missing-runtime" } else { "missing-script.js" });
-        let mut probe = tokio::process::Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut probe = tokio::process::Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
         probe
             .args(["logs", "--path"])
             .current_dir(&project)
@@ -302,9 +302,9 @@ async fn wrapped_startup_errors_keep_their_typed_exit_and_report_without_startin
         assert!(selected.status.success());
         assert_eq!(
             String::from_utf8(selected.stdout).unwrap(),
-            format!("{}\n", data.join("claude-code-rust/logs/runtime").display())
+            format!("{}\n", data.join("machine-god/logs/runtime").display())
         );
-        let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_claude-rs"));
+        let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_machine-god-core"));
         command
             .current_dir(&project)
             .args(["--no-update-check", "--log-file"])
@@ -313,16 +313,16 @@ async fn wrapped_startup_errors_keep_their_typed_exit_and_report_without_startin
             .env("XDG_CACHE_HOME", root.path().join("cache"))
             .env("HOME", root.path().join("home"))
             .env("CLAUDE_CONFIG_DIR", root.path().join("profile"))
-            .env("CLAUDE_RS_CONFIG_DIR", root.path().join("app-profile"))
+            .env("MACHINE_GOD_CONFIG_DIR", root.path().join("app-profile"))
             .env_remove("RUST_LOG")
-            .env_remove("CLAUDE_RS_AGENT_BRIDGE")
-            .env("CLAUDE_RS_AGENT_BRIDGE_RUNTIME", &missing)
+            .env_remove("MACHINE_GOD_AGENT_BRIDGE")
+            .env("MACHINE_GOD_AGENT_BRIDGE_RUNTIME", &missing)
             .stdin(std::process::Stdio::null())
             .kill_on_drop(true);
         if missing_runtime {
             command.arg("--bridge-script").arg(&script);
         } else {
-            command.env("CLAUDE_RS_AGENT_BRIDGE", &missing);
+            command.env("MACHINE_GOD_AGENT_BRIDGE", &missing);
         }
         let output = tokio::time::timeout(std::time::Duration::from_secs(20), command.output())
             .await
@@ -336,9 +336,9 @@ async fn wrapped_startup_errors_keep_their_typed_exit_and_report_without_startin
         };
         assert_eq!(field("category"), Some(category));
         assert_eq!(field("exit_code"), Some(code.to_string().as_str()));
-        assert_eq!(field("next_step"), Some("claude-rs doctor --strict"));
+        assert_eq!(field("next_step"), Some("machine-god doctor --strict"));
         assert!(field("detail").unwrap().contains(missing.to_str().unwrap()));
-        assert!(!text.contains("claude-rs resume"));
+        assert!(!text.contains("machine-god resume"));
         assert!(!root.path().join("app-profile").exists());
         assert!(!root.path().join("profile").exists());
         assert_eq!(std::fs::read(script).unwrap(), b"throw new Error('must never run');");

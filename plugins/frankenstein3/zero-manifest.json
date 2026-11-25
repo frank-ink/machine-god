@@ -2,6 +2,50 @@
   "name": "frankenstein3",
   "version": "3.0.0",
   "description": "Bundled FranKenstein 3.0 declarations for Agent Zero host integration. Hook declarations are not runtime health evidence.",
+  "paths": {
+    "plugin_root": {
+      "source": "bundle_location",
+      "resolver": "f3_pfade.py::resolve_plugin_root",
+      "note": "Directory of this bundle; no environment override."
+    },
+    "data_dir": {
+      "derives_from": "env_precedence",
+      "resolver": "f3_pfade.py::resolve_data_dir",
+      "precedence": [
+        "FRANK3_DATA",
+        "FRANKENSTEIN3_ROOT",
+        "F3_DB_PATH (data root: parent dir if file, dir itself if directory)",
+        "CLAUDE_PLUGIN_DATA",
+        "XDG_DATA_HOME/frankenstein3",
+        "HOME/.local/share/frankenstein3",
+        "USERPROFILE/AppData/Local/frankenstein3"
+      ]
+    },
+    "db_path": {
+      "derives_from": "data_dir",
+      "resolver": "f3_pfade.py::resolve_db_path",
+      "precedence": [
+        "FRANK3_DATA/unified.db",
+        "FRANKENSTEIN3_ROOT/unified.db",
+        "F3_DB_PATH (file used directly; directory joined with unified.db)",
+        "CLAUDE_PLUGIN_DATA/unified.db",
+        "XDG_DATA_HOME/frankenstein3/unified.db",
+        "HOME/.local/share/frankenstein3/unified.db",
+        "USERPROFILE/AppData/Local/frankenstein3/unified.db"
+      ]
+    },
+    "resolver": "f3_pfade.py",
+    "contract": "docs/zero/contract_env.json"
+  },
+  "path_precedence": [
+    "FRANK3_DATA",
+    "FRANKENSTEIN3_ROOT",
+    "F3_DB_PATH",
+    "CLAUDE_PLUGIN_DATA",
+    "XDG_DATA_HOME",
+    "HOME",
+    "USERPROFILE"
+  ],
   "hooks": [
     {
       "id": "session-start",

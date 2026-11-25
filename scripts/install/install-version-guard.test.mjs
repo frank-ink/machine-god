@@ -29,7 +29,7 @@ test("Unix installer treats a same-version update as a no-op even though update 
 
   assert.equal(result.status, 0, result.output);
   assert.match(result.output, /already installed; no changes made/);
-  assert.doesNotMatch(result.output, /Reinstalling claude-rs/);
+  assert.doesNotMatch(result.output, /Reinstalling machine-god-core/);
   assert.deepEqual(result.downloads, []);
 });
 
@@ -37,8 +37,8 @@ test("Unix installer --yes explicitly proceeds with a same-version reinstall", {
   const result = runInstallerScenario({ extraArgs: ["--yes"], allowReleasePayload: true });
 
   assert.equal(result.status, 0, result.output);
-  assert.match(result.output, new RegExp(`Reinstalling claude-rs ${escapeRegex(selectedVersion)}`));
-  assert.match(result.output, new RegExp(`Verified claude-rs ${escapeRegex(selectedVersion)}`));
+  assert.match(result.output, new RegExp(`Reinstalling machine-god-core ${escapeRegex(selectedVersion)}`));
+  assert.match(result.output, new RegExp(`Verified machine-god-core ${escapeRegex(selectedVersion)}`));
   assert.doesNotMatch(result.output, /Known issue/, "unavailable release advisories produced a warning");
   assert.deepEqual(result.downloads, [
     advisoriesUrl,
@@ -91,7 +91,7 @@ test("Unix installer warns about advisories whose inclusive range contains the s
       assert.equal(result.status, 0, `${name}: ${result.output}`);
       assert.deepEqual(
         result.output.split(/\r?\n/u).filter((line) => line.includes("Known issue")).map((line) => line.slice(line.indexOf("Known issue"))),
-        expectedSummaries.map((summary) => `Known issue in claude-rs ${selectedVersion}: ${summary}`),
+        expectedSummaries.map((summary) => `Known issue in machine-god-core ${selectedVersion}: ${summary}`),
         name,
       );
       assert.equal(result.replacementMarker, true, `${name}: advisory check stopped the install`);
@@ -127,10 +127,10 @@ function runInstallerScenario({
   allowReleasePayload = false,
   advisories,
 } = {}) {
-  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-version-guard-"));
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-version-guard-"));
   const homeDir = path.join(sandbox, "home");
   const tempDir = path.join(sandbox, "tmp");
-  const installDir = path.join(sandbox, "app", "claude-rs");
+  const installDir = path.join(sandbox, "app", "machine-god-core");
   const binDir = path.join(sandbox, "bin");
   const shimDir = path.join(sandbox, "shims");
   const downloadLog = path.join(sandbox, "downloads.log");
@@ -148,7 +148,7 @@ function runInstallerScenario({
 
   const env = { ...process.env };
   for (const name of Object.keys(env)) {
-    if (name.startsWith("CLAUDE_RS_")) {
+    if (name.startsWith("MACHINE_GOD_")) {
       delete env[name];
     }
   }
@@ -194,7 +194,7 @@ function runInstallerScenario({
 
     assert.deepEqual(fs.readdirSync(tempDir), [], "installer left temporary files behind");
     assert.equal(
-      fs.existsSync(path.join(path.dirname(installDir), ".claude-rs-install.lock")),
+      fs.existsSync(path.join(path.dirname(installDir), ".machine-god-install.lock")),
       false,
       "installer left its install lock behind",
     );
@@ -219,16 +219,16 @@ function runInstallerScenario({
 function writeOwnedInstall(installDir, version) {
   fs.writeFileSync(
     path.join(installDir, "package.json"),
-    `${JSON.stringify({ name: "claude-code-rust", version }, null, 2)}\n`,
+    `${JSON.stringify({ name: "machine-god", version }, null, 2)}\n`,
     "utf8",
   );
-  fs.writeFileSync(path.join(installDir, "claude-rs"), "existing binary\n", "utf8");
-  fs.writeFileSync(path.join(installDir, "claude-rs-bridge-bun"), "existing runtime\n", "utf8");
+  fs.writeFileSync(path.join(installDir, "machine-god-core"), "existing binary\n", "utf8");
+  fs.writeFileSync(path.join(installDir, "machine-god-bridge-bun"), "existing runtime\n", "utf8");
 }
 
 function createReleaseFixture(sandbox, version) {
   const fixtureParent = path.join(sandbox, "release-fixture");
-  const appRootName = `claude-code-rust-${version}-${platformDir}`;
+  const appRootName = `machine-god-${version}-${platformDir}`;
   const appRoot = path.join(fixtureParent, appRootName);
   const archiveName = `${appRootName}.tar.gz`;
   const archivePath = path.join(sandbox, archiveName);
@@ -244,7 +244,7 @@ function createReleaseFixture(sandbox, version) {
   fs.writeFileSync(
     path.join(appRoot, "package.json"),
     `${JSON.stringify(
-      { name: "claude-code-rust", version, private: true, versionGuardReplacement: true },
+      { name: "machine-god", version, private: true, versionGuardReplacement: true },
       null,
       2,
     )}\n`,
@@ -260,19 +260,19 @@ function createReleaseFixture(sandbox, version) {
     "utf8",
   );
 
-  const binaryPath = path.join(appRoot, "claude-rs");
+  const binaryPath = path.join(appRoot, "machine-god-core");
   fs.writeFileSync(
     binaryPath,
     `#!/bin/sh
 case "\${1:-}" in
-  --version) printf '%s\\n' 'claude-rs ${version}' ;;
+  --version) printf '%s\\n' 'machine-god-core ${version}' ;;
   --help) printf '%s\\n' 'mock help' ;;
   *) exit 0 ;;
 esac
 `,
     "utf8",
   );
-  const runtimePath = path.join(appRoot, "claude-rs-bridge-bun");
+  const runtimePath = path.join(appRoot, "machine-god-bridge-bun");
   fs.writeFileSync(runtimePath, "#!/bin/sh\nexit 0\n", "utf8");
   fs.chmodSync(binaryPath, 0o755);
   fs.chmodSync(runtimePath, 0o755);

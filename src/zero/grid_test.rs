@@ -296,3 +296,59 @@ fn fresh_measurement_below_thirty_seconds_stays_measured() {
     assert_eq!(status.state, HealthState::Ok);
     assert_eq!(status.last_success, Some(recent));
 }
+
+#[test]
+fn test_health_status_line_measured_unknown() {
+    let now = SystemTime::now();
+    let measured_ok = ComponentStatus::measured_at(HealthState::Ok, now);
+    let measured_degraded = ComponentStatus::measured_at(HealthState::Degraded, now);
+    let unknown = ComponentStatus::unknown();
+
+    let input_all_ok = StatusLineInput {
+        now,
+        grid: measured_ok.clone(),
+        retina: measured_ok.clone(),
+        entityos: measured_ok.clone(),
+        omnipool: measured_ok.clone(),
+    };
+    assert_eq!(
+        format_status_line(&input_all_ok),
+        "GRID ok | Retina ok | EntityOS ok | Omnipool ok"
+    );
+    assert_eq!(
+        format_status_line_labeled(&input_all_ok),
+        "GRID MEASURED | Retina MEASURED | EntityOS MEASURED | Omnipool MEASURED"
+    );
+
+    let input_mixed = StatusLineInput {
+        now,
+        grid: measured_ok.clone(),
+        retina: unknown.clone(),
+        entityos: measured_degraded.clone(),
+        omnipool: unknown.clone(),
+    };
+    assert_eq!(
+        format_status_line(&input_mixed),
+        "GRID ok | Retina UNKNOWN | EntityOS degraded | Omnipool UNKNOWN"
+    );
+    assert_eq!(
+        format_status_line_labeled(&input_mixed),
+        "GRID MEASURED | Retina UNKNOWN | EntityOS MEASURED | Omnipool UNKNOWN"
+    );
+
+    let input_all_unknown = StatusLineInput {
+        now,
+        grid: unknown.clone(),
+        retina: unknown.clone(),
+        entityos: unknown.clone(),
+        omnipool: unknown.clone(),
+    };
+    assert_eq!(
+        format_status_line(&input_all_unknown),
+        "GRID UNKNOWN | Retina UNKNOWN | EntityOS UNKNOWN | Omnipool UNKNOWN"
+    );
+    assert_eq!(
+        format_status_line_labeled(&input_all_unknown),
+        "GRID UNKNOWN | Retina UNKNOWN | EntityOS UNKNOWN | Omnipool UNKNOWN"
+    );
+}

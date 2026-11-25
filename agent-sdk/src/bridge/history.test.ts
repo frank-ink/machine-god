@@ -7,7 +7,7 @@ import test from "node:test";
 import { mapSessionMessagesToEntries, mapSessionMessagesToUpdates } from "./history.js";
 
 test("saved Write results restore confirmed bytes from the separate structured JSONL field", () => {
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "claude-rs-write-history-")));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "machine-god-write-history-")));
   try {
     const configDir = join(directory, "config");
     const cwd = join(directory, "project");
@@ -391,7 +391,7 @@ test("history associates each child tool with its own producer and preserves mai
 });
 
 test("resume restores compaction segments and Unicode separators with SDK branch filtering", () => {
-  const directory = realpathSync(mkdtempSync(join(tmpdir(), "claude-rs-transcript-")));
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "machine-god-transcript-")));
   try {
     const cwd = join(directory, "project");
     const configDir = join(directory, "config");

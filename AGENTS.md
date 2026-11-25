@@ -129,7 +129,7 @@ Project-specific restrictions may tighten these defaults.
 
 ### Toolchain
 
-- Rust crate `claude-code-rust` (binary `claude-rs`, edition 2024) built with Cargo. `rust-toolchain.toml` pins channel `1.89`; the MSRV in `Cargo.toml` is `1.88.0`.
+- Rust crate `machine-god` (binary `machine-god`, edition 2024) built with Cargo. `rust-toolchain.toml` pins channel `1.89`; the MSRV in `Cargo.toml` is `1.88.0`.
 - TypeScript bridge in `agent-sdk/` and the root npm package both use npm with Node `>=24`. `agent-sdk/` is an npm workspace of the root package with a single root `package-lock.json`; install both with `npm ci` from the repository root.
 - Bun is only the bundled bridge runtime for source runs and release packaging. It is not the package manager.
 
@@ -178,13 +178,13 @@ Run these only when the change touches the matching area:
 
 ### Diagnostics
 
-- When logging is enabled without `--log-file`, the default filename is timestamped per run: `claude-rs-YYYYMMDDTHHMMSSZ-pPID-rRUN.log`.
+- When logging is enabled without `--log-file`, the default filename is timestamped per run: `machine-god-YYYYMMDDTHHMMSSZ-pPID-rRUN.log`.
 
 ### Additional project restrictions
 
 - Never open, create, close, update, or otherwise operate on GitHub PRs, issues, or repository settings from this workspace. If a PR is needed, create only local draft text such as `pr.md` when explicitly requested; the user owns all GitHub actions. Pushing commits is covered by the Git section.
 - Do not trigger releases, create tags, or publish npm packages. Release workflow changes are maintainer-owned and must preserve the invariants in `CONTRIBUTING.md` and `docs/src/architecture.md`.
-- Do not terminate the bridge runtime process `claude-rs-bridge-bun.exe`. When cleaning up development processes, stop only PIDs started in the current session.
+- Do not terminate the bridge runtime process `machine-god-bridge-bun.exe`. When cleaning up development processes, stop only PIDs started in the current session.
 
 Prefer existing CLI commands and repository scripts when they provide the canonical workflow.
 

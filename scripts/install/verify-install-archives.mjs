@@ -76,7 +76,7 @@ function verifyPlatformArchive(platformPackage) {
     return;
   }
 
-  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), `claude-rs-verify-${platformPackage.dir}-`));
+  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), `machine-god-verify-${platformPackage.dir}-`));
   try {
     extractArchive({ archivePath, destinationDir: extractDir });
     const appRoot = findSingleTopLevelDirectory(extractDir);
@@ -214,7 +214,7 @@ function expectArchiveSpecifics(platformPackage, appRoot, context) {
     if (!platformPackage.binaryName.endsWith(".exe") || !platformPackage.bundledRuntimeName.endsWith(".exe")) {
       fail(`${context} Windows platform metadata must use .exe names`);
     }
-    if (fs.existsSync(path.join(appRoot, "claude-rs")) || fs.existsSync(path.join(appRoot, "claude-rs-bridge-bun"))) {
+    if (fs.existsSync(path.join(appRoot, "machine-god-core")) || fs.existsSync(path.join(appRoot, "machine-god-bridge-bun"))) {
       fail(`${context} contains Unix launcher names in Windows archive`);
     }
     return;
@@ -223,8 +223,8 @@ function expectArchiveSpecifics(platformPackage, appRoot, context) {
   if (platformPackage.binaryName.endsWith(".exe") || platformPackage.bundledRuntimeName.endsWith(".exe")) {
     fail(`${context} Unix platform metadata must not use .exe names`);
   }
-  expectFilesExist(listRelativeFiles(appRoot), ["share/man/man1/claude-rs.1"], context);
-  const manPage = path.join(appRoot, "share", "man", "man1", "claude-rs.1");
+  expectFilesExist(listRelativeFiles(appRoot), ["share/man/man1/machine-god-core.1"], context);
+  const manPage = path.join(appRoot, "share", "man", "man1", "machine-god-core.1");
   if (fs.existsSync(manPage) && !fs.readFileSync(manPage, "utf8").includes(".TH")) {
     fail(`${context} has an invalid generated man page`);
   }

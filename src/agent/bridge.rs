@@ -6,14 +6,14 @@ use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
 pub const BRIDGE_SCRIPT_RELATIVE_PATH: &str = "agent-sdk/dist/bridge.js";
-pub const BRIDGE_SCRIPT_ENV_VAR: &str = "CLAUDE_RS_AGENT_BRIDGE";
-pub const BRIDGE_RUNTIME_ENV_VAR: &str = "CLAUDE_RS_AGENT_BRIDGE_RUNTIME";
-const ROOT_NPM_PACKAGE_NAME: &str = "claude-code-rust";
+pub const BRIDGE_SCRIPT_ENV_VAR: &str = "MACHINE_GOD_AGENT_BRIDGE";
+pub const BRIDGE_RUNTIME_ENV_VAR: &str = "MACHINE_GOD_AGENT_BRIDGE_RUNTIME";
+const ROOT_NPM_PACKAGE_NAME: &str = "machine-god";
 const MAX_BRIDGE_EXE_ANCESTORS: usize = 8;
 #[cfg(windows)]
-const BUNDLED_BUN_RUNTIME_FILE_NAME: &str = "claude-rs-bridge-bun.exe";
+const BUNDLED_BUN_RUNTIME_FILE_NAME: &str = "machine-god-bridge-bun.exe";
 #[cfg(not(windows))]
-const BUNDLED_BUN_RUNTIME_FILE_NAME: &str = "claude-rs-bridge-bun";
+const BUNDLED_BUN_RUNTIME_FILE_NAME: &str = "machine-god-bridge-bun";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BridgeLauncher {
@@ -75,7 +75,7 @@ impl BridgeLauncher {
     pub fn command(&self, bridge_diagnostics_enabled: bool) -> Command {
         let mut cmd = Command::new(&self.runtime_path);
         cmd.arg(&self.script_path);
-        cmd.env("CLAUDE_RS_BRIDGE_DIAGNOSTICS", if bridge_diagnostics_enabled { "1" } else { "0" });
+        cmd.env("MACHINE_GOD_BRIDGE_DIAGNOSTICS", if bridge_diagnostics_enabled { "1" } else { "0" });
         // Omnipool built in: the SDK and the claude CLI below it talk to the local free pool.
         // The derived key lives only in this child's environment (never in config, logs or UI).
         if let Some(link) = crate::omnipool::link() {
@@ -83,13 +83,13 @@ impl BridgeLauncher {
             cmd.env("ANTHROPIC_API_KEY", &link.key);
             cmd.env_remove("ANTHROPIC_AUTH_TOKEN");
             cmd.env_remove("CLAUDE_CODE_OAUTH_TOKEN");
-            cmd.env("CLAUDE_RS_OMNIPOOL_ACTIVE", "1");
+            cmd.env("MACHINE_GOD_OMNIPOOL_ACTIVE", "1");
         }
         // Built-in FranKenstein 3.0 plugin (with Agent Zero): <root>/plugins/frankenstein3 next to agent-sdk/.
         if let Some(root) = self.script_path.parent().and_then(Path::parent).and_then(Path::parent) {
             let fs3 = root.join("plugins").join("frankenstein3");
             if fs3.is_dir() {
-                cmd.env("CLAUDE_RS_BUILTIN_PLUGINS", fs3);
+                cmd.env("MACHINE_GOD_BUILTIN_PLUGINS", fs3);
             }
         }
         cmd.stdin(std::process::Stdio::piped());
@@ -409,7 +409,7 @@ impl<'a> BridgeScriptResolver<'a> {
             candidates.iter().map(AutomaticCandidate::describe).collect::<Vec<_>>().join(", ");
 
         Err(anyhow::anyhow!(
-            "bridge script not found near the installed executable. lookup mode {:?} checked: {}. expected bundled `agent-sdk/dist/bridge.js`; debug builds also check repo-local fallbacks. set CLAUDE_RS_AGENT_BRIDGE to override.",
+            "bridge script not found near the installed executable. lookup mode {:?} checked: {}. expected bundled `agent-sdk/dist/bridge.js`; debug builds also check repo-local fallbacks. set MACHINE_GOD_AGENT_BRIDGE to override.",
             self.lookup_mode(),
             if checked.is_empty() { "<none>" } else { checked.as_str() }
         ))

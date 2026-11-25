@@ -11,7 +11,7 @@ pub(super) fn completions(
 ) -> anyhow::Result<i32> {
     // Generate to memory because clap_complete's writer interface cannot return I/O errors.
     let mut script = Vec::new();
-    clap_complete::generate(shell, &mut Cli::command(), "claude-rs", &mut script);
+    clap_complete::generate(shell, &mut Cli::command(), "machine-god", &mut script);
     stdout.write_all(&script)?;
     Ok(0)
 }

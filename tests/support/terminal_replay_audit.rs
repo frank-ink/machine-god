@@ -111,7 +111,7 @@ impl TerminalTest {
         self.shutdown();
         // This command is emitted after restoration and follows all preceding
         // writes. Successful process exit alone does not drain ConPTY output.
-        self.wait_final_rendered_output_since(offset, "claude-rs resume fake-session");
+        self.wait_final_rendered_output_since(offset, "machine-god resume fake-session");
         let output = self.output.lock().expect("output lock");
         assert!(!output.parser.screen().alternate_screen());
         assert!(!output.parser.screen().hide_cursor());

@@ -7,7 +7,7 @@
       "capability": "capability_registry",
       "status": "MEASURED",
       "evidence_ref": "test:zero::features::tests::registry_roundtrip@WORKTREE",
-      "gate": "cargo test -p claude_rs zero::features",
+      "gate": "cargo test -p machine_god zero::features",
       "tracking_issue": null,
       "description": {
         "de": "Kanonisches JSON-Register aller Faehigkeiten; einzige Quelle der Wahrheit fuer /features.",
@@ -18,7 +18,7 @@
       "capability": "features_command_table",
       "status": "MEASURED",
       "evidence_ref": "test:zero::features::tests::render_table_has_required_columns@WORKTREE",
-      "gate": "cargo test -p claude_rs zero::features",
+      "gate": "cargo test -p machine_god zero::features",
       "tracking_issue": null,
       "description": {
         "de": "/features liefert die Tabelle capability | status | evidence_ref | gate.",
@@ -29,7 +29,7 @@
       "capability": "capability_ci_gate",
       "status": "MEASURED",
       "evidence_ref": "test:zero::features::tests::ci_gate_rejects_measured_without_passing_test@WORKTREE",
-      "gate": "cargo test -p claude_rs zero::features",
+      "gate": "cargo test -p machine_god zero::features",
       "tracking_issue": null,
       "description": {
         "de": "CI-Gate schlaegt fehl, wenn eine MEASURED-Faehigkeit keinen bestandenen Testbeleg hat.",
@@ -40,7 +40,7 @@
       "capability": "ground_mode_capability_explanation",
       "status": "MEASURED",
       "evidence_ref": "test:zero::features_ground::tests::explain_capability_in_german@WORKTREE",
-      "gate": "cargo test -p claude_rs zero::features",
+      "gate": "cargo test -p machine_god zero::features",
       "tracking_issue": null,
       "description": {
         "de": "Der Grundmodus erklaert jede Faehigkeit auf Deutsch oder Englisch und markiert Unbekanntes als UNKNOWN.",
@@ -51,7 +51,7 @@
       "capability": "omega_ground_mode",
       "status": "UNKNOWN",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs zero::omega",
+      "gate": "cargo test -p machine_god zero::omega",
       "tracking_issue": null,
       "description": {
         "de": "Lokaler Grundmodus ueber das 0.8B-Modell; in dieser Registry liegt noch keine verifizierende Messung vor.",
@@ -62,7 +62,7 @@
       "capability": "freewiki_provider_tips",
       "status": "UNKNOWN",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs zero::freewiki",
+      "gate": "cargo test -p machine_god zero::freewiki",
       "tracking_issue": null,
       "description": {
         "de": "Wiki-Tipp fuer einen noch nicht eingerichteten Anbieter; unbestätigt in dieser Registry.",
@@ -73,7 +73,7 @@
       "capability": "retina_local_perception",
       "status": "UNKNOWN",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs zero::retina",
+      "gate": "cargo test -p machine_god zero::retina",
       "tracking_issue": null,
       "description": {
         "de": "Lokale Retina-Zustandszeile; unbestätigt in dieser Registry.",
@@ -84,7 +84,7 @@
       "capability": "entity_identity_root_state",
       "status": "UNKNOWN",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs zero::entity",
+      "gate": "cargo test -p machine_god zero::entity",
       "tracking_issue": null,
       "description": {
         "de": "Identitaet und Root-State aus dem gebuendelten Plugin; unbestätigt in dieser Registry.",
@@ -95,7 +95,7 @@
       "capability": "grid_health_and_events",
       "status": "UNKNOWN",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs zero::grid",
+      "gate": "cargo test -p machine_god zero::grid",
       "tracking_issue": null,
       "description": {
         "de": "GRID-Health und Ereignis-Push ueber Loopback; unbestätigt in dieser Registry.",
@@ -106,7 +106,7 @@
       "capability": "token_tacho_panel",
       "status": "UNKNOWN",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs ui::tacho",
+      "gate": "cargo test -p machine_god ui::tacho",
       "tracking_issue": null,
       "description": {
         "de": "Token-Tacho-Panel des Design-Teams; in dieser Registry nicht verifiziert.",
@@ -117,7 +117,7 @@
       "capability": "claude_code_mode_switch",
       "status": "PLANNED",
       "evidence_ref": "",
-      "gate": "cargo test -p claude_rs zero::claude_code_mode",
+      "gate": "cargo test -p machine_god zero::claude_code_mode",
       "tracking_issue": "zero40-track3-item13",
       "description": {
         "de": "Umschaltung zwischen Free Pool (Omnipool) und echtem Claude Code mit eigenem Login.",

@@ -19,8 +19,8 @@ type DiagnosticRecord = Record<string, unknown> & {
 
 function childEnvironment(mode: string | undefined): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, HOME: privateHome, USERPROFILE: privateHome };
-  delete env.CLAUDE_RS_BRIDGE_DIAGNOSTICS;
-  if (mode !== undefined) env.CLAUDE_RS_BRIDGE_DIAGNOSTICS = mode;
+  delete env.MACHINE_GOD_BRIDGE_DIAGNOSTICS;
+  if (mode !== undefined) env.MACHINE_GOD_BRIDGE_DIAGNOSTICS = mode;
   return env;
 }
 

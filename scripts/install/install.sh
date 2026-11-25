@@ -4,7 +4,7 @@ set -eu
 repo_owner="gschaidergabriel"
 repo_name="machine-god"
 repo_slug="$repo_owner/$repo_name"
-root_package="claude-code-rust"
+root_package="machine-god"
 download_retry_count=3
 download_connect_timeout_seconds=30
 download_low_speed_bytes_per_second=1024
@@ -12,9 +12,9 @@ download_low_speed_time_seconds=30
 release_advisories_url="https://raw.githubusercontent.com/$repo_slug/main/scripts/install/release-advisories.json"
 release_advisories_timeout_seconds=10
 
-release="${CLAUDE_RS_RELEASE:-latest}"
-install_dir="${CLAUDE_RS_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/claude-rs}"
-bin_dir="${CLAUDE_RS_BIN_DIR:-$HOME/.local/bin}"
+release="${MACHINE_GOD_RELEASE:-latest}"
+install_dir="${MACHINE_GOD_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/machine-god-core}"
+bin_dir="${MACHINE_GOD_BIN_DIR:-$HOME/.local/bin}"
 yes=0
 non_interactive=0
 no_modify_path=0
@@ -26,28 +26,28 @@ uninstall=0
 update=0
 path_updated=0
 
-case "${CLAUDE_RS_NON_INTERACTIVE:-}" in
+case "${MACHINE_GOD_NON_INTERACTIVE:-}" in
   1 | true | TRUE | yes | YES) non_interactive=1 ;;
 esac
-case "${CLAUDE_RS_NO_MODIFY_PATH:-}" in
+case "${MACHINE_GOD_NO_MODIFY_PATH:-}" in
   1 | true | TRUE | yes | YES) no_modify_path=1 ;;
 esac
-case "${CLAUDE_RS_VERIFY:-}" in
+case "${MACHINE_GOD_VERIFY:-}" in
   1 | true | TRUE | yes | YES) verify=1 ;;
 esac
-case "${CLAUDE_RS_RUN:-}" in
+case "${MACHINE_GOD_RUN:-}" in
   1 | true | TRUE | yes | YES) run_after_install=1 ;;
 esac
-case "${CLAUDE_RS_REMOVE_NPM:-}" in
+case "${MACHINE_GOD_REMOVE_NPM:-}" in
   1 | true | TRUE | yes | YES) remove_npm=1 ;;
 esac
-case "${CLAUDE_RS_KEEP_NPM:-}" in
+case "${MACHINE_GOD_KEEP_NPM:-}" in
   1 | true | TRUE | yes | YES) keep_npm=1 ;;
 esac
-case "${CLAUDE_RS_UNINSTALL:-}" in
+case "${MACHINE_GOD_UNINSTALL:-}" in
   1 | true | TRUE | yes | YES) uninstall=1 ;;
 esac
-case "${CLAUDE_RS_UPDATE:-}" in
+case "${MACHINE_GOD_UPDATE:-}" in
   1 | true | TRUE | yes | YES) update=1 ;;
 esac
 if [ -n "${CI:-}" ]; then
@@ -61,14 +61,14 @@ Usage: install.sh [options]
 Options:
   --release <version>       Release tag or version. Defaults to latest.
   --install-dir <dir>       App install directory.
-  --bin-dir <dir>           Directory for the claude-rs launcher.
+  --bin-dir <dir>           Directory for the machine-god-core launcher.
   --yes, -y                 Reinstall the selected version when already installed;
                             accept safe prompts; optional prompts are skipped.
   --non-interactive         Do not prompt.
   --no-modify-path          Do not update shell profile PATH.
   --verify                  Show download diagnostics and run strict runtime
                             diagnostics after install.
-  --run                     Start claude-rs after a successful install.
+  --run                     Start machine-god-core after a successful install.
   --remove-npm              Remove an existing global npm install when found.
   --keep-npm                Keep an existing global npm install without prompting.
   --uninstall               Remove the script install layout and managed PATH block.
@@ -76,17 +76,17 @@ Options:
   --help                    Show this help.
 
 Environment:
-  CLAUDE_RS_RELEASE
-  CLAUDE_RS_INSTALL_DIR
-  CLAUDE_RS_BIN_DIR
-  CLAUDE_RS_NON_INTERACTIVE
-  CLAUDE_RS_NO_MODIFY_PATH
-  CLAUDE_RS_VERIFY
-  CLAUDE_RS_RUN
-  CLAUDE_RS_REMOVE_NPM
-  CLAUDE_RS_KEEP_NPM
-  CLAUDE_RS_UNINSTALL
-  CLAUDE_RS_UPDATE
+  MACHINE_GOD_RELEASE
+  MACHINE_GOD_INSTALL_DIR
+  MACHINE_GOD_BIN_DIR
+  MACHINE_GOD_NON_INTERACTIVE
+  MACHINE_GOD_NO_MODIFY_PATH
+  MACHINE_GOD_VERIFY
+  MACHINE_GOD_RUN
+  MACHINE_GOD_REMOVE_NPM
+  MACHINE_GOD_KEEP_NPM
+  MACHINE_GOD_UNINSTALL
+  MACHINE_GOD_UPDATE
 EOF
 }
 
@@ -340,9 +340,9 @@ entry() {
 intro() {
   frame_open=1
   if [ -n "$badge" ]; then
-    printf '%s%s%s  %s claude-rs %s %s%s%s\n' "$gray" "$s_bar_start" "$reset" "$badge" "$reset" "$dim" "$1" "$reset"
+    printf '%s%s%s  %s machine-god-core %s %s%s%s\n' "$gray" "$s_bar_start" "$reset" "$badge" "$reset" "$dim" "$1" "$reset"
   else
-    printf '%s  claude-rs %s\n' "$s_bar_start" "$1"
+    printf '%s  machine-god-core %s\n' "$s_bar_start" "$1"
   fi
   gutter
 }
@@ -565,7 +565,7 @@ format_download_bytes() {
 
 # Prints the --verify detail line for curl's tab-separated transfer stats.
 format_download_diagnostic() {
-  download_stats="${1#__CLAUDE_RS_DOWNLOAD_STATS__}"
+  download_stats="${1#__MACHINE_GOD_DOWNLOAD_STATS__}"
   saved_ifs="$IFS"
   IFS="$tab_char"
   # shellcheck disable=SC2086 # curl's tab-separated fields are intentionally split.
@@ -752,7 +752,7 @@ download_archive() {
       total_bytes="$(download_content_length "$headers_path")"
     fi
 
-    curl_stats_format='__CLAUDE_RS_DOWNLOAD_STATS__%{http_code}\t%{size_download}\t%{speed_download}\t%{time_total}'
+    curl_stats_format='__MACHINE_GOD_DOWNLOAD_STATS__%{http_code}\t%{size_download}\t%{speed_download}\t%{time_total}'
     curl --fail --location \
       --retry "$download_retry_count" \
       --connect-timeout "$download_connect_timeout_seconds" \
@@ -974,12 +974,12 @@ validate_extracted_app() {
 
 acquire_lock() {
   parent="$1"
-  lock_dir="$parent/.claude-rs-install.lock"
+  lock_dir="$parent/.machine-god-install.lock"
   if mkdir "$lock_dir" 2>/dev/null; then
     printf '%s\n' "$lock_dir"
     return
   fi
-  die "another claude-rs installer appears to be running: $lock_dir (remove this directory if no installer is running)"
+  die "another machine-god-core installer appears to be running: $lock_dir (remove this directory if no installer is running)"
 }
 
 replace_app_dir() {
@@ -1007,20 +1007,20 @@ launcher_contents() {
 
 machine_god_launcher_contents() {
   quoted_app="$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
-  printf '%s\n' '#!/bin/sh' '# Machine God launcher: first-run companion (runs once per user), then claude-rs.'
+  printf '%s\n' '#!/bin/sh' '# Machine God launcher: first-run companion (runs once per user), then machine-god-core.'
   printf "app='%s'\n" "$quoted_app"
   cat <<'MG_LAUNCHER_EOF'
 d="${app%/*}"
-if [ -x "$d/claude-rs-bridge-bun" ]; then
+if [ -x "$d/machine-god-bridge-bun" ]; then
   case "${1:-}" in
     interests) t=interest/cli.ts ;; mailbox) t=mailbox/mailbox.js ;; ais) t=fusion/ais.js ;; grid) t=grid/cli.js ;; improve) t=reflect/cli.ts ;; *) t= ;;
   esac
-  if [ -n "$t" ] && [ -f "$d/$t" ]; then shift; exec "$d/claude-rs-bridge-bun" "$d/$t" "$@"; fi
+  if [ -n "$t" ] && [ -f "$d/$t" ]; then shift; exec "$d/machine-god-bridge-bun" "$d/$t" "$@"; fi
 fi
 st="${MG_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/machine-god}/firstrun.json"
-if [ -t 0 ] && [ -t 1 ] && [ -x "$d/claude-rs-bridge-bun" ] && [ -f "$d/firstrun/mg-firstrun.js" ]; then
+if [ -t 0 ] && [ -t 1 ] && [ -x "$d/machine-god-bridge-bun" ] && [ -f "$d/firstrun/mg-firstrun.js" ]; then
   if [ "${MG_FIRSTRUN_FORCE:-}" = 1 ] || ! { [ -f "$st" ] && grep -Eq '"status": "(done|declined)"' "$st" 2>/dev/null && ! grep -q '"version": 1,' "$st" 2>/dev/null; }; then
-    "$d/claude-rs-bridge-bun" "$d/firstrun/mg-firstrun.js" "$@" || true
+    "$d/machine-god-bridge-bun" "$d/firstrun/mg-firstrun.js" "$@" || true
   fi
 fi
 exec "$app" "$@"
@@ -1036,7 +1036,7 @@ write_machine_god_launcher() {
 
 write_launcher() {
   mkdir -p "$bin_dir"
-  launcher="$bin_dir/claude-rs"
+  launcher="$bin_dir/machine-god-core"
   tmp_launcher="$launcher.tmp.$$"
   app_binary="$install_dir/$binary_name"
   launcher_contents "$app_binary" > "$tmp_launcher"
@@ -1060,7 +1060,7 @@ install_man_pages() {
   [ -d "$manual_dir" ] || return 0
   link_dir="$(man_link_dir)"
   mkdir -p "$link_dir"
-  for manual in "$manual_dir"/claude-rs*.1; do
+  for manual in "$manual_dir"/machine-god-core*.1; do
     [ -f "$manual" ] || continue
     destination="$link_dir/$(basename "$manual")"
     if [ -e "$destination" ] || [ -L "$destination" ]; then
@@ -1074,11 +1074,11 @@ install_man_pages() {
 remove_man_pages_if_owned() {
   link_dir="$(man_link_dir "${2:-$bin_dir}")"
   source_dir="$(man_source_dir "${1:-$install_dir}")"
-  for destination in "$link_dir"/claude-rs*.1; do
+  for destination in "$link_dir"/machine-god-core*.1; do
     [ -L "$destination" ] || continue
     target="$(readlink "$destination")"
     case "$target" in
-      "$source_dir/"claude-rs*.1) rm -f "$destination" ;;
+      "$source_dir/"machine-god-core*.1) rm -f "$destination" ;;
     esac
   done
 }
@@ -1118,7 +1118,7 @@ resolve_npm_install_choice() {
   fi
 
   if [ "$keep_npm" -eq 0 ] && [ "$yes" -eq 0 ] &&
-    confirm_default_no "Uninstall this npm installation of claude-rs?"
+    confirm_default_no "Uninstall this npm installation of machine-god-core?"
   then
     remove_npm_install
     return
@@ -1131,9 +1131,9 @@ is_script_install_dir() {
   app="$1"
   [ -d "$app" ] || return 1
   [ -f "$app/package.json" ] || return 1
-  [ -f "$app/claude-rs" ] || return 1
-  [ -f "$app/claude-rs-bridge-bun" ] || return 1
-  grep -q '"name"[ 	]*:[ 	]*"claude-code-rust"' "$app/package.json" 2>/dev/null
+  [ -f "$app/machine-god-core" ] || return 1
+  [ -f "$app/machine-god-bridge-bun" ] || return 1
+  grep -q '"name"[ 	]*:[ 	]*"machine-god"' "$app/package.json" 2>/dev/null
 }
 
 script_install_version() {
@@ -1213,7 +1213,7 @@ warn_release_advisories() {
   matching_release_advisories "$advisories_file" "$advisory_version" \
     > "$advisory_matches_file" 2>/dev/null || return 0
   while IFS= read -r advisory_summary; do
-    warn "Known issue in claude-rs $advisory_version: $advisory_summary"
+    warn "Known issue in machine-god-core $advisory_version: $advisory_summary"
   done < "$advisory_matches_file"
 }
 
@@ -1225,7 +1225,7 @@ approve_same_version_reinstall() {
   if [ "$yes" -eq 1 ]; then
     return 0
   fi
-  confirm_default_no "claude-rs $selected_version is already installed at $install_dir. Reinstall the same version?"
+  confirm_default_no "machine-god-core $selected_version is already installed at $install_dir. Reinstall the same version?"
 }
 
 guard_same_version_before_download() {
@@ -1241,11 +1241,11 @@ guard_same_version_before_download() {
 
   if approve_same_version_reinstall "$selected_version"; then
     same_version_reinstall_approved=1
-    info "Reinstalling claude-rs $selected_version"
+    info "Reinstalling machine-god-core $selected_version"
     return 0
   fi
 
-  outro "claude-rs $selected_version is already installed; no changes made"
+  outro "machine-god-core $selected_version is already installed; no changes made"
   exit 0
 }
 
@@ -1258,16 +1258,16 @@ stop_if_selected_version_became_installed() {
   [ -n "$installed_version" ] || return 0
   [ "$installed_version" = "$selected_version" ] || return 0
 
-  outro "claude-rs $selected_version was installed by another installer; no changes made"
+  outro "machine-god-core $selected_version was installed by another installer; no changes made"
   exit 0
 }
 
 remove_launcher_if_owned() {
-  if [ -f "$bin_dir/machine-god" ] && grep -F "$install_dir/claude-rs" "$bin_dir/machine-god" >/dev/null 2>&1; then
+  if [ -f "$bin_dir/machine-god" ] && grep -F "$install_dir/machine-god-core" "$bin_dir/machine-god" >/dev/null 2>&1; then
     rm -f "$bin_dir/machine-god"
   fi
-  launcher="$bin_dir/claude-rs"
-  app_binary="$install_dir/claude-rs"
+  launcher="$bin_dir/machine-god-core"
+  app_binary="$install_dir/machine-god-core"
   [ -f "$launcher" ] || return
   if grep -F "$app_binary" "$launcher" >/dev/null 2>&1; then
     rm -f "$launcher"
@@ -1328,7 +1328,7 @@ remove_managed_path_block() {
     legacy_assignment="$(manual_path_line "$only_bin_dir")"
   fi
   awk -v selected="$only_bin_dir" -v managed="$managed_assignment" -v legacy="$legacy_assignment" '
-    /^# claude-rs PATH start$/ {
+    /^# machine-god-core PATH start$/ {
       inside = 1
       block = $0 "\n"
       remove = (selected == "")
@@ -1337,7 +1337,7 @@ remove_managed_path_block() {
     inside {
       block = block $0 "\n"
       if ($0 == managed || $0 == legacy) remove = 1
-      if ($0 == "# claude-rs PATH end") {
+      if ($0 == "# machine-god-core PATH end") {
         if (!remove) printf "%s", block
         inside = 0
         block = ""
@@ -1366,7 +1366,7 @@ uninstall_script_install() (
   trap 'rmdir "$uninstall_lock"' EXIT
 
   if [ -e "$uninstall_directory" ] && ! is_script_install_dir "$uninstall_directory"; then
-    warn "not removing $uninstall_directory because it does not look like a claude-rs script install"
+    warn "not removing $uninstall_directory because it does not look like a machine-god-core script install"
     return 0
   fi
   if [ "$#" -eq 0 ]; then
@@ -1379,7 +1379,7 @@ uninstall_script_install() (
     uninstall_commands="$(commands_on_path)"
     while IFS= read -r uninstall_command; do
       [ -f "$uninstall_command" ] || continue
-      [ "$uninstall_command" != "$uninstall_directory/claude-rs" ] || continue
+      [ "$uninstall_command" != "$uninstall_directory/machine-god-core" ] || continue
       [ "$(script_install_directory_for_command "$uninstall_command" || true)" = "$uninstall_directory" ] || continue
       rm -f "$uninstall_command" || return 1
       ok "Removed launcher $uninstall_command"
@@ -1444,7 +1444,7 @@ path_entries() {
 
 commands_on_path() {
   path_entries | while IFS= read -r directory; do
-    candidate="$directory/claude-rs"
+    candidate="$directory/machine-god-core"
     if [ ! -f "$candidate" ] || [ ! -x "$candidate" ]; then
       continue
     fi
@@ -1483,7 +1483,7 @@ maybe_update_path() {
   [ "$no_modify_path" -eq 1 ] && {
     warn_path_update_skipped
     if path_has_bin_dir; then
-      warn "$bin_dir is already on PATH but not first; another claude-rs may take precedence in new shells"
+      warn "$bin_dir is already on PATH but not first; another machine-god-core may take precedence in new shells"
     fi
     return
   }
@@ -1499,9 +1499,9 @@ maybe_update_path() {
     remove_managed_path_blocks
     profile_targets | while IFS= read -r profile_file; do
       {
-        printf '\n# claude-rs PATH start\n'
+        printf '\n# machine-god-core PATH start\n'
         managed_path_lines
-        printf '# claude-rs PATH end\n'
+        printf '# machine-god-core PATH end\n'
       } >> "$profile_file"
     done
     path_updated=1
@@ -1542,21 +1542,21 @@ script_install_directory_for_command() (
   app_binary="$(printf '%s' "$encoded_path" | sed "s/'\\\\''/'/g")"
   [ "$contents" = "$(launcher_contents "$app_binary")" ] || return 1
   app_binary="$(canonical_path "$app_binary")" || return 1
-  [ "$(basename "$app_binary")" = "claude-rs" ] || return 1
+  [ "$(basename "$app_binary")" = "machine-god-core" ] || return 1
   app_directory="$(dirname "$app_binary")"
   is_script_install_dir "$app_directory" || return 1
   printf '%s\n' "$app_directory"
 )
 
-warn_other_claude_rs_commands() {
-  expected_launcher="$(canonical_path "$bin_dir/claude-rs")" || return 0
-  expected_binary="$(canonical_path "$install_dir/claude-rs")" || return 0
+warn_other_machine_god_commands() {
+  expected_launcher="$(canonical_path "$bin_dir/machine-god-core")" || return 0
+  expected_binary="$(canonical_path "$install_dir/machine-god-core")" || return 0
   command_candidates="$(commands_on_path)"
   seen_script_installs=""
-  resolved="$(command -v claude-rs || true)"
+  resolved="$(command -v machine-god-core || true)"
   if [ -n "$resolved" ] && [ ! -f "$resolved" ]; then
-    warn "A shell alias or function named claude-rs takes precedence over the installed command" \
-      "Check its definition with: command -V claude-rs"
+    warn "A shell alias or function named machine-god-core takes precedence over the installed command" \
+      "Check its definition with: command -V machine-god-core"
   fi
   # Keep prompts in the main shell so signal cleanup sees their saved tty state.
   while IFS= read -r candidate; do
@@ -1568,7 +1568,7 @@ warn_other_claude_rs_commands() {
       continue
     fi
     if candidate_directory="$(script_install_directory_for_command "$candidate")"; then
-      [ "$candidate_directory/claude-rs" != "$expected_binary" ] || continue
+      [ "$candidate_directory/machine-god-core" != "$expected_binary" ] || continue
       if printf '%s\n' "$seen_script_installs" | grep -F -x -e "$candidate_directory" >/dev/null; then
         continue
       fi
@@ -1586,7 +1586,7 @@ warn_other_claude_rs_commands() {
         fi
       fi
     else
-      warn "Another claude-rs is also on PATH: $candidate" \
+      warn "Another machine-god-core is also on PATH: $candidate" \
         "Current installation: $expected_launcher" \
         "Check PATH order or remove that copy using the tool that installed it."
     fi
@@ -1647,7 +1647,7 @@ if [ "$update" -eq 1 ]; then
   flow_label="Update"
   intro "updater"
   is_script_install_dir "$install_dir" ||
-    die "--update requires an existing claude-rs script install: $install_dir"
+    die "--update requires an existing machine-god-core script install: $install_dir"
 else
   intro "installer"
 fi
@@ -1665,30 +1665,30 @@ need_cmd cat
 need_cmd date
 need_cmd wc
 
-tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/claude-rs-install.XXXXXX")"
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/machine-god-install.XXXXXX")"
 same_version_reinstall_approved=0
 
 target="$(detect_target)"
 case "$target" in
   darwin-arm64)
     target_label="macOS arm64"
-    binary_name="claude-rs"
-    runtime_name="claude-rs-bridge-bun"
+    binary_name="machine-god-core"
+    runtime_name="machine-god-bridge-bun"
     ;;
   darwin-x64)
     target_label="macOS x64"
-    binary_name="claude-rs"
-    runtime_name="claude-rs-bridge-bun"
+    binary_name="machine-god-core"
+    runtime_name="machine-god-bridge-bun"
     ;;
   linux-arm64-gnu)
     target_label="Linux arm64 glibc"
-    binary_name="claude-rs"
-    runtime_name="claude-rs-bridge-bun"
+    binary_name="machine-god-core"
+    runtime_name="machine-god-bridge-bun"
     ;;
   linux-x64-gnu)
     target_label="Linux x64 glibc"
-    binary_name="claude-rs"
-    runtime_name="claude-rs-bridge-bun"
+    binary_name="machine-god-core"
+    runtime_name="machine-god-bridge-bun"
     ;;
   *)
     die "unsupported Unix install target: $target"
@@ -1759,10 +1759,10 @@ export PATH
 
 progress_start "Verifying installed command"
 version_output="$("$install_dir/$binary_name" --version)" ||
-  die "installed claude-rs did not run successfully"
-[ -n "$version_output" ] || die "installed claude-rs did not print a version"
+  die "installed machine-god-core did not run successfully"
+[ -n "$version_output" ] || die "installed machine-god-core did not print a version"
 "$install_dir/$binary_name" --help >/dev/null ||
-  die "installed claude-rs help check failed"
+  die "installed machine-god-core help check failed"
 progress_done "Verified $version_output"
 
 if [ "$verify" -eq 1 ]; then
@@ -1778,7 +1778,7 @@ if [ "$verify" -eq 1 ]; then
 fi
 
 # Only offer to remove an existing npm install after the script install has
-# fully succeeded, so a failed install never leaves the user without claude-rs.
+# fully succeeded, so a failed install never leaves the user without machine-god-core.
 # Release the completed installation's lock before optional cleanup of another
 # copy, which can share the same parent directory.
 rmdir "$lock_dir"
@@ -1787,18 +1787,18 @@ if [ "$update" -eq 0 ]; then
   resolve_npm_install_choice
 fi
 
-warn_other_claude_rs_commands
+warn_other_machine_god_commands
 
 if [ "$update" -eq 1 ]; then
-  outro "claude-rs is updated. Start claude-rs again to use $selected_version."
-elif [ "$run_after_install" -eq 1 ] || { [ "$yes" -eq 0 ] && confirm_default_no "Start claude-rs now?"; }; then
-  outro "claude-rs $selected_version is installed"
+  outro "machine-god-core is updated. Start machine-god-core again to use $selected_version."
+elif [ "$run_after_install" -eq 1 ] || { [ "$yes" -eq 0 ] && confirm_default_no "Start machine-god-core now?"; }; then
+  outro "machine-god-core $selected_version is installed"
   launch_installed
 else
   if [ "$path_updated" -eq 1 ]; then
-    note "Next steps" "Start a new shell, then run:" "  claude-rs"
+    note "Next steps" "Start a new shell, then run:" "  machine-god-core"
   else
-    note "Next steps" "Run claude-rs directly:" "  $(tildify "$install_dir/$binary_name")"
+    note "Next steps" "Run machine-god-core directly:" "  $(tildify "$install_dir/$binary_name")"
   fi
-  outro "claude-rs $selected_version is installed"
+  outro "machine-god-core $selected_version is installed"
 fi

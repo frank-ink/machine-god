@@ -36,14 +36,14 @@ fn retention_and_discovery_preserve_unmanaged_near_matches() {
     let dir = tempfile::tempdir().unwrap();
     let directory = dir.path().canonicalize().unwrap();
     let names = [
-        "claude-rs-notes.log",
-        "claude-rs-20260101T000000Z-p1-rabc.log.",
-        "claude-rs-20260101T000000Z-p1-rabc.log.backup",
-        "claude-rs-20260101T000000Z-p-rabc.log",
-        "claude-rs-20260101T000000Z-p1-r.log",
-        "claude-rs-20260101X000000Z-p1-rabc.log",
-        "claude-rs-extra-20260101T000000Z-p1-rabc.log",
-        "claude-rs.log",
+        "machine-god-notes.log",
+        "machine-god-20260101T000000Z-p1-rabc.log.",
+        "machine-god-20260101T000000Z-p1-rabc.log.backup",
+        "machine-god-20260101T000000Z-p-rabc.log",
+        "machine-god-20260101T000000Z-p1-r.log",
+        "machine-god-20260101X000000Z-p1-rabc.log",
+        "machine-god-extra-20260101T000000Z-p1-rabc.log",
+        "machine-god.log",
         "other.log",
     ];
     for name in names {
@@ -51,7 +51,7 @@ fn retention_and_discovery_preserve_unmanaged_near_matches() {
     }
     let before = contents(&directory);
     let managed =
-        put(&directory, "claude-rs-20260101T000000Z-p12-rhistorical.log.1", b"managed", 2);
+        put(&directory, "machine-god-20260101T000000Z-p12-rhistorical.log.1", b"managed", 2);
     assert_eq!(
         list_managed_runtime_logs_in(&directory)
             .unwrap()
@@ -62,7 +62,7 @@ fn retention_and_discovery_preserve_unmanaged_near_matches() {
     );
     let target = LogRetentionTarget {
         directory: directory.clone(),
-        prefix: "claude-rs",
+        prefix: "machine-god",
         extension: "log",
         policy: LogRetentionPolicy {
             max_total_bytes: 0,
@@ -90,20 +90,20 @@ fn retention_applies_independent_age_byte_and_count_pressure_oldest_first() {
     ];
     for (max_total_bytes, max_age, max_files, min_files, survivors) in cases {
         let dir = tempfile::tempdir().unwrap();
-        let active = put(dir.path(), "claude-rs-20200101T000000Z-p1-ractive.log", b"alive", 1);
+        let active = put(dir.path(), "machine-god-20200101T000000Z-p1-ractive.log", b"alive", 1);
         let files = [
-            ("old", "claude-rs-20300101T000000Z-p1-rold.log", b"oo".as_slice(), 800),
-            ("middle", "claude-rs-20200101T000000Z-p1-rmid.log.1", b"mmm".as_slice(), 900),
-            ("new", "claude-rs-20100101T000000Z-p1-rnew.log", b"nnnn".as_slice(), 901),
+            ("old", "machine-god-20300101T000000Z-p1-rold.log", b"oo".as_slice(), 800),
+            ("middle", "machine-god-20200101T000000Z-p1-rmid.log.1", b"mmm".as_slice(), 900),
+            ("new", "machine-god-20100101T000000Z-p1-rnew.log", b"nnnn".as_slice(), 901),
         ];
         for (_, name, bytes, seconds) in files {
             put(dir.path(), name, bytes, seconds);
         }
         put(dir.path(), "neighbor.txt", b"private neighbor", 0);
-        fs::create_dir(dir.path().join("claude-rs-20260101T000000Z-p1-rdirectory.log")).unwrap();
+        fs::create_dir(dir.path().join("machine-god-20260101T000000Z-p1-rdirectory.log")).unwrap();
         let target = LogRetentionTarget {
             directory: dir.path().into(),
-            prefix: "claude-rs",
+            prefix: "machine-god",
             extension: "log",
             policy: LogRetentionPolicy { max_total_bytes, max_age, max_files, min_files },
         };
@@ -122,7 +122,7 @@ fn retention_applies_independent_age_byte_and_count_pressure_oldest_first() {
         }
         assert_eq!(fs::read(&active).unwrap(), b"alive");
         assert_eq!(fs::read(dir.path().join("neighbor.txt")).unwrap(), b"private neighbor");
-        assert!(dir.path().join("claude-rs-20260101T000000Z-p1-rdirectory.log").is_dir());
+        assert!(dir.path().join("machine-god-20260101T000000Z-p1-rdirectory.log").is_dir());
         let before = contents(dir.path());
         enforce_log_retention_at(
             &target,
@@ -217,7 +217,7 @@ fn baseline_native_records_preserve_safe_values_and_bound_unicode_without_privat
             tracing::warn!(target:"app.session",message="private-unnamed-message",error_message="anonymous safe cause");
         });
         let record = event(&records, "native_failure");
-        assert_eq!(record["schema"], "claude-rs-baseline/v1");
+        assert_eq!(record["schema"], "machine-god-baseline/v1");
         assert_eq!(record["target"], "app.session");
         assert_eq!(record["level"], "WARN");
         assert_eq!(record["error_message"], "before api_key=[redacted] after");
@@ -250,9 +250,9 @@ fn baseline_native_records_preserve_safe_values_and_bound_unicode_without_privat
 
 #[test]
 fn bridge_records_route_by_level_and_target_and_distinguish_absent_from_zero() {
-    let warning=json!({"schema":"claude-rs-log/v1","level":"warn","target":"bridge.permission","event_name":"bridge_warning","message":"hook failed","outcome":"failure","session_id":"session-1","request_id":"request-1","tool_call_id":"tool-1","duration_ms":0,"count":0,"size_bytes":0,"fields":{"hook_name":"PreToolUse:Bash","exit_code":0,"cause":"lint gate","attempts":0}}).to_string();
-    let error=json!({"schema":"claude-rs-log/v1","level":"error","target":"unknown.target","event_name":"unknown_failure","message":"safe failure"}).to_string();
-    let routine=json!({"schema":"claude-rs-log/v1","level":"debug","target":"bridge.sdk","event_name":"routine","message":"started"}).to_string();
+    let warning=json!({"schema":"machine-god-log/v1","level":"warn","target":"bridge.permission","event_name":"bridge_warning","message":"hook failed","outcome":"failure","session_id":"session-1","request_id":"request-1","tool_call_id":"tool-1","duration_ms":0,"count":0,"size_bytes":0,"fields":{"hook_name":"PreToolUse:Bash","exit_code":0,"cause":"lint gate","attempts":0}}).to_string();
+    let error=json!({"schema":"machine-god-log/v1","level":"error","target":"unknown.target","event_name":"unknown_failure","message":"safe failure"}).to_string();
+    let routine=json!({"schema":"machine-god-log/v1","level":"debug","target":"bridge.sdk","event_name":"routine","message":"started"}).to_string();
     let records = super::tests::baseline_records(|| {
         emit_bridge_stderr_line(&warning);
         emit_bridge_stderr_line(&error);
@@ -307,7 +307,7 @@ fn stderr_fallback_retains_exact_unicode_prefix_and_redacts_credentials() {
     }
     for line in [
         r#"{"schema":"future/v9","level":"warn","target":"bridge.sdk","event_name":"bad","message":"schema failure"}"#,
-        r#"{"schema":"claude-rs-log/v1","level":"unknown","message":"shape failure"}"#,
+        r#"{"schema":"machine-god-log/v1","level":"unknown","message":"shape failure"}"#,
         "{ malformed failure",
     ] {
         let records = super::tests::baseline_records(|| emit_bridge_stderr_line(line));
@@ -323,11 +323,11 @@ fn stderr_fallback_retains_exact_unicode_prefix_and_redacts_credentials() {
 #[test]
 fn logging_worker() {
     use clap::Parser;
-    let Ok(_scenario) = std::env::var("CLAUDE_RS_AUDIT_CASE") else { return };
-    let root = PathBuf::from(std::env::var_os("CLAUDE_RS_AUDIT_ROOT").unwrap());
+    let Ok(_scenario) = std::env::var("MACHINE_GOD_AUDIT_CASE") else { return };
+    let root = PathBuf::from(std::env::var_os("MACHINE_GOD_AUDIT_ROOT").unwrap());
     let args: Vec<String> =
-        serde_json::from_str(&std::env::var("CLAUDE_RS_AUDIT_ARGS").unwrap()).unwrap();
-    let cli = Cli::try_parse_from(["claude-rs".to_owned()].into_iter().chain(args)).unwrap();
+        serde_json::from_str(&std::env::var("MACHINE_GOD_AUDIT_ARGS").unwrap()).unwrap();
+    let cli = Cli::try_parse_from(["machine-god".to_owned()].into_iter().chain(args)).unwrap();
     let result =
         LoggingRuntime::init_with_paths(&cli, || Ok(crate::diagnostics_test_support::paths(&root)));
     let mut outcome = json!({"ok":result.is_ok(),"continued":42});
@@ -341,7 +341,7 @@ fn logging_worker() {
             let value = cmd
                 .as_std()
                 .get_envs()
-                .find(|(key, _)| *key == "CLAUDE_RS_BRIDGE_DIAGNOSTICS")
+                .find(|(key, _)| *key == "MACHINE_GOD_BRIDGE_DIAGNOSTICS")
                 .unwrap()
                 .1
                 .unwrap()
@@ -356,7 +356,7 @@ fn logging_worker() {
             tracing::info!(target:"tui_markdown",event_name="audit_markdown_info",message="markdown info");
             tracing::debug!(target:"tui_markdown",event_name="audit_markdown_debug",message="markdown debug");
             emit_bridge_stderr_line(
-                r#"{"schema":"claude-rs-log/v1","level":"info","target":"bridge.sdk","event_name":"audit_bridge","message":"bridge"}"#,
+                r#"{"schema":"machine-god-log/v1","level":"info","target":"bridge.sdk","event_name":"audit_bridge","message":"bridge"}"#,
             );
             drop(runtime);
         }
@@ -375,7 +375,7 @@ async fn initialize(root: &Path, args: &[String], rust_log: Option<&str>) -> Val
         root,
         "init",
     );
-    cmd.env("CLAUDE_RS_AUDIT_ARGS", serde_json::to_string(args).unwrap());
+    cmd.env("MACHINE_GOD_AUDIT_ARGS", serde_json::to_string(args).unwrap());
     if let Some(filter) = rust_log {
         cmd.env("RUST_LOG", filter);
     }
@@ -485,7 +485,7 @@ async fn production_logging_selects_baseline_and_detailed_filters_with_explicit_
             if detailed {
                 assert_eq!(warning["session_id"], "detailed-identity");
             } else {
-                assert_eq!(warning["schema"], "claude-rs-baseline/v1");
+                assert_eq!(warning["schema"], "machine-god-baseline/v1");
                 assert!(!fs::read_to_string(&logs[0].path).unwrap().contains("detailed-identity"));
             }
         }
@@ -499,8 +499,8 @@ fn selected_log_modes_preserve_existing_runs_and_apply_only_requested_file_polic
     let paths = crate::diagnostics_test_support::paths(temp.path());
     fs::create_dir_all(&paths.runtime_dir).unwrap();
     let prior =
-        put(&paths.runtime_dir, "claude-rs-20200101T000000Z-p1-rprevious.log", b"previous run", 1);
-    let cli = Cli::try_parse_from(["claude-rs"]).unwrap();
+        put(&paths.runtime_dir, "machine-god-20200101T000000Z-p1-rprevious.log", b"previous run", 1);
+    let cli = Cli::try_parse_from(["machine-god"]).unwrap();
     let selected = resolve_log_path_with(&cli, || Ok(paths.clone())).unwrap().unwrap();
     assert_eq!(selected.path.parent(), Some(paths.runtime_dir.as_path()));
     fs::write(&selected.path, b"collision sentinel").unwrap();
@@ -512,7 +512,7 @@ fn selected_log_modes_preserve_existing_runs_and_apply_only_requested_file_polic
         let target =
             if explicit { temp.path().join("explicit.log") } else { paths.legacy_log_path.clone() };
         fs::write(&target, b"old").unwrap();
-        let mut cli = Cli::try_parse_from(["claude-rs"]).unwrap();
+        let mut cli = Cli::try_parse_from(["machine-god"]).unwrap();
         cli.log_append = append;
         if explicit {
             cli.log_file = Some(target.clone());
@@ -557,7 +557,7 @@ async fn repeated_default_initializations_preserve_each_runs_records_and_explici
     let outcome = initialize(&root, &["--log-append".into()], None).await;
     assert_eq!(outcome["bridge_env"], "1");
     assert_eq!(
-        event(&persisted(&root.join("claude-rs.log")), "audit_warning")["session_id"],
+        event(&persisted(&root.join("machine-god.log")), "audit_warning")["session_id"],
         "detailed-identity"
     );
 }

@@ -55,15 +55,15 @@ fn launch(f: &Fixture, exe: &Path, profile: &Path, tools: &Path, code: i32) -> A
     c.cwd(f.root.path());
     c.args(["--log-file", f.path("runtime.log").to_str().unwrap()]);
     let runtime = which::which("node").or_else(|_| which::which("bun")).unwrap();
-    c.env("CLAUDE_RS_AGENT_BRIDGE_RUNTIME", runtime);
+    c.env("MACHINE_GOD_AGENT_BRIDGE_RUNTIME", runtime);
     c.env(
-        "CLAUDE_RS_AGENT_BRIDGE",
+        "MACHINE_GOD_AGENT_BRIDGE",
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/fake-bridge.js"),
     );
     for key in ["CLAUDE_RUST_NO_UPDATE_CHECK", "RUST_LOG", "CLAUDE_CODE_PROJECT_DIR_NAME"] {
         c.env_remove(key);
     }
-    c.env("CLAUDE_RS_CONFIG_DIR", profile);
+    c.env("MACHINE_GOD_CONFIG_DIR", profile);
     c.env("CLAUDE_CONFIG_DIR", f.path("claude-profile"));
     c.env("HOME", f.path("home"));
     c.env("XDG_CONFIG_HOME", f.path("config"));
@@ -122,12 +122,12 @@ fn normal_exit_detaches_the_real_worker_and_preserves_absolute_and_relative_prof
     for relative in [false, true] {
         let mut f = Fixture::new();
         let tools = f.install_tools();
-        for dir in ["chosen", "claude-profile", "tmp/chosen", "home", "config/claude-code-rust"] {
+        for dir in ["chosen", "claude-profile", "tmp/chosen", "home", "config/machine-god"] {
             std::fs::create_dir_all(f.path(dir)).unwrap();
         }
         let chosen = f.path("chosen/settings.json");
         let wrong = f.path("tmp/chosen/settings.json");
-        let unrelated = f.path("config/claude-code-rust/settings.json");
+        let unrelated = f.path("config/machine-god/settings.json");
         let sentinel = r#"{"sentinel":"unrelated profile"}"#;
         std::fs::write(&wrong, sentinel).unwrap();
         std::fs::write(&unrelated, sentinel).unwrap();
@@ -142,8 +142,8 @@ fn normal_exit_detaches_the_real_worker_and_preserves_absolute_and_relative_prof
         .unwrap();
         let package = f.path("owned-package");
         std::fs::create_dir_all(package.join("bin")).unwrap();
-        let exe = package.join("bin/claude-rs");
-        std::fs::copy(env!("CARGO_BIN_EXE_claude-rs"), &exe).unwrap();
+        let exe = package.join("bin/machine-god");
+        std::fs::copy(env!("CARGO_BIN_EXE_machine-god-core"), &exe).unwrap();
         std::fs::write(
             package.join("package.json"),
             r#"{"name":"@gschaidergabriel/machine-god-linux-x64-gnu"}"#,
@@ -166,7 +166,7 @@ fn normal_exit_detaches_the_real_worker_and_preserves_absolute_and_relative_prof
             assert!(!f.path("marker").exists(), "parent exited while installer is gated");
             let journal = std::fs::read_to_string(f.path("journal")).unwrap();
             let args: Vec<_> = journal.lines().filter_map(|l| l.strip_prefix("arg=")).collect();
-            assert_eq!(args, ["install", "-g", "claude-code-rust@99.0.0"]);
+            assert_eq!(args, ["install", "-g", "machine-god@99.0.0"]);
             assert!(
                 journal.contains(&format!("cwd={}", f.path("tmp").display())),
                 "worker actually changes cwd: {journal}"
@@ -189,7 +189,7 @@ fn normal_exit_detaches_the_real_worker_and_preserves_absolute_and_relative_prof
                         .is_some_and(|e| e.contains("41") && e.contains("v99.0.0"))
                 }
             });
-            let log = f.path("data/claude-code-rust/logs/claude-rs-update.log");
+            let log = f.path("data/machine-god/logs/machine-god-update.log");
             wait("isolated worker log", || {
                 std::fs::read_to_string(&log).is_ok_and(|s| s.contains("fixture-installer-output"))
             });

@@ -5,7 +5,6 @@ mod agents;
 mod autocomplete;
 mod config;
 mod copy;
-pub(crate) mod machine_god_art;
 pub(crate) mod sacred_banner;
 mod diff;
 pub(crate) mod footer_rows;
@@ -31,6 +30,7 @@ pub(crate) mod tool_display;
 mod trusted;
 mod two_column_list;
 mod update;
+mod machine_god_art;
 mod welcome;
 mod wrap;
 #[cfg(test)]

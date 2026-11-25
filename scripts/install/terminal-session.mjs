@@ -10,7 +10,7 @@ const INTERRUPT_REPEAT_MS = 50;
 // user's terminal runs the installer, and resolves with its exit status and terminal output.
 // `onOutput(output, terminal)` sees the accumulated output after every chunk and may answer it.
 export async function runTerminalSession(source, onOutput) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-terminal-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-terminal-"));
   const sourcePath = path.join(directory, "session.sh");
   fs.writeFileSync(sourcePath, source);
   const env = { ...process.env, TERM: "xterm", LC_ALL: "C", NO_COLOR: "1", SHELL: "/bin/sh" };

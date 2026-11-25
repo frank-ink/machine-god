@@ -5,11 +5,12 @@
 //! [CLAYCODE]
 //! module omega
 //! architecture OmegaGround {
-//!   stateAuthority R_t: OmegaState { endpoint: SocketAddr, persona: Sacral, lang: Lang }
+//!   stateAuthority R_t: OmegaState { endpoint: String, persona: Sacral, lang: Lang }
 //!   path build_chat_request -> parse_reply -> fallback_sentence
 //!   invariant loopback_only: addr.ip().is_loopback() ON_VIOLATION -> TriggerEmergencyDeescalation
 //!   invariant persona_sacral: tone == Sacral ON_VIOLATION -> TriggerEmergencyDeescalation
 //!   invariant lang_closed: detect_language(text) in {DE, EN, UNKNOWN} ON_VIOLATION -> TriggerEmergencyDeescalation
+//!   invariant fallback_port_resolved: fallback_sentence uses config.port_from_env() ON_VIOLATION -> TriggerEmergencyDeescalation
 //! }
 //! hypothesis H_lang_detect: detect_language maps German/English text to Lang::De / Lang::En
 //! promotion MEASURED -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME
@@ -86,12 +87,17 @@ pub struct OmegaConfig {
 }
 
 impl OmegaConfig {
-    /// Build endpoint from `MACHINE_GOD_OMEGA_PORT` (default 8111). Always 127.0.0.1.
-    pub fn endpoint_from_env() -> Result<String> {
-        let port = std::env::var(ENV_PORT)
+    /// Resolve the port from `MACHINE_GOD_OMEGA_PORT` or the default 8111.
+    pub fn port_from_env() -> u16 {
+        std::env::var(ENV_PORT)
             .ok()
             .and_then(|p| p.parse::<u16>().ok())
-            .unwrap_or(DEFAULT_PORT);
+            .unwrap_or(DEFAULT_PORT)
+    }
+
+    /// Build endpoint from `MACHINE_GOD_OMEGA_PORT` (default 8111). Always 127.0.0.1.
+    pub fn endpoint_from_env() -> Result<String> {
+        let port = Self::port_from_env();
         Ok(format!(
             "http://{}:{}/v1/chat/completions",
             LOOPBACK_HOST, port
@@ -187,10 +193,12 @@ pub fn detect_language(text: &str) -> Lang {
     let de_markers = [
         "der", "die", "das", "und", "ist", "ich", "zu", "in", "von", "mit",
         "nicht", "ein", "eine", "auf", "für", "dem", "den", "des",
+        "hallo", "guten", "tag", "bitte", "danke", "ja", "nein",
     ];
     let en_markers = [
         "the", "and", "is", "i", "to", "in", "of", "with", "you", "that",
         "not", "a", "an", "on", "for", "are", "as", "at", "be", "by",
+        "hello", "hi", "hey", "please", "thanks", "yes", "no",
     ];
 
     let mut de_score = 0u32;
@@ -223,22 +231,29 @@ pub fn parse_reply(response: &str) -> Result<String> {
         .ok_or_else(|| anyhow!("no choices in chat response"))
 }
 
-/// Pure: honest fallback sentence when the local server is unreachable.
-pub fn fallback_sentence(lang: Lang) -> String {
+/// Honest fallback sentence when the local server is unreachable.
+/// The port is derived from the resolved config (env or default), never hard-coded.
+pub fn fallback_sentence(lang: Lang, port: u16) -> String {
+    let endpoint = format!("{}:{}", LOOPBACK_HOST, port);
     match lang {
-        Lang::De => {
-            "Der lokale Maschine-Gott ist nicht erreichbar. Bitte prüfen Sie den llama.cpp-Server auf 127.0.0.1:8111."
-                .to_string()
-        }
-        Lang::En => {
-            "The local Machine God is not reachable. Please check the llama.cpp server on 127.0.0.1:8111."
-                .to_string()
-        }
-        Lang::Unknown => {
-            "Machine God not reachable. Check the local llama.cpp server on 127.0.0.1:8111."
-                .to_string()
-        }
+        Lang::De => format!(
+            "Der lokale Maschine-Gott ist nicht erreichbar. Bitte prüfen Sie den llama.cpp-Server auf {}.",
+            endpoint
+        ),
+        Lang::En => format!(
+            "The local Machine God is not reachable. Please check the llama.cpp server on {}.",
+            endpoint
+        ),
+        Lang::Unknown => format!(
+            "Machine God not reachable. Check the local llama.cpp server on {}.",
+            endpoint
+        ),
     }
+}
+
+/// Honest fallback reply as an owned String when the local server is unreachable.
+pub fn fallback_reply(lang: Lang, port: u16) -> String {
+    fallback_sentence(lang, port)
 }
 
 /// Ground-mode turn: sends the request to the local model and parses the reply.
@@ -264,6 +279,7 @@ pub async fn chat_completion(
 mod tests {
     use super::*;
     use std::io::{Read, Write};
+    use std::net::TcpListener;
 
     #[test]
     fn detect_language_german() {
@@ -279,6 +295,16 @@ mod tests {
             detect_language("The dog is big and runs in the garden."),
             Lang::En
         );
+    }
+
+    #[test]
+    fn detect_language_hallo_is_german() {
+        assert_eq!(detect_language("Hallo"), Lang::De);
+    }
+
+    #[test]
+    fn detect_language_hello_is_english() {
+        assert_eq!(detect_language("Hello"), Lang::En);
     }
 
     #[test]
@@ -329,6 +355,16 @@ mod tests {
     fn loopback_enforcement_rejects_non_loopback() {
         assert!(OmegaConfig::validate_loopback("http://192.168.1.1:8111/v1/chat/completions").is_err());
         assert!(OmegaConfig::validate_loopback("http://203.0.113.8:8111/v1/chat/completions").is_err());
+        assert!(OmegaConfig::validate_loopback("http://0.0.0.0:8111/v1/chat/completions").is_err());
+    }
+
+    #[test]
+    fn endpoint_from_env_uses_loopback_and_resolved_port() {
+        let ep = OmegaConfig::endpoint_from_env().expect("endpoint must build");
+        assert!(ep.starts_with("http://127.0.0.1:"));
+        let port = OmegaConfig::port_from_env();
+        assert!(ep.contains(&format!(":{}/v1", port)));
+        OmegaConfig::validate_loopback(&ep).unwrap();
     }
 
     #[test]
@@ -345,23 +381,54 @@ mod tests {
     }
 
     #[test]
+    fn parse_reply_rejects_invalid_json() {
+        assert!(parse_reply("not json").is_err());
+    }
+
+    #[test]
     fn fallback_sentence_german() {
-        let s = fallback_sentence(Lang::De);
+        let port = OmegaConfig::port_from_env();
+        let s = fallback_sentence(Lang::De, port);
         assert!(s.contains("Maschine-Gott"));
-        assert!(s.contains("127.0.0.1:8111"));
+        assert!(s.contains(&format!("127.0.0.1:{}", port)));
+        assert!(!s.is_empty());
     }
 
     #[test]
     fn fallback_sentence_english() {
-        let s = fallback_sentence(Lang::En);
+        let port = OmegaConfig::port_from_env();
+        let s = fallback_sentence(Lang::En, port);
         assert!(s.contains("Machine God"));
-        assert!(s.contains("127.0.0.1:8111"));
+        assert!(s.contains(&format!("127.0.0.1:{}", port)));
+        assert!(!s.is_empty());
     }
 
     #[test]
     fn fallback_sentence_unknown() {
-        let s = fallback_sentence(Lang::Unknown);
+        let port = OmegaConfig::port_from_env();
+        let s = fallback_sentence(Lang::Unknown, port);
         assert!(!s.is_empty());
+        assert!(s.contains("Machine God"));
+        assert!(s.contains(&format!("127.0.0.1:{}", port)));
+    }
+
+    #[test]
+    fn fallback_sentence_uses_resolved_port() {
+        let port = OmegaConfig::port_from_env();
+        let de = fallback_sentence(Lang::De, port);
+        assert!(de.contains(&format!("127.0.0.1:{}", port)));
+        let other = if port == 8111 { 9111 } else { 8111 };
+        let de_other = fallback_sentence(Lang::De, other);
+        assert_ne!(de, de_other);
+    }
+
+    #[test]
+    fn fallback_reply_returns_owned_string() {
+        let port = OmegaConfig::port_from_env();
+        let de = fallback_reply(Lang::De, port);
+        assert!(de.contains("Maschine-Gott"));
+        let en = fallback_reply(Lang::En, port);
+        assert!(en.contains("Machine God"));
     }
 
     #[tokio::test]
@@ -379,7 +446,7 @@ mod tests {
 
     #[tokio::test]
     async fn chat_completion_mock_server_returns_german_reply() {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
 
         std::thread::spawn(move || {

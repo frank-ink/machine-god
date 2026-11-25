@@ -1,4 +1,4 @@
-# Configure claude-rs
+# Configure machine-god
 
 Use `/config` to change saved defaults and interface preferences. To change the model or permission mode only for the current conversation, use the [session commands](commands.md#session-commands). See the [settings reference](settings.md) for file locations, keys, scopes and effective behavior. Most settings need an active session to load; if the list is still connecting, wait for the session before editing.
 
@@ -12,7 +12,7 @@ Use `/config` to change saved defaults and interface preferences. To change the 
 
 To remove your override, select the same setting and scope and press `Delete`. The inherited value or Default returns; reset does not restore a previous edit.
 
-Claude Code Rust has a fullscreen settings surface with multiple tabs. These slash commands open that surface directly:
+Machine God has a fullscreen settings surface with multiple tabs. These slash commands open that surface directly:
 
 | Command | Tab | Purpose |
 | --- | --- | --- |

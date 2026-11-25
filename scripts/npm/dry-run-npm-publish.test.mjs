@@ -17,7 +17,7 @@ test("npmTarballName matches npm scoped package tarball filenames", () => {
     npmTarballName("@gschaidergabriel/machine-god-linux-x64-gnu", "1.2.3"),
     "srothgan-claude-code-rust-linux-x64-gnu-1.2.3.tgz",
   );
-  assert.equal(npmTarballName(ROOT_PACKAGE_NAME, "1.2.3"), "claude-code-rust-1.2.3.tgz");
+  assert.equal(npmTarballName(ROOT_PACKAGE_NAME, "1.2.3"), "machine-god-1.2.3.tgz");
 });
 
 test("expectedPublishTarballs includes all platform packages before root", () => {
@@ -29,7 +29,7 @@ test("expectedPublishTarballs includes all platform packages before root", () =>
     PLATFORM_PACKAGES.map((entry) => entry.packageName),
   );
   assert.equal(tarballs.at(-1).packageName, ROOT_PACKAGE_NAME);
-  assert.equal(tarballs.at(-1).tarball, path.join("dist-pack", "claude-code-rust-1.2.3.tgz"));
+  assert.equal(tarballs.at(-1).tarball, path.join("dist-pack", "machine-god-1.2.3.tgz"));
 });
 
 test("resolveNpmInvocation uses direct npm outside Windows", () => {
@@ -112,7 +112,7 @@ test("npmPackageVersionExists rejects unexpected npm lookup failures", () => {
 });
 
 test("dryRunNpmPublish skips existing versions and dry-runs missing versions", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-rs-dry-run-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "machine-god-dry-run-"));
   try {
     const packDir = path.join(tempDir, "dist-pack");
     const version = "1.2.3";

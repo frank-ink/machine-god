@@ -1,31 +1,31 @@
 # Diagnostics
 
-Interactive TUI runs write a small local diagnostics baseline by default. The baseline records warnings and errors from the app, the bridge, and the SDK, plus minimal application lifecycle metadata, using a restricted field set. Detailed diagnostics (timings, routine activity, every protocol and SDK event) remain opt-in because verbose logs can grow quickly and may contain private context. `claude-rs logs` prints where the current log is; see [Finding Logs](#finding-logs).
+Interactive TUI runs write a small local diagnostics baseline by default. The baseline records warnings and errors from the app, the bridge, and the SDK, plus minimal application lifecycle metadata, using a restricted field set. Detailed diagnostics (timings, routine activity, every protocol and SDK event) remain opt-in because verbose logs can grow quickly and may contain private context. `machine-god logs` prints where the current log is; see [Finding Logs](#finding-logs).
 
 ## Doctor
 
 Run deterministic environment diagnostics:
 
 ```bash
-claude-rs doctor
+machine-god doctor
 ```
 
 For machine-readable output:
 
 ```bash
-claude-rs doctor --json
+machine-god doctor --json
 ```
 
 For CI or support scripts that should fail on hard runtime prerequisites:
 
 ```bash
-claude-rs doctor --strict
+machine-god doctor --strict
 ```
 
 Use `-C, --dir` with `doctor` to inspect project-local settings for a specific folder:
 
 ```bash
-claude-rs -C path/to/project doctor
+machine-god -C path/to/project doctor
 ```
 
 ## Config Inspection
@@ -33,31 +33,31 @@ claude-rs -C path/to/project doctor
 Inspect resolved config paths without starting the TUI:
 
 ```bash
-claude-rs config
-claude-rs config path
+machine-god config
+machine-god config path
 ```
 
-`claude-rs config` prints the same path summary as `config path`, including user settings, project-local settings, user preferences, and whether each file is present and valid. Use `-C, --dir` to inspect project-local config for a specific folder.
+`machine-god config` prints the same path summary as `config path`, including user settings, project-local settings, user preferences, and whether each file is present and valid. Use `-C, --dir` to inspect project-local config for a specific folder.
 
 For script-friendly path output:
 
 ```bash
-claude-rs config path --which settings
-claude-rs config path --which local-settings
-claude-rs config path --which preferences
+machine-god config path --which settings
+machine-god config path --which local-settings
+machine-god config path --which preferences
 ```
 
 Show a concise redacted config summary:
 
 ```bash
-claude-rs config show
-claude-rs config show --json
+machine-god config show
+machine-god config show --json
 ```
 
 Export a support-safe config snapshot:
 
 ```bash
-claude-rs config export --output claude-rs-config.json
+machine-god config export --output machine-god-config.json
 ```
 
 Config output redacts obvious credentials by default. Export refuses to overwrite existing files, and inspection does not repair, back up, normalize, or rewrite config files. Malformed existing config files are reported as invalid and cause `show` or `export` to return a non-zero exit code.
@@ -67,8 +67,8 @@ Config output redacts obvious credentials by default. Export refuses to overwrit
 Expand the baseline with a named diagnostics preset:
 
 ```bash
-claude-rs --enable-logs --diagnostics-preset session
-claude-rs --enable-logs --diagnostics-preset render
+machine-god --enable-logs --diagnostics-preset session
+machine-god --enable-logs --diagnostics-preset render
 ```
 
 Available presets:
@@ -86,51 +86,51 @@ The `render` preset includes Read preview timings. `read_preview_started` record
 Use an explicit log path when you want the file somewhere predictable:
 
 ```bash
-claude-rs --enable-logs --diagnostics-preset bridge --log-file claude-rs.log
+machine-god --enable-logs --diagnostics-preset bridge --log-file machine-god.log
 ```
 
 Use an explicit tracing filter for targeted debugging:
 
 ```bash
-claude-rs --log-filter "info,app.render=trace,bridge.protocol=debug"
+machine-god --log-filter "info,app.render=trace,bridge.protocol=debug"
 ```
 
-`--log-filter` overrides `--diagnostics-preset`. Every interactive run writes to a timestamped default diagnostics file when `--log-file` is omitted. With no logging options, the filter is `warn,app.lifecycle=info` and versioned `claude-rs-baseline/v1` records keep stable event metadata (event name, message, outcome, error classification, duration, counts, logging policy) plus the failure detail needed to act on a warning or error: the error message or startup failure reason and, for bridge and SDK records, only a fixed set of failure fields (reason, hook name and event, exit code, output excerpt, plugin name and category). Text fields are redacted for common credential shapes (bearer, basic and token authorization values, API keys and tokens in `name=value` pairs, headers and query strings, and URL user information) and cut to a fixed length. Session, request and tool-call identifiers, working directories, project keys, commands, and conversation or file content are omitted from the baseline format. Redaction is pattern-based and best-effort. It also replaces your home directory with `~` in text, so `/Users/alice/.claude/settings.json` is logged as `~/.claude/settings.json`; a path outside the home directory (`/opt/tools/x`, `/tmp/build`, another drive) is kept as written. A free-text error message, a hook output excerpt, and the preview of an unstructured line the bridge printed to stderr (a stack trace, for example) are kept as written once redacted, so they can still hold such paths, file names and fragments of command output. Review a log before sharing it.
+`--log-filter` overrides `--diagnostics-preset`. Every interactive run writes to a timestamped default diagnostics file when `--log-file` is omitted. With no logging options, the filter is `warn,app.lifecycle=info` and versioned `machine-god-baseline/v1` records keep stable event metadata (event name, message, outcome, error classification, duration, counts, logging policy) plus the failure detail needed to act on a warning or error: the error message or startup failure reason and, for bridge and SDK records, only a fixed set of failure fields (reason, hook name and event, exit code, output excerpt, plugin name and category). Text fields are redacted for common credential shapes (bearer, basic and token authorization values, API keys and tokens in `name=value` pairs, headers and query strings, and URL user information) and cut to a fixed length. Session, request and tool-call identifiers, working directories, project keys, commands, and conversation or file content are omitted from the baseline format. Redaction is pattern-based and best-effort. It also replaces your home directory with `~` in text, so `/Users/alice/.claude/settings.json` is logged as `~/.claude/settings.json`; a path outside the home directory (`/opt/tools/x`, `/tmp/build`, another drive) is kept as written. A free-text error message, a hook output excerpt, and the preview of an unstructured line the bridge printed to stderr (a stack trace, for example) are kept as written once redacted, so they can still hold such paths, file names and fragments of command output. Review a log before sharing it.
 
 Baseline logging is best-effort: if the default log cannot be initialized, the app continues without disrupting the TUI. Explicitly requested detailed logging still reports initialization failures as startup errors.
 
 The default diagnostics directory is under the platform local data directory:
 
-- Windows: `%LOCALAPPDATA%\claude-code-rust\logs\runtime\`
-- Linux: usually `$XDG_DATA_HOME/claude-code-rust/logs/runtime/` or `~/.local/share/claude-code-rust/logs/runtime/`
-- macOS: the platform data directory reported by the `dirs` crate, under `claude-code-rust/logs/runtime/`
+- Windows: `%LOCALAPPDATA%\machine-god\logs\runtime\`
+- Linux: usually `$XDG_DATA_HOME/machine-god/logs/runtime/` or `~/.local/share/machine-god/logs/runtime/`
+- macOS: the platform data directory reported by the `dirs` crate, under `machine-god/logs/runtime/`
 
 Default runtime log files include the UTC start timestamp, process id, and a short run id, for example:
 
 ```text
-claude-rs-20260614T075924Z-p12345-r8f3a2c1.log
+machine-god-20260614T075924Z-p12345-r8f3a2c1.log
 ```
 
 Logs rotate at 10 MB and keep up to five rotated files per run. Default runtime logs are retained up to 256 MB, 30 days, or 100 managed files, while always preserving at least 10 newest files. Retention only applies to app-managed timestamped files in the default runtime log directory; explicit `--log-file` paths are never cleaned up by the app.
 
-`--log-append` appends to an explicit `--log-file`. When used without `--log-file`, it appends to the legacy shared default file `claude-rs.log` for compatibility; prefer the normal timestamped defaults for new diagnostics.
+`--log-append` appends to an explicit `--log-file`. When used without `--log-file`, it appends to the legacy shared default file `machine-god.log` for compatibility; prefer the normal timestamped defaults for new diagnostics.
 
 ## Finding Logs
 
 Use the logs command to find diagnostics paths without starting the TUI:
 
 ```bash
-claude-rs logs
-claude-rs logs --path
-claude-rs logs --latest
+machine-god logs
+machine-god logs --path
+machine-god logs --latest
 ```
 
-`claude-rs logs` prints the runtime log directory, legacy log path, latest discovered log, and common follow-up commands. `--path` prints only the default runtime log directory for scripts. `--latest` prints only the latest runtime log path, falling back to the legacy shared log when no timestamped runtime log exists.
+`machine-god logs` prints the runtime log directory, legacy log path, latest discovered log, and common follow-up commands. `--path` prints only the default runtime log directory for scripts. `--latest` prints only the latest runtime log path, falling back to the legacy shared log when no timestamped runtime log exists.
 
 To inspect recent log output safely:
 
 ```bash
-claude-rs logs --tail 200
+machine-god logs --tail 200
 ```
 
 Tail output is redacted for obvious credentials such as API keys, bearer tokens, OAuth tokens, passwords, and authorization headers before it is printed.
@@ -140,17 +140,17 @@ Tail output is redacted for obvious credentials such as API keys, bearer tokens,
 Create a redacted support bundle with:
 
 ```bash
-claude-rs logs --bundle --yes
+machine-god logs --bundle --yes
 ```
 
 Without `--yes`, an interactive terminal is prompted before the bundle is written. Use `--output <PATH>` to choose the ZIP path.
 
-The manifest uses schema `claude-rs-debug-bundle/v2`. Diagnostics paths describe the runtime log directory and legacy log path.
+The manifest uses schema `machine-god-debug-bundle/v2`. Diagnostics paths describe the runtime log directory and legacy log path.
 
 The bundle includes:
 
 - `manifest.json`
-- `doctor.json`, equivalent to `claude-rs doctor --json`
+- `doctor.json`, equivalent to `machine-god doctor --json`
 - selected recent runtime logs
 - the legacy log if present
 - bridge diagnostics extracted from structured log records
@@ -178,30 +178,30 @@ When detailed diagnostics are requested through `--enable-logs`, a preset, `--lo
 The bridge script can be overridden with:
 
 ```bash
-claude-rs --bridge-script /path/to/agent-sdk/dist/bridge.js
+machine-god --bridge-script /path/to/agent-sdk/dist/bridge.js
 ```
 
 or:
 
 ```bash
-CLAUDE_RS_AGENT_BRIDGE=/path/to/agent-sdk/dist/bridge.js
+MACHINE_GOD_AGENT_BRIDGE=/path/to/agent-sdk/dist/bridge.js
 ```
 
 Debug builds can override the bridge runtime with:
 
 ```bash
-CLAUDE_RS_AGENT_BRIDGE_RUNTIME=/path/to/bun
+MACHINE_GOD_AGENT_BRIDGE_RUNTIME=/path/to/bun
 ```
 
-Release npm installs use the root package launcher to start the native platform binary and point it at the bundled bridge script. The native binary resolves the private `claude-rs-bridge-bun` executable from the installed platform package. In `doctor --json`, the runtime checks are reported as `bridge_runtime`, `bridge_runtime_version`, and `bridge_script`.
+Release npm installs use the root package launcher to start the native platform binary and point it at the bundled bridge script. The native binary resolves the private `machine-god-bridge-bun` executable from the installed platform package. In `doctor --json`, the runtime checks are reported as `bridge_runtime`, `bridge_runtime_version`, and `bridge_script`.
 
 ## Notification Diagnostics
 
 To investigate a missing or unexpected alert, run with a preset that includes notification records, or add the target to a custom filter:
 
 ```bash
-claude-rs --enable-logs --diagnostics-preset session
-claude-rs --log-filter "info,app.notify=debug"
+machine-god --enable-logs --diagnostics-preset session
+machine-god --log-filter "info,app.notify=debug"
 ```
 
 The `runtime`, `session` and `full` presets include `app.notify`. Its records show the observed terminal focus, the origin and delivery report supplied by the SDK, duplicate and replay handling, the category and method decision, and the outcome of the terminal or desktop transport. Question and notification text are omitted.
@@ -212,10 +212,10 @@ A successful terminal write or an accepted OS request confirms that the alert wa
 
 Include:
 
-- `claude-rs --version`
+- `machine-god --version`
 - OS and terminal.
 - Install method: npm package, source build, fork build, or manual binary.
 - The exact command used to launch the app.
 - Whether a custom bridge script or debug bridge runtime override was used.
 - A short reproduction.
-- A `claude-rs logs --bundle --yes` bundle or relevant redacted log snippets, not full secrets or private conversation content.
+- A `machine-god logs --bundle --yes` bundle or relevant redacted log snippets, not full secrets or private conversation content.
