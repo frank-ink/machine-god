@@ -13,6 +13,7 @@ research/
 team/          Dev team: roles, thinking frame, goal (see team/README.md)
 docs/research/ Control-loop study (PDF + text), Claude + ChatGPT decisions, core idea pulse/wiki,
                round 11 measurements, mg-build review
+docs/process/  Process archive: how the team made this (see how-this-was-made.md)
 ```
 
 ## Honest status (2026-11-25)
