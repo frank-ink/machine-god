@@ -354,7 +354,7 @@ mod tests {
     #[test]
     fn loopback_enforcement_rejects_non_loopback() {
         assert!(OmegaConfig::validate_loopback("http://192.168.1.1:8111/v1/chat/completions").is_err());
-        assert!(OmegaConfig::validate_loopback("http://203.0.113.8:8111/v1/chat/completions").is_err());
+        assert!(OmegaConfig::validate_loopback("http://<ip>:8111/v1/chat/completions").is_err());
         assert!(OmegaConfig::validate_loopback("http://0.0.0.0:8111/v1/chat/completions").is_err());
     }
 
