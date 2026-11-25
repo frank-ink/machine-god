@@ -43,7 +43,7 @@ test("Unix installer --yes explicitly proceeds with a same-version reinstall", {
   assert.deepEqual(result.downloads, [
     advisoriesUrl,
     `https://github.com/gschaidergabriel/machine-god/releases/download/${selectedTag}/SHA256SUMS`,
-    `https://github.com/gschaidergabriel/machine-god/releases/download/${selectedTag}/claude-code-rust-${selectedVersion}-${platformDir}.tar.gz`,
+    `https://github.com/gschaidergabriel/machine-god/releases/download/${selectedTag}/machine-god-${selectedVersion}-${platformDir}.tar.gz`,
   ]);
   assert.equal(result.replacementMarker, true, "approved reinstall did not replace the existing app");
 });
