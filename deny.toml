@@ -18,6 +18,10 @@ targets = [
 version = 2
 yanked = "deny"
 unmaintained = "workspace"
+ignore = [
+    { id = "RUSTSEC-2026-0543", reason = "chrono is flagged unmaintained; it is a direct dependency used for local time and locale formatting in about ten modules, with no maintained drop-in yet. Revisit when the advisory lists a replacement." },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz is flagged unmaintained together with chrono (same upstream notice); it is only used for time zone names next to chrono. Revisit together with RUSTSEC-2026-0543." },
+]
 
 [licenses]
 confidence-threshold = 0.8

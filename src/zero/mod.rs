@@ -21,3 +21,5 @@ pub mod retina;
 pub mod retina_db;
 #[cfg(test)]
 mod retina_test;
+#[cfg(test)]
+mod stub_exec_test;

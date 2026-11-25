@@ -1,16 +1,13 @@
 use crate::zero::retina::*;
 use serde_json::Value;
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Instant;
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 // ---------------------------------------------------------------- mocks
 
@@ -83,12 +80,7 @@ fn unique_dir(tag: &str) -> PathBuf {
 #[cfg(unix)]
 fn write_script(dir: &Path, name: &str, body: &str) -> PathBuf {
     let path = dir.join(name);
-    let mut file = fs::File::create(&path).expect("script file");
-    writeln!(file, "#!/bin/sh").expect("shebang");
-    write!(file, "{body}").expect("script body");
-    let mut perms = fs::metadata(&path).expect("metadata").permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&path, perms).expect("perms");
+    crate::zero::stub_exec_test::write_executable_stub(&path, &format!("#!/bin/sh\n{body}"));
     path
 }
 

@@ -942,19 +942,16 @@ pub fn status_is_done(result: &ImageStudioResult) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
     use std::sync::{Arc, Mutex};
 
     #[cfg(unix)]
     fn write_stub(name: &str, body: &str) -> (PathBuf, PathBuf) {
-        use std::os::unix::fs::PermissionsExt;
         let dir = std::env::temp_dir().join(format!("zero-bild-{}-{}", std::process::id(), name));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create stub dir");
         let script = dir.join(CLI_NAME);
-        std::fs::write(&script, body).expect("write stub");
-        let mut perms = std::fs::metadata(&script).expect("stat stub").permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&script, perms).expect("chmod stub");
+        crate::zero::stub_exec_test::write_executable_stub(&script, body);
         (dir, script)
     }
 

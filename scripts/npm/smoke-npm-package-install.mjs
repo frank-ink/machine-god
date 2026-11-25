@@ -584,21 +584,21 @@ function globalBinDir(prefix) {
 function assertSingleGlobalBin(prefix) {
   const binDir = globalBinDir(prefix);
   const entries = fs.existsSync(binDir)
-    ? fs.readdirSync(binDir).filter((entry) => entry === "machine-god-core" || entry.startsWith("machine-god-core."))
+    ? fs.readdirSync(binDir).filter((entry) => entry === "machine-god" || entry.startsWith("machine-god."))
     : [];
 
   const allowedEntries =
     process.platform === "win32"
-      ? new Set(["machine-god-core", "machine-god-core.cmd", "machine-god-core.ps1"])
-      : new Set(["machine-god-core"]);
+      ? new Set(["machine-god", "machine-god.cmd", "machine-god.ps1"])
+      : new Set(["machine-god"]);
   for (const entry of entries) {
     if (!allowedEntries.has(entry)) {
-      throw new Error(`Unexpected global machine-god-core bin entry after install: ${entry}`);
+      throw new Error(`Unexpected global machine-god bin entry after install: ${entry}`);
     }
   }
-  const requiredEntry = process.platform === "win32" ? "machine-god-core.cmd" : "machine-god-core";
+  const requiredEntry = process.platform === "win32" ? "machine-god.cmd" : "machine-god";
   if (!entries.includes(requiredEntry)) {
-    throw new Error(`Missing global machine-god-core bin entry: ${path.join(binDir, requiredEntry)}`);
+    throw new Error(`Missing global machine-god bin entry: ${path.join(binDir, requiredEntry)}`);
   }
   return path.join(binDir, requiredEntry);
 }
@@ -608,9 +608,9 @@ function assertGlobalBinsRemoved(prefix) {
   if (!fs.existsSync(binDir)) {
     return;
   }
-  const entries = fs.readdirSync(binDir).filter((entry) => entry === "machine-god-core" || entry.startsWith("machine-god-core."));
+  const entries = fs.readdirSync(binDir).filter((entry) => entry === "machine-god" || entry.startsWith("machine-god."));
   if (entries.length > 0) {
-    throw new Error(`Global machine-god-core bin entries remained after uninstall: ${entries.join(", ")}`);
+    throw new Error(`Global machine-god bin entries remained after uninstall: ${entries.join(", ")}`);
   }
 }
 
@@ -625,7 +625,7 @@ function installedLauncherCommands(projectDir) {
         args: (commandArgs) => [
           "/d",
           "/c",
-          ["call", path.join(binDir, "machine-god-core.cmd"), ...commandArgs]
+          ["call", path.join(binDir, "machine-god.cmd"), ...commandArgs]
             .map((arg, index) => (index === 0 ? arg : quoteCmdArg(arg)))
             .join(" ")
         ]
@@ -638,7 +638,7 @@ function installedLauncherCommands(projectDir) {
           "-ExecutionPolicy",
           "Bypass",
           "-File",
-          path.join(binDir, "machine-god-core.ps1"),
+          path.join(binDir, "machine-god.ps1"),
           ...commandArgs
         ]
       }
@@ -648,7 +648,7 @@ function installedLauncherCommands(projectDir) {
   return [
     {
       label: "npm symlink",
-      command: path.join(binDir, "machine-god-core"),
+      command: path.join(binDir, "machine-god"),
       args: (commandArgs) => commandArgs
     }
   ];
@@ -665,7 +665,7 @@ function globalLauncherCommands(prefix) {
         args: (commandArgs) => [
           "/d",
           "/c",
-          ["call", path.join(binDir, "machine-god-core.cmd"), ...commandArgs]
+          ["call", path.join(binDir, "machine-god.cmd"), ...commandArgs]
             .map((arg, index) => (index === 0 ? arg : quoteCmdArg(arg)))
             .join(" ")
         ]
@@ -678,7 +678,7 @@ function globalLauncherCommands(prefix) {
           "-ExecutionPolicy",
           "Bypass",
           "-File",
-          path.join(binDir, "machine-god-core.ps1"),
+          path.join(binDir, "machine-god.ps1"),
           ...commandArgs
         ]
       }
@@ -688,7 +688,7 @@ function globalLauncherCommands(prefix) {
   return [
     {
       label: "global npm bin",
-      command: path.join(binDir, "machine-god-core"),
+      command: path.join(binDir, "machine-god"),
       args: (commandArgs) => commandArgs
     }
   ];
@@ -720,7 +720,7 @@ function runInstalledCommand(installedCommand, args, cwd, env) {
     const stdout = bufferToString(error.stdout);
     const stderr = bufferToString(error.stderr);
     throw new Error(
-      `Installed machine-god-core command failed via ${installedCommand.label}: ${args.join(" ")}\n` +
+      `Installed machine-god command failed via ${installedCommand.label}: ${args.join(" ")}\n` +
         `status: ${error.status ?? "unknown"}\n` +
         `stdout:\n${stdout}\n` +
         `stderr:\n${stderr}`
