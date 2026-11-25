@@ -9,7 +9,7 @@ research/
   mg-build/    Measurement tool: gate (paired bootstrap), ledger, retrieval benchmark, loop (84 tests, mg-batch2 after team review)
   grid10/      Organs E1-E5, world model WM1/WM2, self model, intent cortex, class demand V1/V2/V2.1,
                retina thalamus, goal pursuit, freellm.py (15 test files, run_tests.py)
-  teamkanal/   Reference scripts of the team-channel repair (cleaned, not runnable without a channel client)
+  team_channel/   Reference scripts of the team-channel repair (cleaned, not runnable without a channel client)
 team/          Dev team: roles, thinking frame, goal (see team/README.md)
 docs/research/ Control-loop study (PDF + text), Claude + ChatGPT decisions, core idea pulse/wiki,
                round 11 measurements, mg-build review
@@ -22,17 +22,17 @@ docs/process/  Process archive: how the team made this (see how-this-was-made.md
 |---|---|---|
 | All grid10 organs | SHADOW: write only to their own ledger, control nothing | code, tests |
 | S0 (prospective collection) | `ZU_WENIG_DATEN`: 0 windows, no sensor cycle runs without a continuous tick | `s0_eval.py`, protocol in `fixtures/wm-s0/` |
-| Intent cortex V1 | **failed**: `INTENT_BENCH_V1` macro-F1 0.615 (target 0.80), all five thresholds missed; the model measured was a local 4B model, which does not work as an intent cortex; other models are not measured | `fixtures/intent-bench/lauf_voll.json` |
+| Intent cortex V1 | **failed**: `INTENT_BENCH_V1` macro-F1 0.615 (target 0.80), all five thresholds missed; the model measured was a local 4B model, which does not work as an intent cortex; other models are not measured | `fixtures/intent-bench/full_run.json` |
 | Class demand V1 | 89 % ABSTAIN on 1614 messages, accepted only as a baseline | `docs/research/decisions-*.md` |
 | Class demand V2 / V2.1 | V2 semantically insufficient (pilot 24/40 exact); V2.1 28/40, but the pilot is a development set, not independent evidence | same |
 | WM1 (forecast) | Historical advantage (Brier 0.0861 vs 0.1192) is retrospective and in-sample, not independently verified; prospective learning benefit open | same |
-| WM2 (hypotheses) | uncalibrated; weights are plausibility shares of an unvalidated rule, not probabilities | `weltmodell2.py` |
+| WM2 (hypotheses) | uncalibrated; weights are plausibility shares of an unvalidated rule, not probabilities | `world_model2.py` |
 | E3/E4 (goal genesis, competition) | goal sentences are template + finding (`rule_template`), not emergent; the competition executes nothing | same |
-| Self model | capability probes; `intent_semantik` is FAILED | `selbstmodell.py` |
+| Self model | capability probes; `intent_semantik` is FAILED | `self_model.py` |
 | Database pulse / four endings / inner wiki | **not running in the measured snapshot**: pulse tables hold 0 rows, wiki tables hold 0 rows (state `active`, empty), the four endings are not defined in any source found | `docs/research/round11-pulse-measurements.md` |
 | mg-build | batch2 after team review; free-pool re-review reproduced 0 new defects; one documented configuration risk (see below) | `docs/research/mg-build-review-2026-11-25.md` |
 
-No AGI, consciousness or emergence claim is made. No AGI indicator is shown as fulfilled (`team/ZIEL.md`).
+No AGI, consciousness or emergence claim is made. No AGI indicator is shown as fulfilled (`team/GOAL.md`).
 
 ## Tests (measured 2026-11-25 on a clean export, empty HOME)
 
@@ -72,5 +72,11 @@ The measured numbers above hold for the local 4B model used at the time; there i
 - Model calls go through `grid10/freellm.py` to a freely chosen OpenAI-compatible endpoint instead of a fixed local model.
 - Names of people, machines and hosts are neutralised; the live wiring (`register.py`) is missing.
 - Not included: live-database content, private chat logs, gstack (a separate project with its own license).
-- Language: new documents and file names are English. Older code comments, identifiers and some test names are still
-  German and will be migrated in a separate, tested pass.
+- Language: all documents, comments, docstrings, file names and user-facing messages are English (translated 2026-11-25 with a free-pool
+  model; code was never sent to the model, an AST-equality gate and the full test suite verified every file). Kept German on purpose, because
+  they are data or hash-pinned: the German lexicons and regexes of the bilingual classifiers (`class_demand*.py`, `lexical_percept.py`), German
+  test inputs, the intent-bench prompts and fixtures (`fixtures/intent-bench`, `fixtures/pilot`), the intent-cortex prompt (the measured
+  result belongs to that prompt), the frozen S0 protocol (`fixtures/wm-s0/S0_EVAL_V1.md`, sha256-pinned; English copy `S0_EVAL_V1.en.md`),
+  `class_demand_v2.py` (frozen, hash-pinned) and the original control-loop study text. Database table names with German words
+  (`f3_endo_befund`, `f3_wm_anfrage`, ...) are schema names of the originating project and stay. Test function names and some internal
+  helper names are still German (open item, no behaviour change).

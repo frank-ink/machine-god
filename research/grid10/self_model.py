@@ -1,9 +1,9 @@
-"""selbstmodell.py -- SELF_MODEL_V1 (Entwurf ChatGPT Runde 9/10, 2026-11-25), SHADOW. Selbstmodell nur aus ueberpruefbaren Faehigkeiten, Messungen und Grenzen, NIE aus einer Persona.
+"""self_model.py -- SELF_MODEL_V1 (Draft ChatGPT Round 9/10, 2026-11-25), SHADOW. Self-model only from verifiable capabilities, measurements, and limits, NEVER from a persona.
 
-Jede Faehigkeit = Behauptung (claim) + Sonde (lesend, lokal, billig). Ergebnis je Pruefung: VERIFIED | FAILED | UNKNOWN (Sonde nicht anwendbar/Daten fehlen; nie als FAILED oder VERIFIED geraten)
-mit Evidenz (Messwerte). Revisionen sind append-only (Trigger gegen UPDATE/DELETE), eine neue Revision nur, wenn sich Status oder Evidenz aendern.
-Widerspruch: war eine Faehigkeit VERIFIED und ist jetzt FAILED -> E2-Befund 'widerspruch' (Selbstbild stimmt nicht mehr mit der Messung ueberein).
-selbstbild() liefert nur Aussagen mit Beleg und Zeitstempel; keine Bewusstseinsbehauptung, keine Selbstbeschreibung ohne Messung."""
+Each capability = claim + probe (read-only, local, cheap). Result per check: VERIFIED | FAILED | UNKNOWN (probe not applicable/data missing; never guess FAILED or VERIFIED)
+with evidence (measurements). Revisions are append-only (trigger against UPDATE/DELETE), a new revision only when status or evidence changes.
+Contradiction: a capability was VERIFIED and is now FAILED -> E2 finding 'contradiction' (self-image no longer matches measurement).
+self_image() returns only statements with evidence and timestamp; no consciousness claim, no self-description without measurement."""
 import hashlib
 import json
 import os
@@ -53,7 +53,7 @@ def p_lokales_llm(conn, now, url=None):
 
 
 def p_takt(conn, now, n=12):
-    """Hat in den letzten n abgeschlossenen 5-Minuten-Fenstern ein Hook-Lauf stattgefunden (Heartbeat)? Ein Takt ohne Daemon ist nur so dicht wie die Hook-Laeufe."""
+    """Has a hook run occurred in the last n completed 5-minute windows (heartbeat)? A clock without a daemon is only as dense as the hook runs."""
     if not _tbl(conn, "f3_wm_cover"):
         return "UNKNOWN", {"grund": "kein Heartbeat-Ledger"}
     hi = int(now // 300) - 1
@@ -75,7 +75,7 @@ def p_s0(conn, now):
     return ("VERIFIED" if n >= 200 else "FAILED"), {"gueltige_fenster_v0": n, "ziel": 200}
 
 
-def p_intent(conn, now, pfad=os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "intent-bench/lauf_voll.json")):
+def p_intent(conn, now, pfad=os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "intent-bench/full_run.json")):
     try:
         m = json.load(open(pfad))["metrics"]
     except Exception:
@@ -87,12 +87,12 @@ CAPS = {"retina_sinn": ("Die Retina liefert aktuell Beobachtungen (Sinn aktiv un
         "lokales_llm": ("Der konfigurierte Modell-Endpunkt antwortet (MG_LLM_HEALTH_URL).", p_lokales_llm),
         "takt": ("Es laeuft regelmaessig ein Zyklus (mindestens jedes zweite 5-Minuten-Fenster hatte einen Lauf).", p_takt),
         "prognose": ("Das Weltmodell erzeugt und bewertet prospektive Prognosen.", p_prognose),
-        "s0_umfang": ("Fuer die S0-Abnahme liegen mindestens 200 gueltige Fenster der Version 0 vor.", p_s0),
-        "intent_semantik": ("Der Intent-Cortex erfuellt die Abnahme auf INTENT_BENCH_V1 (indirekt Recall >= 0.75, tool-Precision >= 0.90, Macro-F1 >= 0.80).", p_intent)}
+        "s0_coverage": ("At least 200 valid windows of version 0 exist for the S0 acceptance.", p_s0),
+        "intent_semantics": ("The intent cortex meets the acceptance on INTENT_BENCH_V1 (indirect recall >= 0.75, tool precision >= 0.90, macro-F1 >= 0.80).", p_intent)}
 
 
 def project(conn, now=None, caps=None):
-    """Fuehrt alle Sonden aus, haengt bei geaendertem Status/Evidenz eine Revision an. -> Zahl neuer Revisionen."""
+    """Runs all probes, appends a revision when status/evidence changes. -> Number of new revisions."""
     now = time.time() if now is None else now
     if off(conn):
         return 0
@@ -116,36 +116,36 @@ def project(conn, now=None, caps=None):
     return new
 
 
-def verlauf(conn, cid):
+def history(conn, cid):
     return conn.execute("select seq,status,evidence,ts from f3_self_rev where cap_id=? order by seq", (cid,)).fetchall()
 
 
-def befund(conn, now=None):
-    """E2-Befunde: Faehigkeit war VERIFIED und ist jetzt FAILED (Selbstbild widerspricht der Messung). Evidenz = unveraenderlicher Revisionsschnappschuss."""
+def finding(conn, now=None):
+    """E2 findings: capability was VERIFIED and is now FAILED (self-image contradicts measurement). Evidence = immutable revision snapshot."""
     if off(conn) or not _tbl(conn, "f3_self_rev"):
         return []
     out = []
     for (cid, claim) in conn.execute("select cap_id,claim from f3_self_cap order by cap_id").fetchall():
-        v = verlauf(conn, cid)
+        v = history(conn, cid)
         if not v or v[-1][1] != "FAILED" or not any(r[1] == "VERIFIED" for r in v[:-1]):
             continue
         mx = conn.execute("select max(rowid) from f3_self_rev where cap_id=?", (cid,)).fetchone()[0]
         n = conn.execute("select count(*) from f3_self_rev where cap_id=? and rowid<=?", (cid, mx)).fetchone()[0]
-        out.append({"kind": "widerspruch", "key": "self_verloren:" + cid, "statement": "Selbstmodell: Faehigkeit '%s' war verifiziert und ist es nicht mehr (%s)" % (cid, v[-1][2]),
+        out.append({"kind": "contradiction", "key": "self_lost:" + cid, "statement": "Self model: capability '%s' was verified and is no longer (%s)" % (cid, v[-1][2]),
                     "ref": {"table": "f3_self_rev", "where": "cap_id='%s' and rowid<=%d" % (cid, mx), "params": [], "n": n}})
     return out
 
 
-def selbstbild(conn):
-    """Nur belegte Aussagen: je Faehigkeit der letzte Stand mit Evidenz und Zeit; UNKNOWN wird als 'nicht pruefbar' benannt, nie als Faehigkeit oder Mangel."""
+def self_image(conn):
+    """Only substantiated statements: for each capability the latest status with evidence and time; UNKNOWN is labeled 'not verifiable', never as a capability or deficiency."""
     if not _tbl(conn, "f3_self_cap"):
         return []
     out = []
     for cid, claim in conn.execute("select cap_id,claim from f3_self_cap order by cap_id").fetchall():
-        v = verlauf(conn, cid)
+        v = history(conn, cid)
         if not v:
             continue
         s, st, ev, ts = v[-1]
-        txt = {"VERIFIED": "belegt", "FAILED": "widerlegt/nicht erfuellt", "UNKNOWN": "nicht pruefbar"}[st]
-        out.append({"cap": cid, "status": st, "aussage": "%s [%s; Messung %s; Stand r%d]" % (claim, txt, ev, s), "ts": ts})
+        txt = {"VERIFIED": "verified", "FAILED": "refuted/not met", "UNKNOWN": "not testable"}[st]
+        out.append({"cap": cid, "status": st, "statement_text": "%s [%s; measurement %s; as of r%d]" % (claim, txt, ev, s), "ts": ts})
     return out

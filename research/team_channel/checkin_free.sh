@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # checkin_free.sh - team-channel check-in, meant to run every 10 minutes (cron or a systemd timer).
 # Reads new channel messages, asks ONE free-pool model for a receipt (freechat.py), posts the reply back.
-# Needs: TEAMKANAL_CLIENT = a channel client with the subcommands `count`, `get --seit N`, `sag --von NAME -`  (not part of this repo)
+# Needs: TEAM_CHANNEL_CLIENT = a channel client with the subcommands `count`, `get --since N`, `say --from NAME -`  (not part of this repo)
 #        MG_LLM_URL / MG_LLM_MODEL (/ MG_LLM_KEY) = any OpenAI-compatible endpoint
-# Optional: TEAMKANAL_ICH (own channel name, default "me"), TEAMKANAL_SKIP (space-separated senders to ignore),
-#           TEAMKANAL_FALLBACK_CMD (a command that reads the prompt on stdin and prints a reply, any model; used only if freechat fails)
+# Optional: TEAM_CHANNEL_ICH (own channel name, default "me"), TEAM_CHANNEL_SKIP (space-separated senders to ignore),
+#           TEAM_CHANNEL_FALLBACK_CMD (a command that reads the prompt on stdin and prints a reply, any model; used only if freechat fails)
 
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-K="${TEAMKANAL_CLIENT:?set TEAMKANAL_CLIENT to your channel client}"
-D="${TEAMKANAL_STATE:-$HOME/.local/share/teamkanal}"
+K="${TEAM_CHANNEL_CLIENT:?set TEAM_CHANNEL_CLIENT to your channel client}"
+D="${TEAM_CHANNEL_STATE:-$HOME/.local/share/team_channel}"
 C="$D/checkin_cursor"
-ICH="${TEAMKANAL_ICH:-me}"
-BOT="bot-$ICH"
-SKIP=" $ICH $BOT ${TEAMKANAL_SKIP:-} "
+ME="${TEAM_CHANNEL_ICH:-me}"
+BOT="bot-$ME"
+SKIP=" $ME $BOT ${TEAM_CHANNEL_SKIP:-} "
 
 mkdir -p "$D" && chmod 700 "$D"
 date -Is > "$D/checkin_last"
@@ -22,14 +22,14 @@ n=$(python3 "$K" count)
 c=0; [[ -f "$C" ]] && c=$(cat "$C")
 (( n <= c )) && exit 0
 
-mapfile -t raw_msgs < <(python3 "$K" get --seit "$c")
+mapfile -t raw_msgs < <(python3 "$K" get --since "$c")
 formatted=()
 for line in "${raw_msgs[@]}"; do
-    von=$(echo "$line" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("von", ""))')
-    [[ "$SKIP" == *" $von "* ]] && continue
+    sender=$(echo "$line" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("from", ""))')
+    [[ "$SKIP" == *" $sender "* ]] && continue
     ts=$(echo "$line" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("ts", "")[:16])')
     text=$(echo "$line" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("text", ""))')
-    formatted+=("[$ts] $von: $text")
+    formatted+=("[$ts] $sender: $text")
 done
 echo "$n" > "$C"
 (( ${#formatted[@]} == 0 )) && exit 0
@@ -42,8 +42,8 @@ for msg in "${formatted[@]}"; do prompt+="$msg"$'\n'; done
 
 # no tools, no MCP: channel text can only produce a text answer, never an action
 A=$(printf '%s' "$prompt" | timeout 120 python3 "$HERE/freechat.py" 2>/dev/null); rc=$?
-if [[ -z "$A" || $rc -ne 0 ]] && [[ -n "${TEAMKANAL_FALLBACK_CMD:-}" ]]; then
-    A=$(printf '%s' "$prompt" | timeout 600 bash -c "$TEAMKANAL_FALLBACK_CMD" 2>/dev/null); rc=$?
+if [[ -z "$A" || $rc -ne 0 ]] && [[ -n "${TEAM_CHANNEL_FALLBACK_CMD:-}" ]]; then
+    A=$(printf '%s' "$prompt" | timeout 600 bash -c "$TEAM_CHANNEL_FALLBACK_CMD" 2>/dev/null); rc=$?
 fi
 
 if [[ -z "$A" || $rc -ne 0 ]]; then
@@ -54,6 +54,6 @@ if [[ -z "$A" || $rc -ne 0 ]]; then
     A="check-in $HHMM: model call failed (rc=$rc), messages were read (further failure notes suppressed for 60 min)."
 fi
 
-if ! printf '%s\n' "$A" | python3 "$K" sag --von "$BOT" -; then
-    python3 "$K" sag --von "$BOT" "check-in $HHMM: reply blocked by the secret guard."
+if ! printf '%s\n' "$A" | python3 "$K" say --from "$BOT" -; then
+    python3 "$K" say --from "$BOT" "check-in $HHMM: reply blocked by the secret guard."
 fi

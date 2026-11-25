@@ -1,15 +1,15 @@
-"""s0_eval.py -- S0_EVAL_V1 (Protokoll fixtures/wm-s0/S0_EVAL_V1.md, sha eingefroren; Entwurf ChatGPT Runde 9, 2026-11-25). Nur lesend, SHADOW.
+"""s0_eval.py -- S0_EVAL_V1 (Protocol fixtures/wm-s0/S0_EVAL_V1.md, sha frozen; Draft ChatGPT Round 9, 2026-11-25). Read-only, SHADOW.
 
-Prospektive Auswertung der WM1-Prognosen je Modellversion: BSS gegen die eingefrorene W0-Referenz (Haupt) und gegen Persistenz (sekundaer), gesamt und je Kanal,
-mit gepaartem Block-Bootstrap (Block 12 Fenster, 10000 Wiederholungen, Seed 20261125). Bloecke nie ueber Beobachtungsluecken. UNKNOWN wird nie aufgefuellt.
-Das Ergebnis ist eine Pruefstufe, kein endgueltiger Lernnachweis."""
+Prospective evaluation of WM1 forecasts per model version: BSS against the frozen W0 reference (primary) and against persistence (secondary), overall and per channel,
+with paired block bootstrap (Block 12 windows, 10000 repetitions, Seed 20261125). Blocks never across observation gaps. UNKNOWN is never filled in.
+The result is a test stage, not a final proof of learning."""
 import hashlib
 import json
 import os
 
 import numpy as np
 
-import weltmodell as wm
+import world_model as wm
 
 PROTO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "wm-s0/S0_EVAL_V1.md")
 MIN_N, BLOCK, REPS, SEED, SENS = 200, 12, 10000, 20261125, (24, 36)
@@ -17,7 +17,7 @@ CH = wm.CH
 
 
 def protocol_ok(path=PROTO):
-    """sha256 der Protokolldatei gegen die eingefrorene .sha256-Datei."""
+    """sha256 of the protocol file against the frozen .sha256 file."""
     try:
         h = hashlib.sha256(open(path, "rb").read()).hexdigest()
         return h == open(path[:-3] + ".sha256").read().strip(), h
@@ -26,7 +26,7 @@ def protocol_ok(path=PROTO):
 
 
 def load(conn, version):
-    """-> Zeilen (bucket, e_model[5], e_ref[5], e_pers[5]|None) der bewerteten prospektiven Fenster dieser Version, nach Bucket sortiert."""
+    """-> Rows (bucket, e_model[5], e_ref[5], e_pers[5]|None) of the evaluated prospective windows of this version, sorted by bucket."""
     if not wm._tbl(conn, "f3_wm_pred"):
         return []
     out = []
@@ -63,7 +63,7 @@ def _bss(num, den):
 
 
 def _boot(bl_m, bl_r, rng, reps):
-    """bl_m, bl_r: (Bloecke x Kanaele) Summen. Ziehen Bloecke mit Zuruecklegen (gepaart). -> BSS je Wiederholung, gesamt (Spalte 0) und je Kanal."""
+    """bl_m, bl_r: (Blocks x Channels) sums. Draw blocks with replacement (paired). -> BSS per repetition, overall (column 0) and per channel."""
     nb = len(bl_m)
     idx = rng.integers(0, nb, size=(reps, nb))
     sm, sr = bl_m[idx].sum(axis=1), bl_r[idx].sum(axis=1)  # reps x Kanaele
@@ -85,7 +85,7 @@ def _verdict(ci):
 
 
 def _sliding(rows, ref_idx, length, reps, seed):
-    """Sensitivitaet (Runde 10): gleitende Bloecke (alle Startpunkte innerhalb eines Abschnitts), nur berichtet, ohne Einfluss auf das Urteil."""
+    """Sensitivity (Round 10): sliding blocks (all starting points within a segment), only reported, without influence on the verdict."""
     rows = [r for r in rows if r[ref_idx] is not None]
     bl = []
     for s in segments(rows):
@@ -100,7 +100,7 @@ def _sliding(rows, ref_idx, length, reps, seed):
 
 
 def _cmp(rows, ref_idx, length, reps, seed):
-    """Vergleich Modell gegen Referenz (ref_idx 2=W0, 3=Persistenz) auf den Zeilen, die die Referenz haben."""
+    """Comparison of model against reference (ref_idx 2=W0, 3=Persistence) on the rows that have the reference."""
     rows = [r for r in rows if r[ref_idx] is not None]
     if not rows:
         return {"n": 0}
@@ -115,7 +115,7 @@ def _cmp(rows, ref_idx, length, reps, seed):
 
 
 def evaluate(conn, version=0, reps=REPS, seed=SEED, min_n=MIN_N):
-    """Haupt: BSS vs W0 (Block 12); sekundaer: vs Persistenz; Sensitivitaet: Block 24/36 und gleitende Bloecke (nur berichtet). Unter min_n Fenstern: ZU_WENIG_DATEN, kein Urteil."""
+    """Primary: BSS vs W0 (Block 12); secondary: vs Persistence; Sensitivity: Block 24/36 and sliding blocks (only reported). Below min_n windows: INSUFFICIENT_DATA, no verdict."""
     ok, h = protocol_ok()
     rows = load(conn, version)
     unk = conn.execute("select count(*) from f3_wm_pred where status='unbekannt' and model_version=?", (int(version),)).fetchone()[0] if wm._tbl(conn, "f3_wm_pred") else 0

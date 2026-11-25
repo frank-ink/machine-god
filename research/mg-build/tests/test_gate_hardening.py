@@ -11,8 +11,8 @@ from mg import gate
 
 
 def test_missing_cand_items_count_as_zero_and_fail():
-    """Kandidat laesst die 20 schwersten Items weg und ist auf dem Rest nur minimal besser:
-    ohne Null-Regel saehe das nach Gewinn aus, mit Null-Regel ist das Delta negativ -> FAIL."""
+    """Candidate skips the 20 hardest items and is only marginally better on the rest:
+    without the zero rule this would look like a gain, with the zero rule the delta is negative -> FAIL."""
     base = {"i%d" % k: 0.5 for k in range(100)}
     cand = {"i%d" % k: 0.55 for k in range(80)}  # 20 fehlen
     t = gate.paired_bootstrap(base, cand, n=1000, seed=42)

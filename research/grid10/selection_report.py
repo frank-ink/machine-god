@@ -1,13 +1,13 @@
-"""auswahlbericht.py -- Validator fuer den strukturierten Auswahlbericht (Rueckkanal Antwort -> Thalamus, Entwurf ChatGPT Runde 2/4, 2026-11-24).
+"""selection_report.py -- Validator for the structured selection report (feedback channel Answer -> Thalamus, Draft ChatGPT Round 2/4, 2026-11-24).
 
-Rein, ohne DB und ohne Wirkung. Das Modell meldet je uebergebenem Ereignis, ob es in die Antwort einfloss; die Laufzeit prueft gegen das, was TATSAECHLICH
-uebergeben wurde, und haengt model_id/Zeit/Antwort-Hash selbst an (nie vom Modell). Regeln:
-- nur Felder des Schemas; unbekannte Felder -> Eintrag verworfen (kein model_id vom Modell)
-- event_id muss in `passed` sein, channel muss zum uebergebenen Ereignis passen, frame_id/response_id muessen zum Turn passen
-- answer_span = [start, ende) in der Antwort; ausserhalb der Antwort oder leer -> erfundene Referenz, Eintrag verworfen
-- Widerspruch (gleiche event_id used UND unused) -> beide uncertain; identische Dubletten werden zusammengefasst
-- evidence: 'mention' (used + echter Span: beweist Erwaehnung, NICHT Verursachung) | 'claimed' (used ohne Span) | 'none'
-- fehlende Ereignisse -> `unreported` (nicht als unused gewertet)"""
+Pure, without DB and without effect. The model reports for each passed event whether it flowed into the answer; the runtime checks against what was ACTUALLY
+passed and appends model_id/time/answer-hash itself (never from the model). Rules:
+- only fields of the schema; unknown fields -> entry discarded (no model_id from the model)
+- event_id must be in `passed`, channel must match the passed event, frame_id/response_id must match the turn
+- answer_span = [start, end) in the answer; outside the answer or empty -> fabricated reference, entry discarded
+- Contradiction (same event_id used AND unused) -> both uncertain; identical duplicates are consolidated
+- evidence: 'mention' (used + real span: proves mention, NOT causation) | 'claimed' (used without span) | 'none'
+- missing events -> `unreported` (not counted as unused)"""
 import hashlib
 import time
 
@@ -70,5 +70,5 @@ def validate(entries, ctx, response_text, runtime=None):
 
 
 def referenced_channels(result):
-    """Kanaele fuer RetinaThalamus.receive_feedback: nur used (mention oder claimed); uncertain/unused/unreported zaehlen nicht."""
+    """Channels for RetinaThalamus.receive_feedback: only used (mention or claimed); uncertain/unused/unreported do not count."""
     return sorted({a["channel"] for a in result["accepted"] if a["uptake"] == "used"})

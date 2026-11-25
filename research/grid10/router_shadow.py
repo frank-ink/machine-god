@@ -1,7 +1,7 @@
-"""router_shadow.py -- Router-Shadow (Stueck 3, Schritt 4): WELCHES Modell der Router fuer die gewaehlten Klassen waehlen WUERDE; kein Provider-Aufruf, keine Antwortwirkung.
-Quelle ist ein Schnappschuss der Router-Auskunft (pool_offer: Klasse -> bestes Modell + Score), Datei kalibrierung-stueck3/router_offer.json. Der Router entscheidet das
-Modell; hier steht kein Modellname im Code. Aelter als MAX_AGE_S -> 'stale' (Entscheidung trotzdem protokolliert, als veraltet markiert). Der echte HTTP-Aufruf
-(omnipool-<klasse>) bleibt aus, bis der Nutzer die Anwendung in Omni-Brain freigibt (#connect; Status 'pending')."""
+"""router_shadow.py -- Router Shadow (Part 3, Step 4): WHICH model the router WOULD choose for the selected classes; no provider call, no response effect.
+Source is a snapshot of the router information (pool_offer: Klasse -> bestes Modell + Score), file kalibrierung-stueck3/router_offer.json. The router decides the
+model; no model name appears in the code here. Older than MAX_AGE_S -> 'stale' (decision still logged, marked as outdated). The actual HTTP call
+(omnipool-<klasse>) is omitted until the user releases the application in Omni-Brain (#connect; status 'pending')."""
 import json
 import os
 import time

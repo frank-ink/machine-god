@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import goal_competition as gc
 import goal_genesis as gg
 import goal_pursuit as gp
-from test_goal import NOW, befund, evid, mk
+from test_goal import NOW, finding, evid, mk
 
 A = lambda c, aid: c.execute("select * from f3_goal_attempt where attempt_id=?", (aid,)).fetchone()
 COL = lambda c: [r[1] for r in c.execute("pragma table_info(f3_goal_attempt)")]
@@ -17,7 +17,7 @@ ROW = lambda c, aid: dict(zip(COL(c), A(c, aid)))
 
 
 def one(n=5):
-    c = mk(); befund(c, "a", n=n); gg.genesis(c, NOW)
+    c = mk(); finding(c, "a", n=n); gg.genesis(c, NOW)
     return c, c.execute("select goal_id from f3_goal").fetchone()[0]
 
 
@@ -27,7 +27,7 @@ def t_e501():
     a = gp.pursue(c, pick, NOW)
     assert a and pick == g and gp.pursue(c, pick, NOW) == a and c.execute("select count(*) from f3_goal_attempt").fetchone()[0] == 1
     r = ROW(c, a)
-    assert r["goal_id"] == g and r["origin_event_id"].startswith("befund:") and json.loads(r["class_demand"])["turn_origin"] == "endogenous" and r["evaluator_version"] == gp.EVAL_VERSION
+    assert r["goal_id"] == g and r["origin_event_id"].startswith("finding:") and json.loads(r["class_demand"])["turn_origin"] == "endogenous" and r["evaluator_version"] == gp.EVAL_VERSION
 
 
 def t_e502():
@@ -60,11 +60,11 @@ def t_e504():
 def t_e505():
     c, g = one()
     a = gp.bind(c, g, NOW)
-    evid(c, "a", 10); c.commit()  # Welt aendert sich nach der Prognose
+    evid(c, "a", 10); c.commit()  # World changes after the prediction
     gp.process(c, a, NOW)
     r = ROW(c, a)
     b = c.execute("select kind,key from f3_endo_befund where key like 'versuch:%'").fetchone()
-    assert r["evaluation_status"] == "PARTIAL" and r["prediction_error"] == 1.0 and b == ("luecke", "versuch:" + g) and r["reentry_event_id"]
+    assert r["evaluation_status"] == "PARTIAL" and r["prediction_error"] == 1.0 and b == ("gap", "versuch:" + g) and r["reentry_event_id"]
     assert c.execute("select status from f3_goal where goal_id=?", (g,)).fetchone()[0] == "offen"
 
 
@@ -94,8 +94,8 @@ def t_e508():
 def t_e509():
     p = tempfile.mktemp(suffix=".db")
     try:
-        c = mk(p); befund(c, "a"); gg.genesis(c, NOW); g = c.execute("select goal_id from f3_goal").fetchone()[0]
-        a = gp.bind(c, g, NOW); h = ROW(c, a)["frozen_hash"]; c.close()  # Absturz nach Prognose, vor Bearbeitung
+        c = mk(p); finding(c, "a"); gg.genesis(c, NOW); g = c.execute("select goal_id from f3_goal").fetchone()[0]
+        a = gp.bind(c, g, NOW); h = ROW(c, a)["frozen_hash"]; c.close()  # Crash after prediction, before processing
         c2 = sqlite3.connect(p)
         assert gp.resume(c2, NOW + 60) == 1
         r = ROW(c2, a)
@@ -130,12 +130,12 @@ def t_e511():
 
 
 def t_e512():
-    """Kausaler Reentry: Versuch -> Befund -> Folgeziel -> Folgeziel nimmt am naechsten Wettbewerb teil, mit aufloesbarer Kette zurueck zum Versuch."""
-    c = mk(); befund(c, "a", n=5); befund(c, "b", n=50); gg.genesis(c, NOW)
+    """Causal reentry: Attempt -> Finding -> Consequence goal -> Consequence goal participates in next competition, with resolvable chain back to attempt."""
+    c = mk(); finding(c, "a", n=5); finding(c, "b", n=50); gg.genesis(c, NOW)
     pick, _ = gc.compete(c, NOW)
     a = gp.bind(c, pick, NOW)
     tag = json.loads(c.execute("select evidence_refs from f3_goal where goal_id=?", (pick,)).fetchone()[0])[0]["params"][0]
-    evid(c, tag, 80); c.commit()  # Welt aendert sich nach der Prognose -> Prognosefehler
+    evid(c, tag, 80); c.commit()  # World changes after the prediction -> prediction error
     gp.process(c, a, NOW)
     made = gg.genesis(c, NOW + 600)  # E3 liest den Reentry-Befund
     pick2, sc2 = gc.compete(c, NOW + 600)
@@ -149,7 +149,7 @@ def t_e512():
 
 
 def t_e512b_gain():
-    """Rueckwirkung auf E4: ein am Ziel gescheiterter Versuch (hier: Rechteabbruch) steht mit Ergebnis im naechsten Wettbewerb; der Ablauf (used_attempt) ist protokolliert."""
+    """Feedback effect on E4: an attempt failed at the goal (here: right abort) stands with result in the next competition; the sequence (used_attempt) is logged."""
     c, g = one()
     c.execute("update f3_goal set authority_scope='admin'"); c.commit()
     a = gp.pursue(c, g, NOW)

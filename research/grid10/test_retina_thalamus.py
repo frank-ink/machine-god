@@ -1,6 +1,6 @@
-"""Test-Tor Retina-Thalamus Stueck 2 (a-e). Lauf: python3 -I test_retina_thalamus.py (Exit 0 = gruen).
-(a) Gain gleich Original (vendored Thalamus._compute_final_gain, falls vorhanden; sonst nur Handwerte)  (b) Erholung <0.5 nach 3*tau
-(c) kein Fixpunkt / keine zwei Haufen ueber 1000 simulierte Tore  (d) Burst-Anteil >0 und <=50 %  (e) Rueckkanal wirkt."""
+"""Test gate Retina-Thalamus Part 2 (a-e). Run: python3 -I test_retina_thalamus.py (Exit 0 = green).
+(a) Gain equal to original (vendored Thalamus._compute_final_gain, if available; otherwise only manual values)  (b) Recovery <0.5 after 3*tau
+(c) no fixed point / no two clusters over 1000 simulated gates  (d) Burst proportion >0 and <=50%  (e) Feedback channel works."""
 import os
 import random
 import sys
@@ -94,7 +94,7 @@ def t_d_burst_anteil():
     t = rt.RetinaThalamus()  # B: nur echte Signale, nie Dauerstatus
     for i in range(50):
         assert not t.gate({"fokus_app": 2}, i * W)["burst"]
-    r = t.gate({"person_kommt": 1}, 60 * W)  # Rueckkehr: erste Person nach langer Abwesenheit ohne Vorgaenger -> kein Burst
+    r = t.gate({"person_kommt": 1}, 60 * W)  # Return: first person after long absence without predecessor -> no burst
     t.gate({"person_geht": 1}, 61 * W)
     assert t.gate({"person_kommt": 1}, 61 * W + rt.RETURN_ABSENCE_S + 1)["burst"] == ["person_kommt"]
 

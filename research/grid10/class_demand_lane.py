@@ -1,10 +1,10 @@
-"""class_demand_lane.py -- Stueck 3 SHADOW: Klassenbedarf je Turn ins Ledger f3_class_demand_log (Regel CLASS_DEMAND_V1, class_demand.py).
+"""class_demand_lane.py -- Piece 3 SHADOW: Class demand per turn into ledger f3_class_demand_log (rule CLASS_DEMAND_V1, class_demand.py).
 
-Eingaenge: Nutzertext (nur als Hash + Laenge gespeichert, nie Klartext), GRID-Signale des Turns (register.v2_signals, schreibt nichts), gegatetes
-Retina-Ergebnis des letzten abgeschlossenen Fensters (f3_retina_thal_log, hoechstens 2 Fenster alt, sonst leer), offenes Ziel (omega_goal, leer
-auf dieser Maschine solange keine Zeile offen ist). Schreibt NUR f3_class_demand_log; kein Router-Aufruf, keine Wirkung auf Antworten/Routing.
-Schalter star_konfig frank3.class_demand.mode (off|shadow, Standard shadow), frank3.kill=1 stoppt. Felder nach ChatGPT-Runde 3; router_version, model_id,
-response_ref, outcome bleiben bis zur Router-Anbindung NULL, evaluation_status='pending'. G9 gilt als gueltig, wenn > 0 (0 = identisch oder keine Historie)."""
+Inputs: User text (stored only as hash + length, never plaintext), GRID signals of the turn (register.v2_signals, writes nothing), gated
+Retina result of the last completed window (f3_retina_thal_log, at most 2 windows old, otherwise empty), open target (omega_goal, empty
+on this machine as long as no row is open). Writes ONLY f3_class_demand_log; no router call, no effect on responses/routing.
+Switch star_konfig frank3.class_demand.mode (off|shadow, default shadow), frank3.kill=1 stops. Fields after ChatGPT round 3; router_version, model_id,
+response_ref, outcome remain NULL until router integration, evaluation_status='pending'. G9 counts as valid if > 0 (0 = identical or no history)."""
 import hashlib
 import json
 import time
@@ -46,7 +46,7 @@ DDL2 = ("create table if not exists f3_class_demand_v2_log(id integer primary ke
 
 
 def retina_fresh(conn, now):
-    """True, wenn ein Gate-Fenster <= 2 Fenster alt existiert (Retina verfuegbar, auch wenn leer); sonst False = NICHT gemessen (nicht Null)."""
+    """True if a gate window <= 2 windows old exists (Retina available, even if empty); otherwise False = NOT measured (not zero)."""
     try:
         r = conn.execute("select max(bucket) from f3_retina_thal_log").fetchone()
         return bool(r and r[0] is not None and now // BUCKET_S - r[0] <= 2)
@@ -93,8 +93,8 @@ def step(conn, session_id, frame_id, prompt, sig, now=None):
 
 
 def resolve_input(session_id, input_ref, projects_dir=None):
-    """Kalibrierung/Blindbewertung: loest input_ref ('<hash16>:<laenge>') lokal gegen das Sitzungsprotokoll auf (keine zweite Klartextkopie in der DB).
-    -> Text oder None. Nur fuer den Auswerter (Aufrufer, nicht der Router); der Text wird nie zurueckgeschrieben."""
+    """Calibration/Blind evaluation: resolves input_ref ('<hash16>:<length>') locally against the session log (no second plaintext copy in the DB).
+    -> Text or None. Only for the evaluator (caller, not the router); the text is never written back."""
     import glob
     import os
     h, _, n = (input_ref or "").partition(":")

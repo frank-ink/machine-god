@@ -1,10 +1,10 @@
 """F2-WP-1207 P7 -- additive, shadow-gated GRID10 internal coordination cycle.
 
-Roadmap position: "P7 -- GRID10 wird Koordinationsschicht statt Logger. Wenn
-Zellwirkungen kausal bestaetigt sind: echter Frame-Lifecycle TypedEntry ->
+Roadmap position: "P7 -- GRID10 becomes coordination layer instead of logger. When
+cell effects are causally confirmed: real frame lifecycle TypedEntry ->
 GRID10 competition -> selection -> uptake -> v1 processing -> reentry.
-Wichtig: zunaechst KEINE direkte Aussenwirkung -- GRID10 koordiniert intern,
-EffectGate bleibt getrennt." (der Nutzer, F2-WP-1207 P5-P13 roadmap.)
+Important: initially NO direct external effect -- GRID10 coordinates internally,
+EffectGate remains separate." (the user, F2-WP-1207 P5-P13 roadmap.)
 
 This module wires exactly that cycle -- proposals -> competition -> selection
 -> broadcast -> uptake -> recurrent state update -> next-turn reentry -- for
@@ -52,8 +52,7 @@ Persistence convention: plain ``sqlite3.Connection`` supplied by the caller
 (no path resolution, no second database opened here) -- the same convention
 GRID10 tables have always used in stern.py and in p6d_runner.py, not the
 heavier WP-206 ``CanonicalPersistentAgencyStore`` (that store guards a
-different, unrelated table family).
-"""
+different, unrelated table family)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field

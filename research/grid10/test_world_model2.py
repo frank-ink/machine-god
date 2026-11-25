@@ -6,10 +6,10 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-import endogen
+import endogenous
 import goal_genesis as gg
-import weltmodell as wm
-import weltmodell2 as w2
+import world_model as wm
+import world_model2 as w2
 
 B0, NOW = 6_000_000, 1_800_000_000.0
 CH = list(wm.CH)
@@ -18,13 +18,13 @@ CH = list(wm.CH)
 def mk():
     c = sqlite3.connect(":memory:")
     c.execute("create table star_konfig(schluessel text primary key, wert text)")
-    for d in endogen.DDL + wm.DDL:
+    for d in endogenous.DDL + wm.DDL:
         c.execute(d)
     return c
 
 
 def win(c, b, p, x, ver=0, ch=None):
-    """Fenster b: Prognose p, Beobachtung x (Skalar fuer alle Kanaele, ch ueberschreibt einzelne Kanaele von p)."""
+    """Window b: Forecast p, Observation x (Scalar for all channels, ch overrides individual channels of p)."""
     pr = {k: p for k in CH}; ob = {k: x for k in CH}
     for k, v in (ch or {}).items():
         pr[k] = v
@@ -35,7 +35,7 @@ def win(c, b, p, x, ver=0, ch=None):
 def anlass(c, lo, hi, ver=0):
     n = c.execute("select count(*) from f3_wm_pred where bucket>=? and bucket<=? and model_version=?", (lo, hi, ver)).fetchone()[0]
     ref = {"table": "f3_wm_pred", "where": "status='bewertet' and model_version=%d and bucket>=%d and bucket<=%d" % (ver, lo, hi), "params": [], "n": n}
-    c.execute("insert into f3_endo_befund(bucket,kind,statement,evidence_ref,key) values(?,?,?,?,?)", (int(NOW // 300), "widerspruch", "wm", json.dumps(ref), "wm_prognosefehler"))
+    c.execute("insert into f3_endo_befund(bucket,kind,statement,evidence_ref,key) values(?,?,?,?,?)", (int(NOW // 300), "contradiction", "wm", json.dumps(ref), "wm_prognosefehler"))
     c.commit()
 
 
@@ -55,7 +55,7 @@ def t_wm201_ausreisser_rauschen():
     anlass(c, B0, B0 + 11)
     assert w2.project(c, NOW) == 3
     s = top(c)
-    assert s[0]["name"] == "RAUSCHEN" and s[0]["status"] == "leitend" and "conc_n" in s[0]["support"] and abs(sum(h["score"] for h in s) - 1) < 1e-9
+    assert s[0]["name"] == "NOISE" and s[0]["status"] == "leitend" and "conc_n" in s[0]["support"] and abs(sum(h["score"] for h in s) - 1) < 1e-9
 
 
 def t_wm202_regime_gerichtet_und_anhaltend():
@@ -63,7 +63,7 @@ def t_wm202_regime_gerichtet_und_anhaltend():
     for i in range(12):
         win(c, B0 + i, 0.1, 1.0, ch={"fokus_app": 0.5})  # in allen Fenstern zu niedrig vorhergesagt
     for i in range(12, 16):
-        win(c, B0 + i, 0.1, 1.0)  # Fehler bleibt nach dem Anlass
+        win(c, B0 + i, 0.1, 1.0)  # Error persists after the trigger
     anlass(c, B0, B0 + 11); w2.project(c, NOW)
     s = top(c)
     assert s[0]["name"] == "REGIME" and "pers" in s[0]["support"] and s[0]["salience"] > 0.5
@@ -76,7 +76,7 @@ def t_wm203_luecken_stuetzen_sensor():
             win(c, B0 + i, 0.2, 0.2 if i % 2 else 0.6)  # jedes dritte Fenster fehlt (UNBEKANNT), Fehler wechselnd
     anlass(c, B0, B0 + 17); w2.project(c, NOW)
     s = {h["name"]: h for h in top(c)}
-    assert "gap_n" in s["SENSOR"]["support"] and s["SENSOR"]["score"] > 0.3 and not s["RAUSCHEN"]["counter"] == ["pers"] * 5
+    assert "gap_n" in s["SENSOR"]["support"] and s["SENSOR"]["score"] > 0.3 and not s["NOISE"]["counter"] == ["pers"] * 5
 
 
 def t_wm204_revisionen_unveraenderlich():
@@ -115,10 +115,10 @@ def t_wm206_offener_widerspruch_befund():
         win(c, B0 + i, 0.3, 0.3 if i % 4 else 0.9)  # gemischtes Bild
     anlass(c, B0, B0 + 11); w2.project(c, NOW)
     s = top(c); close = s[0]["score"] - s[1]["score"] < w2.MARGIN
-    b = w2.befund(c, NOW)
+    b = w2.finding(c, NOW)
     assert (len(b) == 1) == close
     if b:
-        assert b[0]["kind"] == "widerspruch" and b[0]["key"].startswith("wm2_offen:") and endogen.resolve(c, b[0]["ref"]) == (True, b[0]["ref"]["n"])
+        assert b[0]["kind"] == "contradiction" and b[0]["key"].startswith("wm2_offen:") and endogenous.resolve(c, b[0]["ref"]) == (True, b[0]["ref"]["n"])
     # eindeutiger Fall -> kein Befund
     c2 = mk()
     for i in range(12):
@@ -127,7 +127,7 @@ def t_wm206_offener_widerspruch_befund():
         win(c2, B0 + i, 0.1, 1.0)
     anlass(c2, B0, B0 + 11); w2.project(c2, NOW)
     s2 = top(c2)
-    assert (s2[0]["score"] - s2[1]["score"] >= w2.MARGIN) == (w2.befund(c2, NOW) == [])
+    assert (s2[0]["score"] - s2[1]["score"] >= w2.MARGIN) == (w2.finding(c2, NOW) == [])
 
 
 def t_wm207_aus_und_kill():
@@ -137,7 +137,7 @@ def t_wm207_aus_und_kill():
             win(c, B0 + i, 0.3, 1.0)
         anlass(c, B0, B0 + 11)
         c.execute("insert into star_konfig values(?,?)", (k, v)); c.commit()
-        assert w2.project(c, NOW) == 0 and not c.execute("select 1 from sqlite_master where name='f3_wm2_rev'").fetchone() and w2.befund(c, NOW) == []
+        assert w2.project(c, NOW) == 0 and not c.execute("select 1 from sqlite_master where name='f3_wm2_rev'").fetchone() and w2.finding(c, NOW) == []
 
 
 def t_wm208_wm1_unberuehrt():
@@ -146,7 +146,7 @@ def t_wm208_wm1_unberuehrt():
         win(c, B0 + i, 0.3, 1.0 if i % 3 == 0 else 0.3)
     anlass(c, B0, B0 + 11)
     before = (dump(c, "f3_wm_pred"), dump(c, "f3_endo_befund"))
-    w2.project(c, NOW); w2.befund(c, NOW)
+    w2.project(c, NOW); w2.finding(c, NOW)
     assert before == (dump(c, "f3_wm_pred"), dump(c, "f3_endo_befund"))
 
 
@@ -163,13 +163,13 @@ def t_wm210_kette_befund_zu_ziel():
     for i in range(12):
         win(c, B0 + i, 0.3, 0.3 if i % 4 else 0.9)
     anlass(c, B0, B0 + 11); w2.project(c, NOW)
-    # Zustand erzwingen: knapper Abstand, falls die Regel hier eindeutig ist, Ergebnis ehrlich pruefen
-    b = w2.befund(c, NOW)
-    assert len(b) == 1  # deterministische Testdaten: knapper Abstand (REGIME vs RAUSCHEN)
+    # Force state: narrow margin, if the rule is unambiguous here, verify result honestly
+    b = w2.finding(c, NOW)
+    assert len(b) == 1  # deterministische Testdaten: knapper Abstand (REGIME vs NOISE)
     c.execute("insert into f3_endo_befund(bucket,kind,statement,evidence_ref,key) values(?,?,?,?,?)", (int(NOW // 300), b[0]["kind"], b[0]["statement"], json.dumps(b[0]["ref"]), b[0]["key"])); c.commit()
     made = gg.genesis(c, NOW)
-    g = c.execute("select g.origin_event_id,g.authority_scope,b.key from f3_goal g join f3_endo_befund b on 'befund:'||b.id=g.origin_event_id where b.key like 'wm2_offen:%'").fetchall()
-    assert len(made) == 2 and len(g) == 1 and g[0][1] == "none"  # Anlassbefund (wm_prognosefehler) und WM2-Widerspruch erzeugen je ein Ziel
+    g = c.execute("select g.origin_event_id,g.authority_scope,b.key from f3_goal g join f3_endo_befund b on 'finding:'||b.id=g.origin_event_id where b.key like 'wm2_offen:%'").fetchall()
+    assert len(made) == 2 and len(g) == 1 and g[0][1] == "none"  # Trigger finding (wm_prognosefehler) and WM2 contradiction each generate a target
 
 
 if __name__ == "__main__":

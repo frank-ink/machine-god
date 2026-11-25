@@ -24,7 +24,7 @@ control of any organ is demonstrated here: every organ in `research/grid10` is S
 | Free-pool language models | generation, code drafts, first review (NVIDIA models first); never trusted without a test | `docs/research/mg-build-review-2026-11-25.md` |
 | Review roles (architect, builder, checker, guardian) | independent review of diffs and claims | `team/agents/` |
 
-Channel: a direct cable between the machines, used through a small team channel (`research/teamkanal`). The channel
+Channel: a direct cable between the machines, used through a small team channel (`research/team_channel`). The channel
 had to be repaired first (a drop-in fix, reference scripts included).
 
 ## Timeline
@@ -41,6 +41,10 @@ had to be repaired first (a drop-in fix, reference scripts included).
 6. **Round 11 (pulse, four endings, inner wiki).** Measured read-only: pulse tables 0 rows, wiki tables 0 rows, the four
    endings are defined in no source. Result: design intent plus empty tables, not working code (`round11-pulse-measurements.md`).
 7. **Publication** to branch `fill/team-grid10-mg` only; main untouched.
+8. **English pass** (owner order: all communication and names in English). Comments and docstrings were translated by a free-pool model that
+   never saw code; an AST-equality check per file and the full test suites (84 + 15 files) verified the result. Hash-pinned frozen
+   artifacts were kept byte-identical (the tests caught two translations of pinned files; both were reverted). File, module and role names
+   were renamed mechanically (e.g. `weltmodell` -> `world_model`, `team-pruefer` -> `team-reviewer`, `teamkanal` -> `team_channel`).
 
 ## Incidents (kept visible on purpose)
 

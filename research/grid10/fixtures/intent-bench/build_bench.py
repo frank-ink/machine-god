@@ -1,4 +1,4 @@
-"""Baut INTENT_BENCH_V1 (120 synthetische Aufgaben, Soll-Labels von Claude vorab, unabhaengig vom 4B; keine Pilotaufgaben). Format je Zeile: kategorie|labels(kommagetrennt, leer=ABSTAIN)|text"""
+"""Builds INTENT_BENCH_V1 (120 synthetic tasks, target labels from Claude upfront, independent of the 4B; no pilot tasks). Format per line: kategorie|labels(comma-separated, empty=ABSTAIN)|text"""
 import hashlib, json, sys
 RAW = """
 indirekt|code|Der Build bricht seit dem letzten Merge mit einem Segfault ab und ich finde die Stelle nicht.

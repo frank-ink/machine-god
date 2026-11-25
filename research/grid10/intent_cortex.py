@@ -1,9 +1,9 @@
-"""intent_cortex.py -- INTENT_CORTEX_V1 (Entwurf ChatGPT Runde 9/10, 2026-11-25), SHADOW. Semantisches Evidenzorgan: liefert NUR Evidenz, keine Entscheidung und keine Ausfuehrung.
+"""intent_cortex.py -- INTENT_CORTEX_V1 (Draft ChatGPT Round 9/10, 2026-11-25), SHADOW. Semantic evidence organ: provides ONLY evidence, no decision and no execution.
 
-Schema je Klasse: class, evidence_level E0..E3, evidence_spans (muessen woertlich im Eingabetext stehen), implicit_intent, negation, confidence, reason.
-Auswahl (nur Vorschlag an spaetere Router-Schicht): Klasse nicht negiert, Stufe >= E2, confidence >= 0.5, mind. ein gueltiger Span; sonst ABSTAIN.
-Aufruf gegen den konfigurierten OpenAI-kompatiblen Endpunkt (MG_LLM_URL/MG_LLM_MODEL/MG_LLM_KEY, siehe freellm.py; jedes Free-Pool-Modell); fester Aufrufpfad, kein Werkzeug, kein Schreiben ausser dem Shadow-Ledger (nur Hash des Textes, nie der Text selbst).
-Der Text geht an den konfigurierten Endpunkt: fuer private Texte einen lokalen Endpunkt setzen. 'llm' ist austauschbar."""
+Schema per class: class, evidence_level E0..E3, evidence_spans (must appear verbatim in input text), implicit_intent, negation, confidence, reason.
+Selection (only proposal to later router layer): class not negated, level >= E2, confidence >= 0.5, at least one valid span; otherwise ABSTAIN.
+Call against configured OpenAI-compatible endpoint (MG_LLM_URL/MG_LLM_MODEL/MG_LLM_KEY, see freellm.py; any free-pool model); fixed call path, no tool, no writing except shadow ledger (only hash of text, never the text itself).
+The text goes to the configured endpoint: for private texts set a local endpoint. 'llm' is interchangeable."""
 import hashlib
 import json
 import re
@@ -59,7 +59,7 @@ def validate(raw, text):
 
 
 def select(items):
-    """Vorschlag: nur nicht negierte Klassen mit Stufe >= E2, confidence >= 0.5 und gueltigem Span, je Klasse die staerkste Evidenz."""
+    """Proposal: only non-negated classes with level >= E2, confidence >= 0.5 and valid span, per class the strongest evidence."""
     best = {}
     for it in items:
         if it["negation"] or LEVELS.index(it["evidence_level"]) < MIN_LEVEL or it["confidence"] < MIN_CONF or not it["evidence_spans"]:

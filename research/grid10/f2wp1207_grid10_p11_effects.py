@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""F2-WP-1207 P11 -- Effects anschliessen (first real GRID10 -> EffectGate door).
+"""F2-WP-1207 P11 -- Connect effects (first real GRID10 -> EffectGate door).
 
 Byte-adapted mirror of the canonical module (frankenstein-2.0,
 src/frankenstein2/grid10_p11_effects.py, branch
@@ -12,13 +12,8 @@ copy live in this repo, same as P9's epoch reconciler and P10's own gold
 test.
 
 Roadmap position, verbatim from the project's own P5-P13 plan: "P11 --
-Effects anschliessen. Erst danach duerfen intern ausgewaehlte Zustaende in
-echte Aktionen uebersetzt werden: candidate -> typed effect request ->
-EffectGate -> EffectJournal -> readback. GRID10/ein Modell darf NIE direkt
-externe Wahrheit/Effekte erzeugen." Every phase up to and including P10
-(``grid10_p7_coordination.py`` / ``grid10_p10_workspace_reentry.py``) was
-explicitly internal-only -- "GRID10 koordiniert intern, EffectGate bleibt
-getrennt", repeated in every prior module's own docstring. This module is
+Connect effects. Only after that may internally selected states be translated into real actions: candidate -> typed effect request -> EffectGate -> EffectJournal -> readback. GRID10/a model must NEVER directly produce external truth/effects." Every phase up to and including P10 (``grid10_p7_coordination.py`` / ``grid10_p10_workspace_reentry.py``) was
+explicitly internal-only -- "GRID10 coordinates internally, EffectGate remains separate", repeated in every prior module's own docstring. This module is
 the FIRST deliberate, gated door in that wall, and the door stays firmly
 gated:
 
@@ -45,8 +40,7 @@ gated:
 
 Pipeline (the user's spec, verbatim): "workspace candidate -> typed effect
 request -> effect gate -> effect journal -> execution/denial -> readback ->
-workspace uptake -> next-frame reentry. [...] Kein direkter Effekt aus
-einer GRID10-Zelle heraus, keine Umgehung des Gates."
+workspace uptake -> next-frame reentry. [...] No direct effect from a GRID10 cell, no bypassing of the gate."
 
   1. candidate       -- a ``P7CoordinationResult`` from
                          ``coordinate_real_turn`` / ``coordinate_real_turn_
@@ -72,8 +66,7 @@ einer GRID10-Zelle heraus, keine Umgehung des Gates."
                          back into the SAME ``f2_grid10_p6d_state`` row
                          P7's own ``read_prior_state`` (and P10's
                          ``reconstruct_workspace``) already read for
-                         reentry -- house law "weniger neue Komponenten,
-                         mehr Rueckkopplung": no new plumbing, reuses the
+                         reentry -- house law "fewer new components, more feedback": no new plumbing, reuses the
                          existing reentry channel.
   8. next-frame reentry     -- automatic: the NEXT ``coordinate_real_turn``
                          call for the same ``condition_key`` picks up the

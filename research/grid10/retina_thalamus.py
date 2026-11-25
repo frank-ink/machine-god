@@ -1,13 +1,13 @@
-"""retina_thalamus.py -- Thalamus-Gating der Retina-Kanaele, Stueck 2 (reiner Kern, deterministisch, Zeit wird uebergeben).
+"""retina_thalamus.py -- Thalamus gating of retina channels, Part 2 (pure core, deterministic, time is passed in).
 
-Formel wie im Original (Project-Frankenstein services/thalamus.py), je Kanal und Fenster:
-  gain = base * (1 - 0.8*H) * attention * vigilanz(1+0.3*v) * novelty(2.0 bei Burst sonst 1+0.5*n) * (1+feedback) * (1+min(0.5*fehler, 0.4))
-  Relais nur wenn Kanal Inhalt hat UND gain >= RELAY_THRESHOLD (0.25).
-Abweichung A (der Nutzer 2026-11-24): Habituierung ERHOLT sich. Ein Fenster ohne Inhalt habituiert nicht, sondern H *= exp(-dt/tau)
-  (im Original blieb H im Fixpunkt 1.0, gemessen). Gleicher Inhalt wie zuletzt weitergereicht: H waechst wie im Original.
-Abweichung B: Burst nur aus echten Signalen (real = Menge aus {"amygdala","reality_flag"}) oder Rueckkehr nach Abwesenheit
-  (person_kommt nach >= RETURN_ABSENCE_S ohne Personen-Ereignis); nie aus Dauerstatus / Zahlenspruengen.
-Kanalwerte (base, tau) sind UNKALIBRIERTE Startwerte; Taus sind auf das 300-s-Fenster skaliert (Original: 30-300 s je Gate)."""
+Formula as in the original (Project-Frankenstein services/thalamus.py), per channel and window:
+  gain = base * (1 - 0.8*H) * attention * vigilance(1+0.3*v) * novelty(2.0 on burst else 1+0.5*n) * (1+feedback) * (1+min(0.5*error, 0.4))
+  Relay only if channel has content AND gain >= RELAY_THRESHOLD (0.25).
+Deviation A (user 2026-11-24): Habituation RECOVERS. A window without content does not habituate, instead H *= exp(-dt/tau)
+  (in the original H stayed at fixed point 1.0, measured). Same content as last relayed: H grows as in the original.
+Deviation B: Burst only from real signals (real = set from {"amygdala","reality_flag"}) or return after absence
+  (person_comes after >= RETURN_ABSENCE_S without person event); never from sustained status / numeric jumps.
+Channel values (base, tau) are UNCALIBRATED starting values; taus are scaled to the 300-s window (original: 30-300 s per gate)."""
 import math
 
 RELAY_THRESHOLD = 0.25
@@ -20,7 +20,7 @@ ATTENTION = {  # kognitiver Modus -> Gewicht je Kanal
     "chat_active": {"person_kommt": 1.2, "person_geht": 1.2, "fokus_app": 0.8, "objekt_neu": 0.6, "objekt_weg": 0.5},
     "idle_focus": {"person_kommt": 1.0, "person_geht": 1.0, "fokus_app": 1.0, "objekt_neu": 0.8, "objekt_weg": 0.6},
 }
-FB_DECAY, FB_BOOST, FB_SUPPRESS = 0.87, 0.15, -0.05  # wie im Original
+FB_DECAY, FB_BOOST, FB_SUPPRESS = 0.87, 0.15, -0.05  # as in the original
 
 
 def _clamp(v, lo=0.0, hi=1.0):
@@ -28,7 +28,7 @@ def _clamp(v, lo=0.0, hi=1.0):
 
 
 def final_gain(base, hab, attn, vig, novelty, burst, fb, pred_err):
-    """Reine Originalformel (Referenz fuer das Test-Tor a)."""
+    """Pure original formula (reference for test gate a)."""
     return _clamp(base * (1.0 - hab * 0.8) * attn * (1.0 + _clamp(vig, -1.0, 1.0) * 0.3)
                   * (2.0 if burst else 1.0 + novelty * 0.5) * (1.0 + fb) * (1.0 + min(pred_err * 0.5, 0.4)))
 
@@ -61,7 +61,7 @@ class RetinaThalamus:
             val = _clamp(cnt / 10.0)
             dt = 0.0 if st["last_ts"] is None else max(0.0, ts - st["last_ts"])
             st["last_ts"] = ts
-            if cnt == 0:  # A: kein Inhalt -> Erholung, nichts zu relayen
+            if cnt == 0:  # A: no content -> recovery, nothing to relay
                 st["h"] *= math.exp(-dt / c["tau"]) if c["tau"] > 0 else 0.0
                 st["pred"] += 0.3 * (0.0 - st["pred"])
                 gains[n] = 0.0
@@ -91,7 +91,7 @@ class RetinaThalamus:
         return {"gains": gains, "relay": relay, "burst": burst, "hab": {n: s["h"] for n, s in self.s.items()}}
 
     def receive_feedback(self, referenced):
-        """Wie im Original: genannte Kanaele +0.15, die uebrigen mild -0.05 (nur wenn nicht schon im Plus)."""
+        """As in the original: mentioned channels +0.15, the others mildly -0.05 (only if not already in the positive)."""
         for n, st in self.s.items():
             if n in referenced:
                 st["fb"] = FB_BOOST

@@ -1,13 +1,13 @@
-"""goal_pursuit.py -- E5 Zielverfolgung und kausaler Reentry (Entwurf ChatGPT Runde 7, 2026-11-25), SHADOW, nur lokal und lesend.
+"""goal_pursuit.py -- E5 goal pursuit and causal reentry (Draft ChatGPT Round 7, 2026-11-25), SHADOW, local and read-only only.
 
-a Zielbindung: ein gewaehltes Ziel -> genau ein Versuch (attempt_id = Hash aus goal_id und Auswahlzaehler, idempotent).
-b Klassenbedarf: V2 mit turn_origin='endogenous', Zieltext als Quelle, KEIN fingierter Nutzertext (nur Protokoll, nichts wird dadurch ausgefuehrt).
-c Prognose vor der Bearbeitung, zusammen mit den Erfolgskriterien in frozen_hash eingefroren; bei Abweichung -> UNVERIFIABLE, das bearbeitende Organ aendert Kriterien nie.
-d Bearbeitung: eine lesende Erkenntnisaufgabe auf der Evidenzreferenz des Ziels (Anzahl neu zaehlen, bis zu 5 Zeilen-IDs), unter sqlite-Authorizer (nur SELECT/READ/FUNCTION).
-   Das ist eine flache Beschreibung, KEINE tiefe Untersuchung; Prognosefehler entstehen praktisch nur, wenn sich die Welt zwischen Bindung und Bearbeitung aendert.
-e Evaluation gegen die vorab fixierten Kriterien: SATISFIED | PARTIAL | FAILED | UNVERIFIABLE (fehlende Evidenz zaehlt nie als Erfolg; veralteter Ausgangszustand hoechstens PARTIAL).
-f Reentry: Ergebnis erzeugt genau einen E2-Befund je Versuch (Art 'ergebnis', informativ, erzeugt kein Ziel) oder bei Prognosefehler/Fehlschlag Art 'luecke' (erzeugt ueber E3 ein Untersuchungsziel).
-   Rueckwirkung auf E4: erwartete Informationsgewinn steigt bei Prognosefehler, erfuellte Ziele werden abgeschlossen; compete() protokolliert den benutzten Versuch."""
+a Goal binding: a chosen goal -> exactly one attempt (attempt_id = hash from goal_id and selection counter, idempotent).
+b Class requirement: V2 with turn_origin='endogenous', goal text as source, NO fictitious user text (only log, nothing is executed thereby).
+c Prognosis before processing, frozen together with success criteria in frozen_hash; on deviation -> UNVERIFIABLE, the processing organ never changes criteria.
+d Processing: a reading insight task on the goal's evidence reference (recount, up to 5 line IDs), under sqlite authorizer (only SELECT/READ/FUNCTION).
+   This is a flat description, NO deep investigation; prognosis errors practically only arise when the world changes between binding and processing.
+e Evaluation against pre-fixed criteria: SATISFIED | PARTIAL | FAILED | UNVERIFIABLE (missing evidence never counts as success; outdated initial state at most PARTIAL).
+f Reentry: Result produces exactly one E2 finding per attempt (type 'ergebnis', informative, produces no goal) or on prognosis error/failure type 'gap' (produces an investigation goal via E3).
+   Feedback on E4: expected information gain increases on prognosis error, fulfilled goals are completed; compete() logs the used attempt."""
 import hashlib
 import json
 import re
@@ -15,7 +15,7 @@ import sqlite3
 import time
 
 import class_demand_v2 as v2
-import endogen
+import endogenous
 import goal_genesis as gg
 
 EVAL_VERSION, PE_REL, SAMPLE = "goal_pursuit_eval/1", 0.2, 5
@@ -58,7 +58,7 @@ def bind(conn, goal_id, now=None):
         return aid
     refs = json.loads(refs_j)
     cd = v2.derive("", goal=stmt, turn_origin="endogenous", goal_id=goal_id)
-    if scope != "none":  # E5.11: nie ueber eigene Rechte hinaus; Versuch wird protokolliert, aber nicht bearbeitet
+    if scope != "none":  # E5.11: never beyond own rights; attempt is logged but not processed
         conn.execute("insert into f3_goal_attempt values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                      (aid, goal_id, origin, "{}", json.dumps({"turn_origin": cd["turn_origin"], "selected_classes": cd["selected_classes"]}), "{}", "{}", "", gain,
                       json.dumps({"abbruch": "authority_scope"}), json.dumps(refs), "FAILED", None, "{}", "{}", None, EVAL_VERSION, now, now))
@@ -118,10 +118,10 @@ def process(conn, aid, now=None):
         conn.execute("update f3_goal set expected_information_gain=min(1.0, expected_information_gain+0.2) where goal_id=?", (gid,))
     after = conn.execute("select status,expected_information_gain from f3_goal where goal_id=?", (gid,)).fetchone()
     reentry = _h("reentry", aid)
-    kind = "luecke" if (err or status in ("FAILED", "UNVERIFIABLE", "PARTIAL")) else "ergebnis"
-    conn.execute(endogen.DDL[1])
+    kind = "gap" if (err or status in ("FAILED", "UNVERIFIABLE", "PARTIAL")) else "ergebnis"
+    conn.execute(endogenous.DDL[1])
     cur = conn.execute("insert or ignore into f3_endo_befund(bucket,kind,statement,evidence_ref,key) values(?,?,?,?,?)",
-                       (int(now // endogen.BUCKET_S), kind, "Versuch %s: %s%s" % (aid, status, " (Prognosefehler %.2f)" % pe if err else ""),
+                       (int(now // endogenous.BUCKET_S), kind, "Versuch %s: %s%s" % (aid, status, " (Prognosefehler %.2f)" % pe if err else ""),
                         json.dumps({"table": "f3_goal_attempt", "where": "attempt_id=? and evaluation_status=?", "params": [aid, status], "n": 1}), "versuch:" + gid))
     conn.execute("update f3_goal_attempt set observed_result=?, evaluation_status=?, prediction_error=?, proposed_state_delta=?, state_after_ref=?, reentry_event_id=?, finished_at=? where attempt_id=?",
                  (json.dumps(obs), status, pe, json.dumps(delta), json.dumps({"goal_id": gid, "status": after[0], "gain": after[1]}), reentry if cur.rowcount else None, now, aid))
@@ -130,7 +130,7 @@ def process(conn, aid, now=None):
 
 
 def resume(conn, now=None):
-    """E5.09: nach Neustart unfertige Versuche mit den eingefrorenen Kriterien zu Ende fuehren."""
+    """E5.09: after restart, complete unfinished attempts with the frozen criteria."""
     if not conn.execute("select 1 from sqlite_master where name='f3_goal_attempt'").fetchone():
         return 0
     ids = [r[0] for r in conn.execute("select attempt_id from f3_goal_attempt where evaluation_status is null").fetchall()]

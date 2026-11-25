@@ -1,13 +1,13 @@
-"""retina_grid.py -- Retina als GRID-Unterschicht, Stueck 1 (SHADOW), der Nutzer 2026-11-24 "A-GRID zuerst".
+"""retina_grid.py -- Retina as GRID sublayer, Piece 1 (SHADOW), the user 2026-11-24 "A-GRID first".
 
-Die EIGENE Retina (Ereignisstrom f2_retina_geschehen: objekt_neu/-weg, person_kommt/-geht, fokus_app; nur Text/Zahlen, kein Bild) speist
-dieselbe GridV2Engine wie der Text-GRID. Feste Zeitfenster (BUCKET_S): jedes abgeschlossene Fenster ist EIN Schritt, auch ein leeres
-(deterministisch, aus dem Ereignislog replizierbar). Eigene Tabellen f3_grid_v2r_*; schreibt NIE nach f3_grid_v2_state / v2x, publiziert
-NICHTS an frank3_gwt (Beobachtung, bis Test-Tor gruen und der Nutzer auf active stellt). Schalter star_konfig frank3.grid_retina.mode (off|shadow,
-Standard shadow), frank3.kill=1 stoppt. Zellzuordnung UNKALIBRIERT (Startwerte, nur monoton im genannten Merkmal):
-  G9 Ueberraschung = clamp(max(bits im Fenster)/4)   G4 Bindung = 1 wenn person_kommt/person_geht   G6 Werkzeugdruck = 1 wenn fokus_app
-  G10 Umfang = clamp(Ereignisse/10)
-Messung 2026-11-24: die 0.8B-Lesungen (f2_retina_lesung) tragen als Signal nicht (98 % Enthaltung, 3-7 Werte je Achse) -> hier nicht benutzt."""
+The OWN Retina (event stream f2_retina_geschehen: objekt_neu/-weg, person_kommt/-geht, fokus_app; only text/numbers, no image) feeds
+the same GridV2Engine as the Text-GRID. Fixed time windows (BUCKET_S): each completed window is ONE step, even an empty one
+(deterministic, replicable from the event log). Own tables f3_grid_v2r_*; NEVER writes to f3_grid_v2_state / v2x, publishes
+NOTHING to frank3_gwt (observation, until test gate green and user sets to active). Switch star_konfig frank3.grid_retina.mode (off|shadow,
+Default shadow), frank3.kill=1 stops. Cell mapping UNCALIBRATED (initial values, only monotonic in the mentioned feature):
+  G9 Surprise = clamp(max(bits in window)/4)   G4 Binding = 1 when person_kommt/person_geht   G6 ToolPressure = 1 when fokus_app
+  G10 Scope = clamp(Events/10)
+Measurement 2026-11-24: the 0.8B readings (f2_retina_lesung) do not carry as signal (98% abstention, 3-7 values per axis) -> not used here."""
 import json
 import time
 
@@ -28,7 +28,7 @@ def _clamp(x):
 
 
 def window_signals(events):
-    """events: Liste (art, bits) eines Fensters -> {Zelle: Wert in [0,1]}. Leeres Fenster -> alle 0 (keine Erfindung)."""
+    """events: List (type, bits) of a window -> {Cell: Value in [0,1]}. Empty window -> all 0 (no invention)."""
     arts = {a for a, _ in events}
     bits = [float(b or 0.0) for _, b in events]
     return {
@@ -40,7 +40,7 @@ def window_signals(events):
 
 
 def _events(conn, b0, b1):
-    """{bucket: [(art, bits)]} fuer die Fenster [b0, b1)."""
+    """{bucket: [(type, bits)]} for the windows [b0, b1)."""
     out = {b: [] for b in range(b0, b1)}
     for ts, art, bits in conn.execute("select ts,art,bits from f2_retina_geschehen where ts>=? and ts<? order by ts", (b0 * BUCKET_S, b1 * BUCKET_S)):
         out[int(ts // BUCKET_S)].append((art, bits))
@@ -48,14 +48,14 @@ def _events(conn, b0, b1):
 
 
 def replay(conn, b0, b1, engine=None):
-    """Nur lesend (fuer das Test-Tor): Schritte ueber die Fenster [b0,b1) -> Liste der Engine-Ausgaben."""
+    """Read-only (for the test gate): Steps over the windows [b0,b1) -> List of engine outputs."""
     e = engine or GridV2Engine()
     ev = _events(conn, b0, b1)
     return [e.step(window_signals(ev[b])) for b in range(b0, b1)]
 
 
 def step_buckets(conn, now=None):
-    """Verarbeitet alle abgeschlossenen, noch nicht gesehenen Fenster (idempotent ueber bucket UNIQUE). -> Anzahl neuer Schritte."""
+    """Processes all completed, not yet seen windows (idempotent via bucket UNIQUE). -> Number of new steps."""
     now = time.time() if now is None else now
     r = conn.execute("select wert from star_konfig where schluessel=?", (MODE_KEY,)).fetchone()
     k = conn.execute("select wert from star_konfig where schluessel='frank3.kill'").fetchone()
@@ -63,7 +63,7 @@ def step_buckets(conn, now=None):
         return 0
     for d in DDL:
         conn.execute(d)
-    cur = int(now // BUCKET_S)  # laufendes Fenster ist noch offen
+    cur = int(now // BUCKET_S)  # current window is still open
     row = conn.execute("select j from f3_grid_v2r_state where singleton=1").fetchone()
     st = json.loads(row[0]) if row else {}
     e = GridV2Engine.from_json(st["eng"]) if st.get("eng") else GridV2Engine()

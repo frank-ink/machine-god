@@ -1,20 +1,20 @@
-"""class_demand_v21.py -- Regel CLASS_DEMAND_V2.1 (Entwurf ChatGPT Runde 8, 2026-11-25) = V2 + vier Lexikonkorrekturen, V2 bleibt unveraendert und eingefroren (Hash in AENDERUNGEN).
+"""class_demand_v21.py -- Rule CLASS_DEMAND_V2.1 (Draft ChatGPT Round 8, 2026-11-25) = V2 + four lexicon fixes, V2 remains unchanged and frozen (hash in CHANGES).
 
-AENDERUNGEN gegenueber V2 (an der Entwicklungsstichprobe Pilot v1 gefunden; Schwellen, Gewichte, Klassen und Schnittstelle unveraendert):
- 1 'ausfuehrlich' ist keine Werkzeug-Ausfuehrung (ausfuehr(?!lich)).
- 2 Trennbares Verb 'fuehre X aus' (bis 4 Woerter dazwischen) zaehlt wie 'fuehr aus'.
- 3 Bindestrich-Komposita werden vor dem Abgleich zu Leerzeichen normalisiert (gleiche Laenge, Offsets bleiben): 'Python-Funktion' trifft 'schreib .. funktion'.
- 4 Fachbegriffe (binary search, Tiefensuche, Suchbaum, ...) sind keine Handlungsabsicht: werden vor dem Abgleich maskiert (gleiche Laenge).
- Nicht behoben (bleibt Aufgabe von INTENT_CORTEX): indirekte/implizite Absicht.
+CHANGES compared to V2 (found on development sample Pilot v1; thresholds, weights, classes, and interface unchanged):
+ 1 'ausfuehrlich' (detailed) is not a tool execution (ausfuehr(?!lich)).
+ 2 Separable verb 'fuehre X aus' (execute X, up to 4 words in between) counts as 'fuehr aus' (execute).
+ 3 Hyphen compounds are normalized to spaces before matching (same length, offsets preserved): 'Python-Funktion' (Python function) matches 'schreib .. funktion' (write .. function).
+ 4 Technical terms (binary search, Tiefensuche (depth-first search), Suchbaum (search tree), ...) are not action intents: are masked before matching (same length).
+ Not fixed (remains task of INTENT_CORTEX): indirect/implicit intent.
 
-Urspruenglicher V2-Kopf: (Entwurf ChatGPT Runde 5, 2026-11-25; Startparameter sind HYPOTHESEN, vor der Kalibrierung eingefroren, nur Shadow).
+Original V2 header: (Draft ChatGPT Round 5, 2026-11-25; start parameters are HYPOTHESES, frozen before calibration, shadow only).
 
-Intention I_c aus Evidenzstufen E0=0 | E1=0.25 (Schluesselwort) | E2=0.65 (plausibler Bedarf) | E3=1.0 (expliziter/eindeutiger Bedarf), lexikalisch
-(KEIN semantisches Urteil: die Stufen sind Regex-Naeherungen, Qualitaet erst durch die Kalibrierung belegt). S_c = min(1, I_c + 0.15*G_c + 0.10*R_c), waehle S_c >= 0.65,
-max 4 (E3 zuerst, dann Score, dann Name), Ueberlauf protokolliert, sonst ABSTAIN. G6 wird NICHT code/tool zugerechnet; G nur: reason <- G9 (wenn gueltig), long <- G10.
-Lange Eingabe allein = E0. Negation (<=4 Woerter vor dem Treffer) hat Vorrang -> Klasse in negated_classes, I=0. de ist KEIN Wettbewerber, sondern target_language.
-Fehlende Eingaenge (goal, retina) werden als goal_present/retina_available=False gemeldet, nie als gemessene Null gewertet. Retina verstaerkt nur mit burst + semantischem Gate
-(wie V1) und nie ohne E>=E2."""
+Intention I_c from evidence levels E0=0 | E1=0.25 (keyword) | E2=0.65 (plausible need) | E3=1.0 (explicit/unambiguous need), lexical
+(NO semantic judgment: the levels are regex approximations, quality only established through calibration). S_c = min(1, I_c + 0.15*G_c + 0.10*R_c), choose S_c >= 0.65,
+max 4 (E3 first, then score, then name), overflow logged, otherwise ABSTAIN. G6 is NOT credited to code/tool; G only: reason <- G9 (if valid), long <- G10.
+Long input alone = E0. Negation (<=4 words before hit) takes precedence -> class in negated_classes, I=0. de is NOT a competitor, but target_language.
+Missing inputs (goal, retina) are reported as goal_present/retina_available=False, never valued as measured zero. Retina only reinforces with burst + semantic gate
+(like V1) and never without E>=E2."""
 import re
 
 RULE_VERSION = "CLASS_DEMAND_V2.1"
@@ -54,20 +54,20 @@ _TECH = re.compile(r"\b(?:binary|linear|depth[- ]first|breadth[- ]first|binaere|
 
 
 def normalize(text):
-    """Gleiche Laenge wie die Eingabe (Offsets der Evidenz bleiben gueltig): Bindestriche zwischen Woertern -> Leerzeichen, Fachbegriffe maskiert."""
+    """Same length as input (evidence offsets remain valid): hyphens between words -> spaces, technical terms masked."""
     t = re.sub(r"(?<=\w)-(?=\w)", " ", text or "")
     return _TECH.sub(lambda m: "x" * len(m.group(0)), t)
 
 
 def evidence(text):
-    """-> (stufe_je_klasse, refs_je_klasse [[start,ende,stufe]], negiert). Hoechste Stufe gewinnt; negierte Treffer zaehlen nicht, die Klasse wird gemeldet."""
+    """-> (level_per_class, refs_per_class [[start,end,level]], negated). Highest level wins; negated hits don't count, class is reported."""
     text = normalize(text)
     lvl, refs, neg = {}, {}, []
     for c in CLASSES:
         best, ref, negated = 0, [], False
         for i, rx in enumerate(_RX[c]):
             for m in rx.finditer(text):
-                clause = re.split(r"[,;.:!?\n]", text[:m.start()])[-1]  # Verneinung wirkt nur im selben Satzteil
+                clause = re.split(r"[,;.:!?\n]", text[:m.start()])[-1]  # Negation only takes effect in the same clause
                 if _NEG.search(" ".join(clause.split()[-4:]) + " " + m.group(0)):
                     negated = True
                     continue
@@ -95,7 +95,7 @@ def target_language(text):
 
 
 def derive(text, goal="", grid=None, relay=(), burst=False, goal_id=None, retina_available=False, turn_origin=None):
-    """grid: {"G9","G10","g9_valid"} (G6 wird bewusst nicht benutzt). -> Pflichtfeld-Dict (siehe Entwurf Runde 5)."""
+    """grid: {"G9","G10","g9_valid"} (G6 deliberately not used). -> mandatory field dict (see Draft Round 5)."""
     text, goal, grid = (text or "").strip(), (goal or "").strip(), grid or {}
     origin = turn_origin or ("user" if text else "endogenous")
     src = text if origin == "user" else goal
@@ -112,7 +112,7 @@ def derive(text, goal="", grid=None, relay=(), burst=False, goal_id=None, retina
                     rc[c] = 1.0
     sc, gcon, rcon = {}, {}, {}
     for c in CLASSES:
-        ok = lvl[c] >= 2  # Verstaerkung nur auf vorhandener semantischer Evidenz (E1 + max. Verstaerkung = 0.50 < theta)
+        ok = lvl[c] >= 2  # Reinforcement only on existing semantic evidence (E1 + max. reinforcement = 0.50 < theta)
         gcon[c], rcon[c] = round(WG * gc[c], 4) if ok else 0.0, round(WR * rc[c], 4) if ok else 0.0
         sc[c] = round(min(1.0, E[lvl[c]] + gcon[c] + rcon[c]), 4)
     okc = sorted((c for c in CLASSES if sc[c] >= THETA), key=lambda c: (-(lvl[c] == 3), -sc[c], c))

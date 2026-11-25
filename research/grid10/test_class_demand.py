@@ -1,5 +1,5 @@
-"""Test-Tor Stueck 3 (CLASS_DEMAND_V1, Shadow). Lauf: python3 -I test_class_demand.py (Exit 0 = gruen).
-Regel: explizit -> Klasse; Retina allein nie; max 4; ABSTAIN; bekannte Schwaechen als dokumentierte Erwartung (kein Patch). Lane: Isolation, Schalter, Idempotenz, kein Klartext."""
+"""Test gate segment 3 (CLASS_DEMAND_V1, Shadow). Run: python3 -I test_class_demand.py (Exit 0 = green).
+Rule: explicit -> class; Retina alone never; max 4; ABSTAIN; known weaknesses as documented expectation (no patch). Lane: Isolation, switch, idempotency, no plaintext."""
 import os
 import sqlite3
 import sys
@@ -102,7 +102,7 @@ def t_resolve_input_und_alte_tabelle():
         f.write(json.dumps({"type": "user", "message": {"content": "anderes"}}) + "\n" + json.dumps({"type": "user", "message": {"content": msg}}) + "\n")
     ref = "%s:%d" % (L._h(msg), len(msg))
     assert L.resolve_input("sess1", ref, d) == msg and L.resolve_input("sess1", "0000:3", d) is None and L.resolve_input("nope", ref, d) is None
-    c = _db()  # Tabelle aus aelterer Fassung ohne session_id -> wird ergaenzt
+    c = _db()  # Table from older version without session_id -> will be supplemented
     c.execute(L.DDL[0].replace(", session_id text", ""))
     L.step(c, "sess1", "f9", msg, {}, 1000 * 300 + 1.0)
     assert c.execute("select session_id from f3_class_demand_log").fetchone() == ("sess1",)

@@ -1,9 +1,9 @@
-"""retina_thalamus_lane.py -- Stueck 2 SHADOW: Thalamus-Gating ueber dem Retina-Ereignisstrom, danach dieselbe GridV2Engine.
+"""retina_thalamus_lane.py -- Piece 2 SHADOW: Thalamus gating over the retina event stream, then the same GridV2Engine.
 
-Je abgeschlossenem 5-min-Fenster (wie retina_grid.py): Zaehler je Kanal -> RetinaThalamus.gate -> nur relayte Kanaele speisen die Engine
-(Lane "g", Tabellen f3_retina_thal_state/log + f3_grid_v2g_state/log). Schreibt NIE f3_grid_v2_state / v2x / v2r, publiziert nichts an
-frank3_gwt. Schalter star_konfig frank3.retina_thal.mode (off|shadow, Standard shadow), frank3.kill=1 stoppt. Rueckkanal (receive_feedback)
-ist hier NICHT angeschlossen: das ist die Verdrahtung ueber die Antwort (spaeteres Stueck). Idempotent ueber bucket UNIQUE."""
+Per completed 5-min window (like retina_grid.py): counters per channel -> RetinaThalamus.gate -> only relayed channels feed the engine
+(Lane "g", tables f3_retina_thal_state/log + f3_grid_v2g_state/log). NEVER writes f3_grid_v2_state / v2x / v2r, publishes nothing to
+frank3_gwt. Switch star_konfig frank3.retina_thal.mode (off|shadow, default shadow), frank3.kill=1 stops. Feedback channel (receive_feedback)
+is NOT connected here: that is the wiring via the response (later piece). Idempotent via bucket UNIQUE."""
 import json
 import time
 
@@ -23,7 +23,7 @@ DDL = (
 
 
 def _window(events):
-    """events [(art,bits)] -> (Zaehler je Kanal, Ereignisse nur relayter Kanaele wird spaeter gefiltert)."""
+    """events [(art,bits)] -> (counters per channel, events only relayed channels will be filtered later)."""
     cnt = {}
     for a, _ in events:
         if a in CHANNELS:

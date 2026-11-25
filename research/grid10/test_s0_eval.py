@@ -8,7 +8,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
 import s0_eval as s0
-import weltmodell as wm
+import world_model as wm
 
 CH = wm.CH
 
@@ -55,13 +55,13 @@ def t_s003_positiv():
 
 
 def t_s004_negativ():
-    c = mk(); fill(c, 240, 0.5, 0.1)  # Referenz mit Rest-Fehler (bei Referenzfehler 0 ist der BSS undefiniert)
+    c = mk(); fill(c, 240, 0.5, 0.1)  # Reference with residual error (when reference error is 0, the BSS is undefined)
     assert s0.evaluate(c, 0, reps=500)["urteil"] == "NEGATIV"
 
 
 def t_s005_unentschieden():
     c = mk(); rng = np.random.default_rng(1)
-    for i in range(240):  # Modell und Referenz gleich gut im Mittel, aber rauschend
+    for i in range(240):  # Model and reference equally good on average, but noisy
         x = float(rng.integers(0, 2))
         put(c, i, 0.5 + rng.normal(0, .01), x, 0.5 + rng.normal(0, .01))
     r = s0.evaluate(c, 0, reps=1000)["haupt_vs_w0"]
@@ -87,7 +87,7 @@ def t_s008_keine_bloecke_ueber_luecken():
     seg = s0.segments(rows)
     assert [len(s) for s in seg] == [30, 25, 1]
     bl = s0.blocks(rows, 12)
-    assert [len(b) for b in bl] == [12, 12, 6, 12, 12, 1, 1]  # Restbloecke bleiben, kein Block ueberspringt eine Luecke
+    assert [len(b) for b in bl] == [12, 12, 6, 12, 12, 1, 1]  # Residual blocks remain, no block skips a gap
     assert all(b[-1][0] - b[0][0] == len(b) - 1 for b in bl)
 
 

@@ -5,8 +5,8 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-import selbstmodell as sm
-import weltmodell as wm
+import self_model as sm
+import world_model as wm
 
 NOW = 1_800_000_000.0
 
@@ -25,7 +25,7 @@ def t_sm01_revision_nur_bei_aenderung():
     c = mk(); st = {"a": "VERIFIED"}
     assert sm.project(c, NOW, caps(st)) == 1 and sm.project(c, NOW + 1, caps(st)) == 0
     st["a"] = "FAILED"
-    assert sm.project(c, NOW + 2, caps(st)) == 1 and [r[1] for r in sm.verlauf(c, "a")] == ["VERIFIED", "FAILED"]
+    assert sm.project(c, NOW + 2, caps(st)) == 1 and [r[1] for r in sm.history(c, "a")] == ["VERIFIED", "FAILED"]
     st["x"] = 2
     assert sm.project(c, NOW + 3, caps(st)) == 1  # gleiche Statusart, neue Evidenz
 
@@ -43,21 +43,21 @@ def t_sm02_unveraenderlich_und_kette():
 
 def t_sm03_widerspruch_nur_nach_verifiziert():
     c = mk(); st = {"a": "FAILED"}; sm.project(c, NOW, caps(st))
-    assert sm.befund(c) == []  # nie verifiziert gewesen: kein Widerspruch, nur Mangel
-    st["a"] = "VERIFIED"; sm.project(c, NOW + 1, caps(st)); assert sm.befund(c) == []
+    assert sm.finding(c) == []  # never verified: no contradiction, only deficiency
+    st["a"] = "VERIFIED"; sm.project(c, NOW + 1, caps(st)); assert sm.finding(c) == []
     st["a"] = "FAILED"; sm.project(c, NOW + 2, caps(st))
-    b = sm.befund(c)
-    assert len(b) == 1 and b[0]["key"] == "self_verloren:a" and b[0]["ref"]["n"] == 3
-    import endogen
-    assert endogen.resolve(c, b[0]["ref"]) == (True, 3)
-    st["a"] = "VERIFIED"; sm.project(c, NOW + 3, caps(st)); assert sm.befund(c) == []  # erholt -> Befund erlischt
+    b = sm.finding(c)
+    assert len(b) == 1 and b[0]["key"] == "self_lost:a" and b[0]["ref"]["n"] == 3
+    import endogenous
+    assert endogenous.resolve(c, b[0]["ref"]) == (True, 3)
+    st["a"] = "VERIFIED"; sm.project(c, NOW + 3, caps(st)); assert sm.finding(c) == []  # erholt -> Befund erlischt
 
 
 def t_sm04_sonde_wirft_wird_unknown():
     c = mk()
     def boom(conn, now): raise RuntimeError("x")
     sm.project(c, NOW, {"b": ("B", boom)})
-    assert sm.verlauf(c, "b")[0][1] == "UNKNOWN"
+    assert sm.history(c, "b")[0][1] == "UNKNOWN"
 
 
 def t_sm05_retina_sonde():
@@ -109,17 +109,17 @@ def t_sm08_lokales_llm_sonde():
 
 def t_sm09_selbstbild_nur_belegtes():
     c = mk(); st = {"a": "UNKNOWN"}; sm.project(c, NOW, caps(st))
-    b = sm.selbstbild(c)
-    assert len(b) == 1 and "nicht pruefbar" in b[0]["aussage"] and "Messung" in b[0]["aussage"]
-    assert sm.selbstbild(mk()) == []
+    b = sm.self_image(c)
+    assert len(b) == 1 and "not testable" in b[0]["statement_text"] and "measurement" in b[0]["statement_text"]
+    assert sm.self_image(mk()) == []
 
 
 def t_sm10_aus_und_kill_und_echte_sonden_laufen():
     for k, v in (("frank3.self.mode", "off"), ("frank3.kill", "1")):
         c = mk(); c.execute("insert into star_konfig values(?,?)", (k, v)); c.commit()
-        assert sm.project(c, NOW) == 0 and sm.befund(c) == []
+        assert sm.project(c, NOW) == 0 and sm.finding(c) == []
     c = mk()
-    assert sm.project(c, NOW) == len(sm.CAPS)  # alle Standardsonden liefern ein Ergebnis (auf leerer DB meist UNKNOWN), keine wirft nach aussen
+    assert sm.project(c, NOW) == len(sm.CAPS)  # all standard probes return a result (on empty DB mostly UNKNOWN), none propagates outward
 
 
 if __name__ == "__main__":

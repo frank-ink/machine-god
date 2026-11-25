@@ -1,18 +1,18 @@
-"""weltmodell.py -- WM1 Prognose-Ledger + persistente Weltmodell-Revision (Entwurf ChatGPT Runde 8, 2026-11-25), SHADOW, nur lokal und lesend auf den Retina-Rohereignissen.
+"""world_model.py -- WM1 Forecast Ledger + persistent world model revision (Draft ChatGPT Round 8, 2026-11-25), SHADOW, local only and read-only on retina raw events.
 
-Modell: je Retina-Kanal c ein Vorhersagewert p_c = erwartete Wahrscheinlichkeit eines Ereignisses im naechsten 300-s-Fenster; Aktualisierung p <- (1-a)*p + a*x mit x in {0,1}
-(Start a=0.10 = UNBEGRUENDETE Startannahme, Hypothese). Rohereignisse (f2_retina_geschehen), NICHT nur die vom Thalamus durchgelassenen.
-Prognose wird fuer das uebernaechste Fenster (cur+1) eingefroren, solange es noch nicht begonnen hat (frozen_hash); Abweichung von Runde 8: Horizont = 1 Fenster ab dem letzten
-abgeschlossenen, weil ohne Daemon eine Prognose genau zur Fenstergrenze nicht moeglich ist. Fenster ohne Prognose werden NIE nachtraeglich prognostiziert.
-Bewertung unabhaengig vom Prognostiker: Brier B = 1/5 * Summe (p^ - x)^2, daneben dieselbe Messung fuer die eingefrorene Referenz (W0-Basisraten).
-Versionierung (Runde 9): jede Prognose traegt last_observed_window, forecast_created_at, target_window (bucket), horizon_windows, model_version, state_digest; Modell, W0-Referenz und
-Persistenz (letztes bewertetes Fenster) werden mit DEMSELBEN Informationsstand und Horizont zusammen eingefroren. Eine eingefrorene Prognose wird NIE ueberschrieben oder geloescht; eine Revision legt fuer
-das naechste noch nicht begonnene Fenster eine ZWEITE Prognose unter der neuen Version an. Gewertet wird jede Prognose unter ihrer eigenen Version, Auswertung je Version getrennt (report), Versionsgrenzen werden nie verschoben.
-Abdeckung: nur Fenster mit Sensor-Stichprobe (f2_retina_sinne 'fenster1' aktiv und frisch, beim Hook-Lauf im Fenster aufgezeichnet) sind 'ok'; alle anderen sind UNBEKANNT: sie werden weder
-bewertet noch fliessen sie als 0 ins Modell (ohne Daemon sind das viele; ein echter Dauertakt braucht einen systemd-Timer = des Nutzers OK).
-Konflikt (E2): letzte 12 bewertete Fenster, alle unter der AKTUELLEN Modellversion, rollierender Brier-Mittelwert > 0.30 -> Widerspruchsbefund 'wm_prognosefehler' mit unveraenderlicher Evidenz.
-Revision (nach E3/E5-Untersuchung): Kandidaten a in ALPHAS, Wiedergabe ueber diese 12 Fenster; Aenderung nur bei >= 10 % relativer Verbesserung, sonst keine (ABSTAIN) -> Version+1 persistent,
-noch nicht begonnene Prognosen werden neu eingefroren. Das ist In-Sample-Einstellung eines Parameters, KEIN Lernnachweis; der Nutzen zeigt sich erst prospektiv gegen die Referenz (report)."""
+Model: per retina channel c a forecast value p_c = expected probability of an event in the next 300-s window; update p <- (1-a)*p + a*x with x in {0,1}
+(Start a=0.10 = UNFOUNDED initial assumption, hypothesis). Raw events (f2_retina_geschehen), NOT only those passed by thalamus.
+Forecast for the window after next (cur+1) is frozen while it has not yet started (frozen_hash); deviation from Round 8: horizon = 1 window from the last
+completed one, because without a daemon a forecast exactly at the window boundary is not possible. Windows without forecast are NEVER forecast retroactively.
+Evaluation independent of forecaster: Brier B = 1/5 * Sum (p^ - x)^2, alongside the same measurement for the frozen reference (W0 base rates).
+Versioning (Round 9): each forecast carries last_observed_window, forecast_created_at, target_window (bucket), horizon_windows, model_version, state_digest; model, W0 reference and
+persistence (last evaluated window) are frozen together with THE SAME information state and horizon. A frozen forecast is NEVER overwritten or deleted; a revision creates
+for the next not-yet-started window a SECOND forecast under the new version. Each forecast is evaluated under its own version, evaluation per version separate (report), version boundaries are never shifted.
+Coverage: only windows with sensor sample (f2_retina_sinne 'fenster1' active and fresh, recorded during hook run in the window) are 'ok'; all others are UNKNOWN: they are neither
+evaluated nor do they flow into the model as 0 (without daemon there are many; a real continuous beat needs a systemd timer = user's OK).
+Conflict (E2): last 12 evaluated windows, all under the CURRENT model version, rolling Brier mean > 0.30 -> contradiction finding 'wm_prognosefehler' with immutable evidence.
+Revision (after E3/E5 investigation): candidates a in ALPHAS, replay over these 12 windows; change only if >= 10% relative improvement, otherwise none (ABSTAIN) -> version+1 persistent,
+not-yet-started forecasts are newly frozen. This is in-sample tuning of a parameter, NO proof of learning; the benefit shows only prospectively against the reference (report)."""
 import hashlib
 import json
 import time
@@ -51,7 +51,7 @@ def brier(p, x):
 
 
 def _x(conn, b0, b1):
-    """{bucket: {kanal: 0/1}} fuer die Fenster [b0,b1) aus den Rohereignissen."""
+    """{bucket: {kanal: 0/1}} for windows [b0,b1) from raw events."""
     out = {b: {c: 0 for c in CH} for b in range(b0, b1)}
     if _tbl(conn, "f2_retina_geschehen"):
         for ts, art in conn.execute("select ts,art from f2_retina_geschehen where ts>=? and ts<?", (b0 * BUCKET_S, b1 * BUCKET_S)):
@@ -61,7 +61,7 @@ def _x(conn, b0, b1):
 
 
 def baseline(conn):
-    """W0 aus der vorhandenen Geschichte: Anteil der Fenster mit Ereignis je Kanal ueber die Spanne erstes..letztes Ereignis. Abdeckung historisch UNBEKANNT -> nur Startwert, keine Pruefung."""
+    """W0 from existing history: proportion of windows with event per channel over span first..last event. Historical coverage UNKNOWN -> only initial value, no check."""
     if not _tbl(conn, "f2_retina_geschehen"):
         return {c: 0.0 for c in CH}, 0
     lo, hi = conn.execute("select min(ts),max(ts) from f2_retina_geschehen").fetchone()
@@ -100,7 +100,7 @@ def _save(conn, st, now):
 
 
 def _freeze(conn, st, b, now):
-    """Friert die Prognose fuer Fenster b unter der aktuellen Modellversion ein (insert or ignore: eine eingefrorene Prognose wird nie veraendert). Modell, Referenz, Persistenz: gleicher Stand, gleicher Horizont."""
+    """Freezes the forecast for window b under the current model version (insert or ignore: a frozen forecast is never changed). Model, reference, persistence: same state, same horizon."""
     pred = {c: round(st["p"][c], 6) for c in CH}
     ref = {c: round(st["ref"][c], 6) for c in CH}
     pers = {c: st["last_x"][c] for c in CH} if st.get("last_x") else None
@@ -133,12 +133,12 @@ def step(conn, now=None):
                              (cov, json.dumps(xs[b], sort_keys=True), brier(json.loads(pr), xs[b]), brier(json.loads(rf), xs[b]), brier(json.loads(ps), xs[b]) if ps else None, b, ver))
                 scored += 1
             else:
-                conn.execute("update f3_wm_pred set coverage=?, status='unbekannt' where bucket=? and model_version=?", (cov, b, ver))  # UNBEKANNT: nicht bewertet, nicht als 0 gezaehlt
+                conn.execute("update f3_wm_pred set coverage=?, status='unbekannt' where bucket=? and model_version=?", (cov, b, ver))  # UNKNOWN: not evaluated, not counted as 0
         if ok:
             st["p"] = {c: (1 - st["alpha"]) * st["p"][c] + st["alpha"] * xs[b][c] for c in CH}
             st["last_ok"], st["last_x"] = b, dict(xs[b])
     st["last"] = max(st["last"], cur - 1)
-    _freeze(conn, st, cur + 1, now)  # Fenster cur+1 hat noch nicht begonnen
+    _freeze(conn, st, cur + 1, now)  # Window cur+1 has not yet started
     _save(conn, st, now)
     conn.execute("delete from f3_wm_pred where bucket < ?", (cur - 20000,))
     conn.commit()
@@ -151,8 +151,8 @@ def _window_rows(conn, version=None):
     return conn.execute("select bucket,obs,brier,pred,model_version,alpha from f3_wm_pred where status='bewertet' and model_version=? order by bucket desc limit ?", (v, WINDOW_N)).fetchall()[::-1]
 
 
-def befund(conn, now=None):
-    """Fuer endogen.observe: -> Liste E2-Befunde (Prognosekonflikt und/oder Sensorabdeckung). Unsicher/zu wenig Daten -> keiner."""
+def finding(conn, now=None):
+    """For endogenous.observe: -> list of E2 findings (forecast conflict and/or sensor coverage). Uncertain/insufficient data -> none."""
     if not _tbl(conn, "f3_wm_pred") or not _tbl(conn, "f3_wm_state"):
         return []
     return _konflikt(conn) + sensor_befund(conn, time.time() if now is None else now)
@@ -167,7 +167,7 @@ def _konflikt(conn):
         return []
     lo, hi = rows[0][0], rows[-1][0]
     ver = rows[0][4]
-    return [{"kind": "widerspruch", "key": "wm_prognosefehler", "statement": "Weltmodell-Prognose widerspricht der Beobachtung: Brier %.3f ueber %d Fenster (Schwelle %.2f, Modellversion %d)" % (m, len(rows), THETA_B, ver),
+    return [{"kind": "contradiction", "key": "wm_prognosefehler", "statement": "Weltmodell-Prognose widerspricht der Beobachtung: Brier %.3f ueber %d Fenster (Schwelle %.2f, Modellversion %d)" % (m, len(rows), THETA_B, ver),
              "ref": {"table": "f3_wm_pred", "where": "status='bewertet' and model_version=%d and bucket>=%d and bucket<=%d" % (ver, lo, hi), "params": [], "n": len(rows)}}]
 
 
@@ -175,8 +175,8 @@ COV_N, COV_MIN, COV_GAP = 288, 0.80, 288
 
 
 def coverage(conn, now):
-    """SENSOR_HOMEOSTASIS_V1: Abdeckung C = N_valid / N_expected ueber die letzten 288 abgeschlossenen Fenster. Anlauf (< 288 Fenster seit Start) wird getrennt gekennzeichnet.
-    Ausfallarten getrennt: ausgefallen (Sensor meldet nicht aktiv/frisch), unbekannt (kein Sensorstatus lesbar), keine_zeile (in dem Fenster lief kein Hook = kein Takt)."""
+    """SENSOR_HOMEOSTASIS_V1: Coverage C = N_valid / N_expected over the last 288 completed windows. Ramp-up (< 288 windows since start) is marked separately.
+    Failure types separate: failed (sensor not reporting active/fresh), unknown (no sensor status readable), no_row (no hook ran in that window = no tick)."""
     st = json.loads(conn.execute("select j from f3_wm_state where singleton=1").fetchone()[0])
     hi = int(now // BUCKET_S) - 1
     first = max(hi - COV_N + 1, st["start"])
@@ -190,7 +190,7 @@ def coverage(conn, now):
 
 
 def cause(c):
-    """Dominante Ursache der fehlenden Abdeckung (>= 50 % der fehlenden Fenster), sonst UNKNOWN_CAUSE."""
+    """Dominant cause of missing coverage (>= 50% of missing windows), otherwise UNKNOWN_CAUSE."""
     miss = c["expected"] - c["valid"]
     if miss <= 0:
         return None
@@ -212,17 +212,17 @@ def sensor_befund(conn, now):
         if last is not None and int(now // BUCKET_S) - last < COV_GAP:
             return []
     why = cause(c)
-    return [{"kind": "luecke", "key": "wm_sensorabdeckung",
-             "statement": "Sensorabdeckung %.0f %% (%d von %d Fenstern in 24 h, Schwelle %.0f %%); Ursache %s (ausgefallen %d, ohne Status %d, ohne Takt %d); Stichprobe nur je Hook-Lauf, zeitliche Verfuegbarkeit nicht erfasst"
+    return [{"kind": "gap", "key": "wm_sensorabdeckung",
+             "statement": "Sensor coverage %.0f %% (%d of %d windows in 24 h, threshold %.0f %%); cause %s (failed %d, no status %d, no tick %d); sampled only per hook run, temporal availability not recorded"
              % (100 * c["C"], c["valid"], c["expected"], 100 * COV_MIN, why, c["ausgefallen"], c["unbekannt"], c["keine_zeile"]),
              "ref": {"table": "f3_wm_cover", "where": "status='ok' and bucket>=%d and bucket<=%d" % (c["lo"], c["hi"]), "params": [], "n": c["valid"], "cause": why, "expected": c["expected"]}}]
 
 
 OPTIONS = {
-    "SCHEDULER_INACTIVE": "A) systemd-User-Timer, der alle 5 min step() aufruft (behebt fehlenden Takt; dauerhaft laufend, freigabepflichtig); B) nichts aendern: Abdeckung folgt der Nutzung, der Lernnachweis dauert entsprechend laenger; C) Fensterlaenge vergroessern (aendert das Messdesign, bricht Vergleichbarkeit). Empfehlung: A nach des Nutzers OK.",
-    "SENSOR_UNAVAILABLE": "A) Sensorik/Dienst sichtd pruefen (Fenstertitel-Sensor meldet nicht aktiv); B) Fenster ohne Sensor weiter als UNBEKANNT fuehren; C) Ausfaelle protokollieren und nur bei Dauerausfall melden. Ein Timer allein hilft hier nicht.",
+    "SCHEDULER_INACTIVE": "A) systemd user timer calling step() every 5 min (fixes the missing tick; runs permanently, needs approval); B) change nothing: coverage follows usage, the learning evidence takes correspondingly longer; C) enlarge the window length (changes the measurement design, breaks comparability). Recommendation: A after the owner's OK.",
+    "SENSOR_UNAVAILABLE": "A) check the sensor/service (window-title sensor reports not active); B) keep windows without sensor as UNKNOWN; C) log failures and report only on permanent failure. A timer alone does not help here.",
     "SAMPLING_GAP": "A) Sensorstatus in f2_retina_sinne regelmaessig erfassen (eigene Stichprobe je Fenster); B) Luecken weiter als UNBEKANNT fuehren. Ein Timer allein hilft hier nicht.",
-    "UNKNOWN_CAUSE": "A) mehr Diagnosefelder erfassen (Stichprobendichte, Verfuegbarkeit) bevor eine Massnahme gewaehlt wird; B) beobachten.",
+    "UNKNOWN_CAUSE": "A) record more diagnostic fields (sampling density, availability) before a measure is chosen; B) observe.",
 }
 
 
@@ -232,15 +232,15 @@ def _anfrage(conn, ref, attempt_id, now):
     if conn.execute("select 1 from f3_wm_anfrage where attempt_id=?", (attempt_id,)).fetchone():
         return "anfrage"
     why = ref.get("cause") or "UNKNOWN_CAUSE"
-    txt = ("Nutzer, meine Sensorabdeckung ist zu duenn: %d von %d Fenstern der letzten 24 h sind beobachtet (Schwelle 80 %%), Ursache laut Messung %s. "
-           "Optionen (bewertet, NICHT ausgefuehrt; Text regelbasiert aus Vorlage): %s") % (ref["n"], ref.get("expected", 0), why, OPTIONS.get(why, OPTIONS["UNKNOWN_CAUSE"]))
+    txt = ("Owner, my sensor coverage is too thin: %d of %d windows of the last 24 h are observed (threshold 80 %%), cause according to measurement %s. "
+           "Options (rated, NOT executed; text rule-based from a template): %s") % (ref["n"], ref.get("expected", 0), why, OPTIONS.get(why, OPTIONS["UNKNOWN_CAUSE"]))
     conn.execute("insert into f3_wm_anfrage(ts,attempt_id,kind,text,evidence_ref,status) values(?,?,?,?,?,?)", (now, attempt_id, "sensor", txt, json.dumps(ref), "offen"))
     conn.commit()
     return "anfrage"
 
 
 def _replay(rows, alpha):
-    """Einschrittprognose ueber die bewerteten Fenster; Start = eingefrorene Prognose des ersten. -> mittlerer Brier ab dem zweiten Fenster."""
+    """One-step forecast over evaluated windows; start = frozen forecast of the first. -> mean Brier from the second window onward."""
     p, tot = json.loads(rows[0][3]), 0.0
     x0 = json.loads(rows[0][1])
     p = {c: (1 - alpha) * p[c] + alpha * x0[c] for c in CH}
@@ -263,7 +263,7 @@ def revise(conn, ref, attempt_id, now=None):
     st = _state(conn, now)
     rows = conn.execute("select bucket,obs,brier,pred,model_version,alpha from f3_wm_pred where %s order by bucket" % ref["where"], tuple(ref.get("params", ()))).fetchall()
     if len(rows) < WINDOW_N:
-        return None  # Evidenz nicht mehr vollstaendig -> keine Revision auf Verdacht
+        return None  # Evidence no longer complete -> no revision on suspicion
     base = _replay(rows, st["alpha"])
     cand = {a: _replay(rows, a) for a in ALPHAS}
     best = min(cand, key=lambda a: (cand[a], a))
@@ -273,7 +273,7 @@ def revise(conn, ref, attempt_id, now=None):
         v0, a0 = st["version"], st["alpha"]
         st["version"], st["alpha"] = v0 + 1, best
         cur = int(now // BUCKET_S)
-        _freeze(conn, st, cur + 1, now)  # noch nicht begonnenes Fenster: ZWEITE Prognose unter W1, die v0-Prognose bleibt unveraendert erhalten
+        _freeze(conn, st, cur + 1, now)  # Not yet started window: SECOND forecast under W1, the v0 forecast remains unchanged
         _save(conn, st, now)
         conn.execute("insert into f3_wm_rev(ts,from_version,to_version,alpha_from,alpha_to,evidence_ref,brier_before,brier_after,decision,attempt_id) values(?,?,?,?,?,?,?,?,?,?)",
                      (now, v0, st["version"], a0, best, ev, base, cand[best], "revidiert", attempt_id))
@@ -285,7 +285,7 @@ def revise(conn, ref, attempt_id, now=None):
 
 
 def on_pursuit(conn, goal_id, attempt_id, now=None):
-    """Haken nach goal_pursuit.pursue: gehoert das Ziel zu wm_prognosefehler -> revise. Liest nur das Ziel."""
+    """Hook after goal_pursuit.pursue: does the goal belong to wm_prognosefehler -> revise. Reads only the goal."""
     if not attempt_id or not _tbl(conn, "f3_goal"):
         return None
     r = conn.execute("select evidence_refs,dedup_key from f3_goal where goal_id=?", (goal_id,)).fetchone()
@@ -302,7 +302,7 @@ def on_pursuit(conn, goal_id, attempt_id, now=None):
 
 
 def report(conn, version=None):
-    """Prospektiver Vergleich je Modellversion (nur bewertete Fenster): Modell, W0-Referenz, Persistenz. Kein Lernnachweis ohne wiederholte Zyklen; Versionen werden nie vermischt."""
+    """Prospective comparison per model version (only evaluated windows): model, W0 reference, persistence. No proof of learning without repeated cycles; versions are never mixed."""
     if not _tbl(conn, "f3_wm_pred"):
         return {"n": 0}
     v = "" if version is None else " and model_version=%d" % int(version)

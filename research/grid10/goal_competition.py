@@ -1,14 +1,14 @@
-"""goal_competition.py -- E4 Zielwettbewerb + Ermuedung, GOAL_COMPETITION_V1 (Entwurf ChatGPT Runde 6, 2026-11-25), SHADOW: waehlt nur ein Ziel aus, fuehrt NICHTS aus.
+"""goal_competition.py -- E4 goal competition + fatigue, GOAL_COMPETITION_V1 (draft ChatGPT round 6, 2026-11-25), SHADOW: selects only one goal, executes NOTHING.
 
-score = +0.30 salience +0.30 information_gain +0.25 evidence_quality +0.15 novelty -0.25 fatigue -0.15 resource_cost; zulaessig ab THETA=0.45, sonst ABSTAIN.
-evidence_quality wird bei JEDEM Wettbewerb neu aus der Referenz bestimmt (resolve ok -> 1, sonst Kandidat faellt raus, E4.06). novelty = 1/(1+selections).
-Ermuedung: bei Auswahl f <- f + 0.25*(1-f); alle anderen zerfallen f*exp(-dt/TAU), TAU=1800 s (3*TAU Ruhe -> ~5 %). Gleichstand: hoechster Score, dann kleinste goal_id (deterministisch).
-Nur Status offen/offen_unsicher sind Kandidaten (abgeschlossene werden ohne neuen Befund nicht wieder gewaehlt, E4.07). Parameter sind Startwerte (Hypothesen), nicht kalibriert."""
+score = +0.30 salience +0.30 information_gain +0.25 evidence_quality +0.15 novelty -0.25 fatigue -0.15 resource_cost; permitted from THETA=0.45, otherwise ABSTAIN.
+evidence_quality is newly determined from reference at EVERY competition (resolve ok -> 1, otherwise candidate drops out, E4.06). novelty = 1/(1+selections).
+Fatigue: on selection f <- f + 0.25*(1-f); all others decay f*exp(-dt/TAU), TAU=1800 s (3*TAU rest -> ~5 %). Tie: highest score, then smallest goal_id (deterministic).
+Only status open/open_uncertain are candidates (completed are not chosen again without new finding, E4.07). Parameters are initial values (hypotheses), not calibrated."""
 import json
 import math
 import time
 
-import endogen
+import endogenous
 import goal_genesis as gg
 
 RULE_VERSION, THETA, TAU = "GOAL_COMPETITION_V1", 0.45, 1800.0
@@ -23,7 +23,7 @@ def _decay(conn, now):
 
 
 def compete(conn, now=None):
-    """-> (goal_id|None, score_je_kandidat{goal_id:{score,parts}}); schreibt Ledger und Ermuedung, fuehrt nichts aus."""
+    """-> (goal_id|None, score_je_kandidat{goal_id:{score,parts}}); writes ledger and fatigue, executes nothing."""
     now = time.time() if now is None else now
     if gg.off(conn):
         return None, {}
@@ -34,13 +34,13 @@ def compete(conn, now=None):
     scores = {}
     for gid, sal, gain, cost, fat, sel, refs in conn.execute(
             "select goal_id,salience,expected_information_gain,estimated_resource_cost,fatigue,selections,evidence_refs from f3_goal where status in ('offen','offen_unsicher')").fetchall():
-        ok = all(endogen.resolve(conn, r)[0] for r in json.loads(refs))
+        ok = all(endogenous.resolve(conn, r)[0] for r in json.loads(refs))
         if not ok:
             conn.execute("insert into f3_goal_log(ts,goal_id,event,detail) values(?,?,?,?)", (now, gid, "kandidat_verworfen", "Evidenz nicht mehr aufloesbar"))
             continue
         parts = {"salience": sal or 0.0, "gain": gain or 0.0, "evidence": 1.0, "novelty": 1.0 / (1 + (sel or 0)), "fatigue": fat or 0.0, "cost": cost or 0.0}
         used = conn.execute("select attempt_id,evaluation_status from f3_goal_attempt where goal_id=? and evaluation_status is not null order by created_at desc limit 1", (gid,)).fetchone() \
-            if conn.execute("select 1 from sqlite_master where name='f3_goal_attempt'").fetchone() else None  # E5.12: Ergebnis frueherer Versuche geht nachweisbar in die Auswahl ein (ueber expected_information_gain)
+            if conn.execute("select 1 from sqlite_master where name='f3_goal_attempt'").fetchone() else None  # E5.12: Result of earlier attempts demonstrably feeds into selection (via expected_information_gain)
         scores[gid] = {"score": round(sum(W[k] * parts[k] for k in W), 6), "parts": parts, "used_attempt": list(used) if used else None}
     best = sorted(scores, key=lambda g: (-scores[g]["score"], g))[:1]
     pick = best[0] if best and scores[best[0]]["score"] >= THETA else None

@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import auswahlbericht as A
+import selection_report as A
 
 CTX = {"frame_id": "f1", "response_id": "r1", "passed": {"e1": "fokus_app", "e2": "person_kommt", "e3": "objekt_neu"}}
 RESP = "Das Terminal im Fokus zeigt den Build."

@@ -4,7 +4,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import endogen as E
+import endogenous as E
 
 B = E.BUCKET_S
 
@@ -59,12 +59,12 @@ def t_befunde_haben_aufloesbare_evidenz_und_zustaende_unterscheiden_sich():
     import json
     for kind, ref in c.execute("select kind, evidence_ref from f3_endo_befund"):
         ok, n = E.resolve(c, json.loads(ref))
-        assert ok and n >= 0 and kind in ("luecke", "widerspruch")
+        assert ok and n >= 0 and kind in ("gap", "contradiction")
     c2 = _db(goal_open=True)  # anderer Zustand -> anderer Befundsatz
     E.step(c2, now)
     E.step(c2, now + B)
     assert {r[0] for r in c2.execute("select key from f3_endo_befund")} == set()
-    c.execute("update f3_class_demand_log set evaluation_status='done'")  # Referenz wird ungueltig, wenn die Welt sich aendert
+    c.execute("update f3_class_demand_log set evaluation_status='done'")  # Reference becomes invalid when the world changes
     ref = json.loads(c.execute("select evidence_ref from f3_endo_befund where key='offene_bewertung'").fetchone()[0])
     assert E.resolve(c, ref)[0] is False
 
@@ -74,9 +74,9 @@ def t_gate_durchsichtig_nur_mit_genug_daten():
     for b in range(20):
         c.execute("insert into f3_retina_thal_log values(?,?,?,?)", (b, 3, '["fokus_app"]', "[]"))
     ks = {f["key"] for f in E.observe(c, 1e9)}
-    assert "gate_durchsichtig" in ks
+    assert "gate_transparent" in ks
     c.execute("delete from f3_retina_thal_log where bucket>=5")
-    assert "gate_durchsichtig" not in {f["key"] for f in E.observe(c, 1e9)}
+    assert "gate_transparent" not in {f["key"] for f in E.observe(c, 1e9)}
 
 
 def t_schreibt_keine_fremden_tabellen():
@@ -89,7 +89,7 @@ def t_schreibt_keine_fremden_tabellen():
 
 
 def t_evidenz_ist_unveraenderlicher_schnappschuss():
-    """Append-only-Ledger: neue Zeilen duerfen einen frueheren Befund nicht entwerten (sonst sterben Ziele an jedem Zuwachs)."""
+    """Append-only ledger: new lines must not invalidate an earlier finding (otherwise goals die on every addition)."""
     c = _db()
     c.execute("create table if not exists f3_class_demand_v2_log(id integer primary key, abstain integer)")
     for _ in range(4):

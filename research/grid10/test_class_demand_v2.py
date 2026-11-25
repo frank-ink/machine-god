@@ -1,4 +1,4 @@
-"""Test-Tor CLASS_DEMAND_V2 (Shadow). Lauf: python3 -I test_class_demand_v2.py (Exit 0 = gruen). Prueft Vertrag und Invarianten der Spezifikation, NICHT semantische Guete (die kommt aus der Kalibrierung)."""
+"""Test gate CLASS_DEMAND_V2 (Shadow). Run: python3 -I test_class_demand_v2.py (Exit 0 = green). Verifies contract and invariants of the specification, NOT semantic quality (that comes from calibration)."""
 import os
 import sys
 
@@ -20,7 +20,7 @@ def t_pflichtfelder_und_abstain():
 def t_stufen_und_schwelle():
     assert v.derive("Gib mir das als JSON", "", G0)["selected_classes"] == ["json"]  # E3
     assert v.derive("Fix den bug im Modul parser.py", "", G0)["evidence_level_by_class"]["code"] == "E2"
-    o = v.derive("Das json format ist interessant", "", G0)  # reine Erwaehnung = E1 (0.25) < 0.65, auch mit maximaler GRID/Retina-Hilfe
+    o = v.derive("Das json format ist interessant", "", G0)  # Mere mention = E1 (0.25) < 0.65, even with maximum GRID/Retina assistance
     assert o["evidence_level_by_class"]["json"] == "E1" and o["abstain"]
     o = v.derive("Ich habe ein Problem mit dem Server", "", {"G9": 1, "G10": 1, "g9_valid": True}, relay=["fokus_app"], burst=True, retina_available=True)
     assert o["scores_by_class"]["tool"] == 0.25 and o["abstain"]  # E1 + max. Verstaerkung: nicht einmal Verstaerkung greift

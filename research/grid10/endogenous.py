@@ -1,10 +1,10 @@
-"""endogen.py -- E1 Puls + E2 Zustandsbeobachtung (Entwurf ChatGPT Runde 5, 2026-11-25), SHADOW, nur Beobachtung.
+"""endogenous.py -- E1 Pulse + E2 State Observation (Draft ChatGPT Round 5, 2026-11-25), SHADOW, observation only.
 
-E1 Puls: ein interner Takt pro 300-s-Fenster ohne Nutzertext (f3_endo_puls_log, bucket UNIQUE -> keine Doppelverarbeitung). Es gibt noch KEINEN Daemon: der Puls wird
-beim naechsten Hook-Lauf nachgeholt (MAX_CATCHUP Fenster); ein echter Dauertakt braucht einen systemd-Timer und damit des Nutzers ausdrueckliches OK. Schalter star_konfig
-frank3.endo.mode (off|shadow, Standard shadow), frank3.kill=1 stoppt.
-E2 Beobachtung: je Takt Befunde (Wissensluecke / Widerspruch / Unerledigtes) aus eigenen Ledgern, JEDER mit aufloesbarer Evidenzreferenz {table, where, n}; resolve(conn, ref)
-zaehlt nach, ob die Referenz die behauptete Anzahl noch liefert. Befunde sind Beobachtungen, keine Ziele und geben keine Berechtigung (Zielbildung = spaeteres Stueck E3)."""
+E1 Pulse: one internal tick per 300-s window without user text (f3_endo_puls_log, bucket UNIQUE -> no duplicate processing). There is NO daemon yet: the pulse is
+caught up on the next hook run (MAX_CATCHUP windows); a real continuous tick needs a systemd timer and thus the user's explicit OK. Switch star_konfig
+frank3.endo.mode (off|shadow, default shadow), frank3.kill=1 stops.
+E2 Observation: per tick findings (knowledge gap / contradiction / unfinished) from own ledgers, EACH with resolvable evidence reference {table, where, n}; resolve(conn, ref)
+counts whether the reference still yields the claimed number. Findings are observations, not goals, and grant no authorization (goal formation = later piece E3)."""
 import hashlib
 import json
 import time
@@ -23,7 +23,7 @@ def _maxid(conn, table):
 
 
 def observe(conn, now):
-    """-> Liste {kind, key, statement, ref:{table, where, n}}; nur was die eigenen Ledger tatsaechlich hergeben."""
+    """-> List {kind, key, statement, ref:{table, where, n}}; only what the own ledgers actually yield."""
     out = []
 
     def add(kind, key, stmt, table, where, params=()):
@@ -32,42 +32,42 @@ def observe(conn, now):
             out.append({"kind": kind, "key": key, "statement": stmt % n, "ref": {"table": table, "where": where, "params": list(params), "n": n}})
 
     if _tbl(conn, "f3_class_demand_log"):
-        add("luecke", "offene_bewertung", "%d Klassenbedarf-Eintraege seit >24 h ohne Bewertung (evaluation_status pending)", "f3_class_demand_log",
+        add("gap", "offene_bewertung", "%d Klassenbedarf-Eintraege seit >24 h ohne Bewertung (evaluation_status pending)", "f3_class_demand_log",
             "evaluation_status='pending' and ts<?", (now - 86400,))
     if _tbl(conn, "f3_class_demand_v2_log"):
-        add("luecke", "abstain_v2", "%d V2-Eintraege ohne qualifizierte Klasse (ABSTAIN): Bedarf unbekannt oder keiner", "f3_class_demand_v2_log", "abstain=1 and rowid<=%d" % _maxid(conn, "f3_class_demand_v2_log"))
+        add("gap", "abstain_v2", "%d V2-Eintraege ohne qualifizierte Klasse (ABSTAIN): Bedarf unbekannt oder keiner", "f3_class_demand_v2_log", "abstain=1 and rowid<=%d" % _maxid(conn, "f3_class_demand_v2_log"))
     if _tbl(conn, "f3_retina_thal_log"):
-        mx = _maxid(conn, "f3_retina_thal_log")  # Evidenz = unveraenderlicher Schnappschuss (id<=Maximum), sonst entwertet jede neue Zeile den Befund
+        mx = _maxid(conn, "f3_retina_thal_log")  # Evidenz = immutable snapshot (id<=Maximum), otherwise every new row invalidates the finding
         y = conn.execute("select count(*) from f3_retina_thal_log where n_events>0 and rowid<=?", (mx,)).fetchone()[0]
         x = conn.execute("select count(*) from f3_retina_thal_log where n_events>0 and relay<>'[]' and rowid<=?", (mx,)).fetchone()[0]
         if y >= 20 and x / y > 0.9:
-            out.append({"kind": "widerspruch", "key": "gate_durchsichtig", "statement": "Gate reicht in %d von %d Fenstern mit Ereignissen etwas weiter (>90 %%): kaum Filterwirkung, Entwurfsabsicht war Auswahl" % (x, y),
+            out.append({"kind": "contradiction", "key": "gate_transparent", "statement": "Gate passes almost everything in %d of %d windows with events (>90 %%): hardly any filtering, design intent was selection" % (x, y),
                         "ref": {"table": "f3_retina_thal_log", "where": "n_events>0 and relay<>'[]' and rowid<=%d" % mx, "params": [], "n": x}})
-    try:  # WM1 (Runde 8): wiederholt hoher Prognosefehler des Weltmodells -> Widerspruchsbefund mit unveraenderlicher Evidenz
-        import weltmodell
-        out.extend(weltmodell.befund(conn, now))
+    try:  # WM1 (Round 8): repeatedly high world model prediction error -> contradiction finding with immutable evidence
+        import world_model
+        out.extend(world_model.finding(conn, now))
     except Exception:
         pass
     try:  # WM2 (Runde 10): Hypothesenraum zu wm_prognosefehler projizieren; offener Widerspruch konkurrierender Erklaerungen -> E2-Befund
-        import weltmodell2
-        weltmodell2.project(conn, now)
-        out.extend(weltmodell2.befund(conn, now))
+        import world_model2
+        world_model2.project(conn, now)
+        out.extend(world_model2.finding(conn, now))
     except Exception:
         pass
-    try:  # Selbstmodell (Runde 10, project() laeuft im Hook-Schritt register.py): Faehigkeiten nur aus Sonden; Verlust einer verifizierten Faehigkeit -> E2-Widerspruch
-        import selbstmodell
-        out.extend(selbstmodell.befund(conn, now))
+    try:  # Self-model (Round 10, project() runs in hook step register.py): capabilities only from probes; loss of a verified capability -> E2 contradiction
+        import self_model
+        out.extend(self_model.finding(conn, now))
     except Exception:
         pass
     if _tbl(conn, "omega_goal"):
         n = conn.execute("select count(*) from omega_goal where lower(status) not in ('done','closed','abandoned','complete','completed')").fetchone()[0]
         if n == 0:
-            out.append({"kind": "luecke", "key": "kein_ziel", "statement": "kein offenes Ziel in omega_goal", "ref": {"table": "omega_goal", "where": "lower(status) not in ('done','closed','abandoned','complete','completed')", "params": [], "n": 0}})
+            out.append({"kind": "gap", "key": "kein_ziel", "statement": "kein offenes Ziel in omega_goal", "ref": {"table": "omega_goal", "where": "lower(status) not in ('done','closed','abandoned','complete','completed')", "params": [], "n": 0}})
     return out
 
 
 def resolve(conn, ref):
-    """Evidenzreferenz pruefen: liefert die Abfrage heute noch genau die behauptete Anzahl? -> (ok, aktuelle Anzahl)."""
+    """Check evidence reference: does the query still yield exactly the claimed number today? -> (ok, current count)."""
     try:
         n = conn.execute("select count(*) from %s where %s" % (ref["table"], ref["where"]), tuple(ref.get("params", ()))).fetchone()[0]
     except Exception:
@@ -87,7 +87,7 @@ def step(conn, now=None):
     last = conn.execute("select max(bucket) from f3_endo_puls_log").fetchone()[0]
     b0 = max((last if last is not None else cur - 2) + 1, cur - MAX_CATCHUP)
     n = 0
-    for b in range(b0, cur):  # abgeschlossene Fenster; beobachtet wird der Stand jetzt (kein Rueckblick-Zustand), daher pro Nachhol-Lauf nur ein Befundsatz am juengsten Fenster
+    for b in range(b0, cur):  # completed windows; the current state is observed (no retrospective state), therefore only one finding set at the most recent window per catch-up run
         eid = hashlib.sha256(("puls|%d" % b).encode()).hexdigest()[:16]
         cur_ins = conn.execute("insert or ignore into f3_endo_puls_log(bucket,ts,event_id,n_findings) values(?,?,?,0)", (b, b * BUCKET_S, eid))
         if not cur_ins.rowcount:

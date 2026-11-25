@@ -1,12 +1,12 @@
-"""class_demand.py -- Regel CLASS_DEMAND_V1 (Entwurf ChatGPT Runde 3, 2026-11-24; Gewichte/Schwellen UNKALIBRIERT, eingefroren, nur Shadow).
+"""class_demand.py -- Rule CLASS_DEMAND_V1 (Draft ChatGPT Round 3, 2026-11-24; Weights/Thresholds UNCALIBRATED, frozen, shadow only).
 
-S_c = 0.55*T_c + 0.20*G_c + 0.15*Z_c + 0.10*R_c, waehle S_c >= 0.50, max 4 Klassen (explizite zuerst, dann Score absteigend, dann alphabetisch,
-Ueberlauf wird protokolliert), sonst ABSTAIN. T: explizite Nutzerintention 1, indirekter lexikalischer Hinweis 0.5, sonst 0. Z: dieselbe Klassifikation
-auf dem aktiven Ziel (leer -> 0). Fehlt der Nutzertext, ist das Ziel der primaere Eingang (T aus dem Ziel, Z = 0).
-G nur aus dem TATSAECHLICHEN Zellvertrag (register.v2_signals): reason <- G9 (nur wenn g9_valid), long <- G10, tool <- G6 (Code/Werkzeug-Heuristik),
-code <- G6 nur bei hartem Code-Hinweis (Codeblock, def/class/import, traceback); json, de haben keinen GRID-Indikator -> 0.
-R (Retina): 1 nur bei burst UND passendem relayten Ereignis UND semantischem Bezug im Text/Ziel; die Retina erzeugt NIE allein eine Klasse
-(R wirkt nur, wenn die passende Intention T_c > 0 vorliegt). Keine Negationsbehandlung (erwartetes Gegenbeispiel 1 des Entwurfs)."""
+S_c = 0.55*T_c + 0.20*G_c + 0.15*Z_c + 0.10*R_c, choose S_c >= 0.50, max 4 classes (explicit first, then score descending, then alphabetically,
+overflow is logged), otherwise ABSTAIN. T: explicit user intention 1, indirect lexical hint 0.5, otherwise 0. Z: same classification
+on the active target (empty -> 0). If user text is missing, the target is the primary input (T from target, Z = 0).
+G only from the ACTUAL cell contract (register.v2_signals): reason <- G9 (only if g9_valid), long <- G10, tool <- G6 (code/tool heuristic),
+code <- G6 only on hard code hint (code block, def/class/import, traceback); json, de have no GRID indicator -> 0.
+R (Retina): 1 only on burst AND matching relayed event AND semantic reference in text/target; the Retina NEVER generates a class alone
+(R only takes effect when matching intention T_c > 0 is present). No negation handling (expected counterexample 1 of the draft)."""
 import re
 
 RULE_VERSION = "CLASS_DEMAND_V1"
@@ -46,7 +46,7 @@ def classify(text):
 
 
 def retina_boost(text, goal, relay, burst):
-    """R_c in {0,1}; nur bei burst + passendem relayten Ereignis + Bezug in Text/Ziel; nie ohne Intention (das prueft derive)."""
+    """R_c in {0,1}; only on burst + matching relayed event + reference in text/target; never without intention (that is checked by derive)."""
     ctx = "%s %s" % (text or "", goal or "")
     r = {c: 0.0 for c in CLASSES}
     if not burst:

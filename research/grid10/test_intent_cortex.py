@@ -1,4 +1,4 @@
-"""Tests IC.01-IC.10 fuer intent_cortex + intent_bench_eval. Mit Attrappen-LLM, kein Netz, keine echte DB."""
+"""Tests IC.01-IC.10 for intent_cortex + intent_bench_eval. With mock LLM, no network, no real DB."""
 import json
 import os
 import sqlite3
@@ -30,7 +30,7 @@ def t_ic02_span_muss_im_text_stehen():
 def t_ic03_negation_und_stufe():
     t = "kein Code, nur json"
     r = ic.analyse(t, fake([item("code", spans=["kein Code"], neg=True), item("json", lvl="E1", spans=["json"]), item("tool", lvl="E2", spans=["nur"], conf=0.3)]))
-    assert r["valid"] and r["selected"] == []  # negiert / nur Stichwort / zu unsicher
+    assert r["valid"] and r["selected"] == []  # negated / keyword only / too uncertain
 
 
 def t_ic04_unsinn_wird_abstain():

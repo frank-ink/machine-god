@@ -1,23 +1,23 @@
-"""weltmodell2.py -- WM2 Hyperposition, minimaler Hypothesenraum (Entwurf ChatGPT Runde 10, 2026-11-25), SHADOW, nur lokal.
+"""world_model2.py -- WM2 Hyperposition, minimal hypothesis space (Draft ChatGPT Round 10, 2026-11-25), SHADOW, local only.
 
-Reine PROJEKTION der UnifiedDB: keine zweite Zustandsautoritaet, WM1 (f3_wm_*) wird nur gelesen und nie veraendert; die eingefrorene S0-Auswertung bleibt unberuehrt.
-Anlass = ein E2-Befund 'wm_prognosefehler' (f3_endo_befund). Dazu konkurrierende Erklaerungen, jede mit unveraenderlichen Revisionen (append-only, per Trigger gegen UPDATE/DELETE gesperrt, Hash-Kette):
-  H_RAUSCHEN  zufaellige Streuung/Ausreisser    H_REGIME  Umweltraten haben sich verschoben (gerichteter Fehler, der bleibt)    H_SENSOR  Messartefakt durch Beobachtungsluecken
-Indikatoren (deterministisch aus f3_wm_pred, siehe ind()): conc (Konzentration des Fehlers), bias (Richtungskonstanz im groessten Kanal), gap (Luecken im Fensterbereich),
-post (Fehler NACH dem Anlass: nur Fenster nach hi, ab 3 Fenstern; neue Revision, sobald sich die Evidenz aendert).
-Gewichte sind Plausibilitaetsanteile einer Regel, KEINE kalibrierten Wahrscheinlichkeiten (Startwerte, ungeprueft). Offener Widerspruch: Abstand der beiden Besten < MARGIN -> E2-Befund.
-Gegenevidenz je Revision ausgewiesen (counter), Salienz = Anteil des Spitzenreiters x Schwere des Anlasses."""
+Pure PROJECTION of UnifiedDB: no second state authority, WM1 (f3_wm_*) is only read and never modified; the frozen S0 evaluation remains untouched.
+Occasion = an E2 finding 'wm_prognosefehler' (f3_endo_befund). Competing explanations for this, each with immutable revisions (append-only, locked against UPDATE/DELETE via trigger, hash chain):
+  H_RAUSCHEN  random scatter/outliers    H_REGIME  environmental rates have shifted (systematic error that persists)    H_SENSOR  measurement artifact due to observation gaps
+Indicators (deterministic from f3_wm_pred, see ind()): conc (error concentration), bias (directional consistency in largest channel), gap (gaps in window area),
+post (error AFTER occasion: only windows after hi, from 3 windows onward; new revision whenever evidence changes).
+Weights are plausibility shares of a rule, NOT calibrated probabilities (initial values, unvalidated). Open contradiction: distance between top two < MARGIN -> E2 finding.
+Counter-evidence per revision shown (counter), Salience = share of front-runner x severity of occasion."""
 import hashlib
 import json
 import re
 import time
 
-import weltmodell as wm
+import world_model as wm
 
 RULE_VERSION, MODE_KEY, MARGIN, POST_MIN, FLOOR = "WM2_HYP_V1", "frank3.wm2.mode", 0.10, 3, 0.05
-HYP = {"RAUSCHEN": "Der Prognosefehler ist zufaellige Streuung/Ausreisser, das Modell ist im Kern passend.",
-       "REGIME": "Die Raten der Umwelt haben sich verschoben (gerichteter, anhaltender Fehler), das Modell ist veraltet.",
-       "SENSOR": "Der Prognosefehler ist ein Messartefakt durch Beobachtungsluecken, nicht die Umwelt."}
+HYP = {"NOISE": "The forecast error is random scatter/outliers, the model is fundamentally suitable.",
+       "REGIME": "The environment's rates have shifted (directed, persistent error), the model is outdated.",
+       "SENSOR": "The forecast error is a measurement artifact caused by observation gaps, not the environment."}
 DDL = ("create table if not exists f3_wm2_anlass(anlass_id text primary key, befund_id integer, ver integer, lo integer, hi integer, created_at real, rule_version text)",
        "create table if not exists f3_wm2_hyp(hyp_id text primary key, anlass_id text, name text, claim text, created_at real)",
        "create table if not exists f3_wm2_rev(rev_id text primary key, anlass_id text, hyp_id text, seq integer, ts real, indicators text, support text, counter text, weight real, score real, rank integer,"
@@ -41,7 +41,7 @@ def _clip(x):
 
 
 def ind(conn, ver, lo, hi):
-    """Indikatoren aus f3_wm_pred. Fenster im Bereich [lo,hi] unter Modellversion ver; 'post' = Fenster nach hi (hoechste Version je Bucket)."""
+    """Indicators from f3_wm_pred. Windows in range [lo,hi] under model version ver; 'post' = windows after hi (highest version per bucket)."""
     rows = conn.execute("select bucket,obs,pred,brier from f3_wm_pred where status='bewertet' and model_version=? and bucket>=? and bucket<=? order by bucket", (ver, lo, hi)).fetchall()
     n = len(rows)
     if n == 0:
@@ -68,8 +68,8 @@ def ind(conn, ver, lo, hi):
 
 def weights(i):
     """-> {name: (gewicht, [Stuetzen], [Gegenstuetzen])}. Regel WM2_HYP_V1."""
-    sup = {"RAUSCHEN": [("conc_n", i["conc_n"], .5), ("trans", i["trans"], .5)], "REGIME": [("bias_n", i["bias_n"], .5), ("pers", i["pers"], .5)], "SENSOR": [("gap_n", i["gap_n"], 1.0)]}
-    cnt = {"RAUSCHEN": [("bias_n", i["bias_n"], .25), ("pers", i["pers"], .25)], "REGIME": [("conc_n", i["conc_n"], .25), ("trans", i["trans"], .25)], "SENSOR": []}
+    sup = {"NOISE": [("conc_n", i["conc_n"], .5), ("trans", i["trans"], .5)], "REGIME": [("bias_n", i["bias_n"], .5), ("pers", i["pers"], .5)], "SENSOR": [("gap_n", i["gap_n"], 1.0)]}
+    cnt = {"NOISE": [("bias_n", i["bias_n"], .25), ("pers", i["pers"], .25)], "REGIME": [("conc_n", i["conc_n"], .25), ("trans", i["trans"], .25)], "SENSOR": []}
     out = {}
     for h in HYP:
         s, c = sum(v * w for _, v, w in sup[h]), sum(v * w for _, v, w in cnt[h])
@@ -107,7 +107,7 @@ def _revise(conn, aid, ver, lo, hi, now):
 
 
 def project(conn, now=None):
-    """Projiziert alle E2-Befunde 'wm_prognosefehler' in den Hypothesenraum (idempotent). -> Zahl neuer Revisionen."""
+    """Projects all E2 findings 'wm_prognosefehler' into hypothesis space (idempotent). -> Number of new revisions."""
     now = time.time() if now is None else now
     if off(conn) or not wm._tbl(conn, "f3_wm_pred") or not wm._tbl(conn, "f3_endo_befund"):
         return 0
@@ -136,8 +136,8 @@ def stand(conn, aid):
     return [{"name": n, "seq": s, "score": sc, "rank": rk, "salience": sl, "status": st, "support": json.loads(su)["ind"], "counter": json.loads(co)["ind"]} for n, s, sc, rk, sl, st, su, co in rows]
 
 
-def befund(conn, now=None):
-    """Fuer endogen.observe: offener Widerspruch (Abstand der beiden Besten < MARGIN) -> E2-Befund mit unveraenderlicher Evidenz (alle Revisionen bis zur aktuellen Seq). Projiziert vorher."""
+def finding(conn, now=None):
+    """For endogenous.observe: open contradiction (distance between top two < MARGIN) -> E2 finding with immutable evidence (all revisions up to current seq). Projects beforehand."""
     if off(conn) or not wm._tbl(conn, "f3_wm2_anlass"):
         return []
     out = []
@@ -147,7 +147,7 @@ def befund(conn, now=None):
             continue
         mx = conn.execute("select max(rowid) from f3_wm2_rev where anlass_id=?", (aid,)).fetchone()[0]
         n = conn.execute("select count(*) from f3_wm2_rev where anlass_id=? and rowid<=?", (aid, mx)).fetchone()[0]
-        out.append({"kind": "widerspruch", "key": "wm2_offen:" + aid, "statement": "WM2: konkurrierende Erklaerungen des Prognosefehlers nicht unterscheidbar (%s %.0f %% gegen %s %.0f %%, Abstand < %.0f %%)" % (
+        out.append({"kind": "contradiction", "key": "wm2_offen:" + aid, "statement": "WM2: konkurrierende Erklaerungen des Prognosefehlers nicht unterscheidbar (%s %.0f %% gegen %s %.0f %%, Abstand < %.0f %%)" % (
             st[0]["name"], 100 * st[0]["score"], st[1]["name"], 100 * st[1]["score"], 100 * MARGIN),
             "ref": {"table": "f3_wm2_rev", "where": "anlass_id='%s' and rowid<=%d" % (aid, mx), "params": [], "n": n}})
     return out

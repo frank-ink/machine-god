@@ -1,33 +1,31 @@
-# Kern-Idee: Database-Pulse, vier Paketenden, inneres Wiki
+# Core Idea: Database-Pulse, Four Packet Ends, Inner Wiki
 
-Quelle: Kern-Gedanke des Nutzers vom 2026-11-25, hier als Zusammenfassung. Die ursprünglichen Chat-Nachrichten sind privat.
+Source: User's core thought from 2026-11-25, summarized here. Original chat messages are private.
 
-## Die Idee
+## The Idea
 
-- **Database-Pulse** (~1 Hz) ist die *innere Zeit*: Existenzdauer und Zeit seit einem Prozess. Die Systemzeit dient nur dazu,
-  daraus die Weltzeit abzuleiten. Bei jedem Tick ist der Puls ein Agent; das Ganze ist agentenvernetzt.
-- **Datenpakete** der UnifiedDB haben **vier Endungen** (Bild: DNA/Telomer) mit emergenten Andockpunkten. Der Puls vernetzt damit
-  das System selbstständig weiter.
-- **Inneres Wiki** + emergentes Retrieval gelten als der fehlende Link (*missing link*) zwischen Datenpaketen und Wissen.
-- **Selbstheilung**: ein Regenerationskreislauf, der eingefügte Pakete rückwirkend wiederherstellen kann.
-- Das System funktionierte früh wie beschrieben und ging irgendwann kaputt.
+- **Database-Pulse** (~1 Hz) is the *inner time*: duration of existence and time since a process. System time serves only to derive world time from it. At each tick the pulse is an agent; the whole is agent-networked.
+- **Data packets** of the UnifiedDB have **four ends** (image: DNA/telomere) with emergent docking points. The pulse uses these to further network the system autonomously.
+- **Inner Wiki** + emergent retrieval are considered the *missing link* between data packets and knowledge.
+- **Self-healing**: a regeneration cycle that can retroactively restore inserted packets.
+- The system worked early on as described and broke at some point.
 
-## Was belegt ist und was nicht
+## What Is Substantiated and What Is Not
 
-| Aussage | Status |
+| Statement | Status |
 |---|---|
-| Der Pulse, die Wiki-Tabellen und die Idee der Paketenden existieren als Ziel | belegt als Wunsch/Entwurf |
-| Die **Definition der vier Endungen** | **NICHT gefunden.** Die Vorschläge D1 Semantik, D2 Relation u. a. aus der ChatGPT-Runde sind nur Hypothese |
-| Der **Breaking Point** (wann/warum es kaputtging) | **ungeklärt.** Hypothesen: Hook statt autonomem Puls, Sitzungsidentität, Lesen-vor-Verarbeiten, Beobachter-Rückwirkung, fehlende Wissensrückkopplung |
-| Pulse- und Wiki-Tabellen der aktuellen UnifiedDB | vorhanden, aber **leer**; der Puls schreibt dort derzeit nichts |
-| Frühere Zahlen (120/120 Ticks, 960 Hypothesen, 485 Relationen, Median 45 ms) | historisch gemeldet, nicht neu gemessen |
+| The pulse, the wiki tables, and the idea of packet ends exist as a goal | substantiated as wish/design |
+| The **definition of the four ends** | **NOT found.** The proposals D1 Semantics, D2 Relation, etc. from the ChatGPT round are only hypotheses |
+| The **Breaking Point** (when/why it broke) | **unclear.** Hypotheses: Hook instead of autonomous pulse, session identity, read-before-process, observer back-action, missing knowledge feedback |
+| Pulse and wiki tables of the current UnifiedDB | present, but **empty**; the pulse currently writes nothing there |
+| Earlier numbers (120/120 ticks, 960 hypotheses, 485 relations, median 45 ms) | historically reported, not re-measured |
 
-## Einordnung
+## Classification
 
-Die Organe in `research/grid10` (E1-E5, Weltmodell, Selbstmodell) sind Vorstufen dieses Zielbildes, keine Umsetzung davon.
-Die Studie dazu steht in [control-loop-study-2026-11-24.pdf](control-loop-study-2026-11-24.pdf), die Entscheidungsrunden in
+The organs in `research/grid10` (E1-E5, World Model, Self Model) are precursors of this target picture, not an implementation of it.
+The study on this is in [control-loop-study-2026-11-24.pdf](control-loop-study-2026-11-24.pdf), the decision rounds in
 [decisions-claude-chatgpt-2026-11-24.md](decisions-claude-chatgpt-2026-11-24.md).
 
 ## Measurements (round 11)
 
-The measured state of the pulse, the endings and the wiki is in [round11-pulse-measurements.md](round11-pulse-measurements.md).
+The measured state of the pulse, the ends and the wiki is in [round11-pulse-measurements.md](round11-pulse-measurements.md).

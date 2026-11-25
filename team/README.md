@@ -1,37 +1,36 @@
-# Dev-Team (Referenz)
+# Dev team (reference)
 
-Fünf Rollen als **modellneutrale Prompts**: Leiter (die Hauptsitzung) plus vier Mitglieder. Die Dateien sind einfache Markdown-Rollenbeschreibungen
-(mit kleinem YAML-Kopf); sie laufen mit jedem Chat-Modell, auch mit Free-Pool-Modellen.
+Five roles as **model-neutral prompts**: a lead (the main session) plus four members. The files are plain markdown role descriptions
+(with a small YAML header); they work with any chat model, including free-pool models.
 
-| Rolle | Datei | Aufgabe |
+| Role | File | Task |
 |---|---|---|
-| Architekt | `agents/team-architekt.md` | Design, Schnittstellen, Testplan, Fehlerpfade; schreibt keinen Code |
-| Bauer | `agents/team-bauer.md` | Ursache zuerst, dann Minimalbau |
-| Prüfer | `agents/team-pruefer.md` | unabhängige Prüfung von Diff und Tests, nie die eigene Arbeit |
-| Prüfer+ | `agents/team-pruefer-plus.md` | zweite Prüfung nur bei nicht-trivialer Änderung, mit einem stärkeren Modell, falls eines konfiguriert ist |
-| Wächter | `agents/team-waechter.md` | Sicherheit, Geheimnisse, Zerstörendes, Freigabe-Tore |
+| Architect | `agents/team-architect.md` | design, interfaces, test plan, failure paths; writes no code |
+| Builder | `agents/team-builder.md` | root cause first, then minimal build |
+| Reviewer | `agents/team-reviewer.md` | independent review of diff and tests, never one's own work |
+| Reviewer+ | `agents/team-reviewer-plus.md` | second review only for non-trivial changes, with a stronger model if one is configured |
+| Guardian | `agents/team-guardian.md` | security, secrets, destructive actions, approval gates |
 
-Dokumente: `TEAM.md` (Regeln), `GRF-RAHMEN.md` (acht Denkprinzipien des Generative Reality Framework als Arbeitsregeln),
-`ZIEL.md` (Messgrößen und ehrliche Übersetzung des Ziels).
+Documents: `TEAM.md` (rules), `GRF-FRAME.md` (eight thinking principles of the Generative Reality Framework as working rules),
+`GOAL.md` (metrics and an honest translation of the goal).
 
-## Mit einem Free-Pool-Modell benutzen
+## Use with a free-pool model
 
-Jeder OpenAI-kompatible Endpunkt genügt; es gibt keinen Anbieter-Zwang.
+Any OpenAI-compatible endpoint is enough; there is no provider lock-in.
 
 ```bash
-export MG_LLM_URL="https://<anbieter>/v1/chat/completions"   # beliebiger OpenAI-kompatibler Endpunkt
-export MG_LLM_MODEL="<modell-id>"
-export MG_LLM_KEY="<schluessel>"                              # nur in der Umgebung, nie in eine Datei
-echo "Prüfe diesen Diff: ..." | python3 research/grid10/freellm.py --system team/agents/team-pruefer.md
+export MG_LLM_URL="https://<provider>/v1/chat/completions"   # any OpenAI-compatible endpoint
+export MG_LLM_MODEL="<model-id>"
+export MG_LLM_KEY="<key>"                                     # environment only, never in a file
+echo "Review this diff: ..." | python3 research/grid10/freellm.py --system team/agents/team-reviewer.md
 ```
 
-`freellm.py` entfernt den YAML-Kopf der Rollendatei und nutzt den Rest als Systemprompt. In einem anderen Werkzeug
-(Agenten-Harness, Chat-Client) kopiert man den Text der Rollendatei einfach als Systemprompt hinein.
+`freellm.py` strips the YAML header of the role file and uses the rest as the system prompt. In another tool
+(agent harness, chat client) simply paste the text of the role file as the system prompt.
 
-## Hinweise
+## Notes
 
-- Die Rollen verweisen auf gstack-Skills (`gstack-plan-eng-review`, `gstack-investigate`, `gstack-review`, `gstack-cso`,
-  `gstack-careful`) nur **namentlich** und optional. gstack ist ein eigenes Projekt mit eigener Lizenz und nicht Teil dieses Repos.
-- Die Rollen sind eine Arbeitsweise, kein Beleg für Leistung. `ZIEL.md` sagt ausdrücklich: Kein AGI-Indikator ist als
-  erfüllt belegt.
-- Rückbau: einfach die kopierten Dateien wieder löschen; die Rollen schreiben nichts außerhalb ihres Auftrags.
+- The roles refer to gstack skills (`gstack-plan-eng-review`, `gstack-investigate`, `gstack-review`, `gstack-cso`,
+  `gstack-careful`) by **name only** and optionally. gstack is a separate project with its own license and not part of this repo.
+- The roles are a way of working, not evidence of performance. `GOAL.md` states explicitly: no AGI indicator is shown as fulfilled.
+- Rollback: simply delete the copied files again; the roles write nothing outside their task.
