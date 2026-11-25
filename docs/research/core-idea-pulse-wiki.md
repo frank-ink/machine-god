@@ -25,5 +25,9 @@ Quelle: Kern-Gedanke des Nutzers vom 2026-11-25, hier als Zusammenfassung. Die u
 ## Einordnung
 
 Die Organe in `research/grid10` (E1-E5, Weltmodell, Selbstmodell) sind Vorstufen dieses Zielbildes, keine Umsetzung davon.
-Die Studie dazu steht in [regelkreis-studie-2026-11-24.pdf](regelkreis-studie-2026-11-24.pdf), die Entscheidungsrunden in
-[entscheidungen-claude-chatgpt-2026-11-24.md](entscheidungen-claude-chatgpt-2026-11-24.md).
+Die Studie dazu steht in [control-loop-study-2026-11-24.pdf](control-loop-study-2026-11-24.pdf), die Entscheidungsrunden in
+[decisions-claude-chatgpt-2026-11-24.md](decisions-claude-chatgpt-2026-11-24.md).
+
+## Measurements (round 11)
+
+The measured state of the pulse, the endings and the wiki is in [round11-pulse-measurements.md](round11-pulse-measurements.md).

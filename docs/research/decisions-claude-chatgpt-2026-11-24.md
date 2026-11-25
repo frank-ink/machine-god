@@ -90,7 +90,7 @@ auswahlbericht.py (5 Tests), PROTOKOLL.md + manifest.jsonl (sha256 992adef6...38
 - Alle 13 Suiten gruen; ROLLBACK.sh erweitert (nur Code und f3_*-Tabellen, Protokoll- und Benchmarkdateien bleiben).
 
 ## KERN-IDEE
-Zusammenfassung in [kern-idee-pulse-wiki.md](kern-idee-pulse-wiki.md); die urspruenglichen Chat-Nachrichten sind privat und nicht Teil des Repos.
+Zusammenfassung in [core-idea-pulse-wiki.md](core-idea-pulse-wiki.md); die urspruenglichen Chat-Nachrichten sind privat und nicht Teil des Repos.
 
 ## Runde 11, erste Spuren (Claude, 2026-11-25 01:15, nur lesend)
 - Vier Endungen: grep (andock|docking|telomer|vier Endungen|DNA-Ende) in den lokalen Arbeitskopien -> KEIN Treffer fuer ein Paketende-Konzept (nur Fremdtreffer "andocken" in wake_condition.py/GESPRAECHSMODUS.md). Heisst: die Definition steht nicht unter diesen Woertern; weiter suchen unter Begriffen der Zeit (z.B. Anker, Codependenz, Hyperposition, ClayGraph, Strat) oder in git-Historie/Chat-Exporten.
