@@ -25,7 +25,7 @@ pub fn unified_db_path_for(paths: &PluginPaths) -> PathBuf {
 mod tests {
     use super::*;
     use crate::zero::entity::{
-        resolve_plugin_paths, EnvSnapshot, PLUGIN_DATA_DIR_ENV, PLUGIN_DIR_ENV, UNIFIED_DB_FILE,
+        EnvSnapshot, PLUGIN_DATA_DIR_ENV, PLUGIN_DIR_ENV, UNIFIED_DB_FILE, resolve_plugin_paths,
     };
 
     #[test]

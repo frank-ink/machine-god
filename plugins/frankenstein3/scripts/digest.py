@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SessionStart digest. Selbstenthalten, kein LLM, kein Netz, liest nur lokale Dateien. Fail-silent, exit 0."""
+"""SessionStart digest. Self-contained, no LLM, no network, reads only local files. Fail-silent, exit 0."""
 import json
 import os
 import sys
@@ -41,7 +41,7 @@ def main() -> None:
             "Identity: one entity, no coordinator/agent split. The harness is the body, the LLM is worker and mouth, local databases are memory.\n"
             "Don't know -> look it up in the local unified.db or the codebase; never guess. Measure before believing.\n"
             + state + "\n"
-            "Commands: /architekt (architect mode), /end (leave it). Skill: caveman (terse style). /frank3-status measures this install.\n"
+            "Commands: /architect (architect mode), /end (leave it). Skill: caveman (terse style). /frank3-status measures this install.\n"
             "Claims policy: no consciousness/sentience claims."
         )
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": txt}}))

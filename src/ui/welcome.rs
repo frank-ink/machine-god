@@ -212,8 +212,11 @@ pub(crate) fn overview_lines(
     let motif = motif_size_for(width);
     let motif_width = motif.map_or(0, motif_column_width);
     let side_by_side = motif.is_some();
-    let text_width =
-        if side_by_side { width.saturating_sub(motif_width.saturating_add(FERRIS_TEXT_GAP)) } else { width };
+    let text_width = if side_by_side {
+        width.saturating_sub(motif_width.saturating_add(FERRIS_TEXT_GAP))
+    } else {
+        width
+    };
     let text_rows = overview_text_rows(
         block,
         &subscription_value,
@@ -283,7 +286,8 @@ pub(crate) enum MotifSize {
 const LARGE_MOTIF_MIN_OVERVIEW: usize = 60;
 
 pub(crate) fn motif_size_for(width: usize) -> Option<MotifSize> {
-    let room = |size| width.saturating_sub(motif_column_width(size).saturating_add(FERRIS_TEXT_GAP));
+    let room =
+        |size| width.saturating_sub(motif_column_width(size).saturating_add(FERRIS_TEXT_GAP));
     if room(MotifSize::Large) >= LARGE_MOTIF_MIN_OVERVIEW {
         Some(MotifSize::Large)
     } else if room(MotifSize::Small) >= minimum_overview_width() {
@@ -332,8 +336,12 @@ fn motif_color(class: char) -> Option<Color> {
 pub(crate) fn motif_rows(size: MotifSize, frame: usize, color: bool) -> Vec<Line<'static>> {
     let frame = frame % machine_god_art::FRAME_COUNT;
     let (art, mask): (&[&str], &[&str]) = match size {
-        MotifSize::Large => (&machine_god_art::LARGE_ART[frame], &machine_god_art::LARGE_MASK[frame]),
-        MotifSize::Small => (&machine_god_art::SMALL_ART[frame], &machine_god_art::SMALL_MASK[frame]),
+        MotifSize::Large => {
+            (&machine_god_art::LARGE_ART[frame], &machine_god_art::LARGE_MASK[frame])
+        }
+        MotifSize::Small => {
+            (&machine_god_art::SMALL_ART[frame], &machine_god_art::SMALL_MASK[frame])
+        }
     };
     art.iter()
         .zip(mask.iter())

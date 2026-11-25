@@ -31,7 +31,7 @@ def run_install(args=(), env_extra=None, env_remove=()):
 
 class DryRunFailClosedTests(unittest.TestCase):
     def test_row_1c_dry_run_without_f3_db_path_exits_zero(self):
-        # F3_DRY_RUN=1 ./install.sh (ohne F3_DB_PATH) -> exit 0, temp dir used
+        # F3_DRY_RUN=1 ./install.sh (without F3_DB_PATH) -> exit 0, temp dir used
         with tempfile.TemporaryDirectory() as tmp:
             result = run_install(
                 env_extra={"TMPDIR": tmp, "F3_DRY_RUN": "1"},

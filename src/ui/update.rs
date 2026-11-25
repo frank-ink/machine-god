@@ -132,12 +132,9 @@ fn action_lines(app: &App) -> (Vec<Line<'static>>, usize) {
 
 fn action_line(label: &str, selected: bool) -> Line<'static> {
     let marker = if selected { ">" } else { " " };
-    let style = if selected {
-        Style::default().fg(theme::ACCENT)
-    } else {
-        Style::default().fg(theme::DIM)
-    }
-    .add_modifier(Modifier::BOLD);
+    let style =
+        if selected { Style::default().fg(theme::ACCENT) } else { Style::default().fg(theme::DIM) }
+            .add_modifier(Modifier::BOLD);
 
     Line::from(Span::styled(format!("{marker} {label}"), style))
 }

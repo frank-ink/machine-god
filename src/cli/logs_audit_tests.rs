@@ -195,7 +195,8 @@ fn bundle_selection_keeps_recent_families_and_bounds_orphans_by_metadata() {
     let mut expected = BTreeSet::new();
     assert!(select_bundle_runtime_logs(&f.paths.runtime_dir).unwrap().is_empty());
     for n in 1..=7 {
-        let path = f.log(&format!("machine-god-20250101T000000Z-p{n}-rabc.log.1"), "orphan", n * 100);
+        let path =
+            f.log(&format!("machine-god-20250101T000000Z-p{n}-rabc.log.1"), "orphan", n * 100);
         if n >= 3 {
             expected.insert(path);
         }

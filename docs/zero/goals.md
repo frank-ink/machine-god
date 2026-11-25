@@ -1,10 +1,10 @@
-# ZIELE — Measured Goals Table
+# GOALS — Measured Goals Table
 
-Source: `zero/ZIELE.md` (measured goals definition) and `zero/unifieddb/schema.sql`.
+Source: `zero/GOALS.md` (measured goals definition) and `zero/unifieddb/schema.sql`.
 
 ## Purpose
 
-`ziele` holds the measured goals of the Zero entity. Each row is a goal with a target value, a last measured value, and an explicit epistemic status. Progress is only what a gate MEASURED.
+`goals` holds the measured goals of the Zero entity. Each row is a goal with a target value, a last measured value, and an explicit epistemic status. Progress is only what a gate MEASURED.
 
 ## Epistemic Tags
 
@@ -69,7 +69,7 @@ Notes:
 
 ```sql
 SELECT id, name, domain, measured_value, epistemic_status
-FROM ziele
+FROM goals
 WHERE epistemic_status = 'UNKNOWN'
    OR measured_value IS NULL
 ORDER BY created_at;
@@ -79,7 +79,7 @@ ORDER BY created_at;
 
 ```sql
 SELECT id, name, target_value, measured_value, score_effective, gate_passed
-FROM ziele
+FROM goals
 WHERE gate_passed = TRUE
 ORDER BY score_effective DESC NULLS LAST
 LIMIT 20;
@@ -90,7 +90,7 @@ LIMIT 20;
 ```sql
 SELECT id, name, baseline_value, measured_value,
        (measured_value - baseline_value) AS delta
-FROM ziele
+FROM goals
 WHERE measured_value IS NOT NULL
   AND baseline_value IS NOT NULL;
 ```
@@ -99,7 +99,7 @@ WHERE measured_value IS NOT NULL
 
 ```sql
 SELECT id, name, confidence, epistemic_status
-FROM ziele
+FROM goals
 WHERE epistemic_status = 'HYPOTHESIS'
   AND confidence > 0.5;
 -- NOTE: confidence > 0.5 does not imply the goal is true.
@@ -107,7 +107,7 @@ WHERE epistemic_status = 'HYPOTHESIS'
 
 ```sql
 SELECT id, name, score_effective, decay_factor, updated_at
-FROM ziele
+FROM goals
 WHERE decay_factor > 0
 ORDER BY score_effective ASC
 LIMIT 10;
@@ -117,7 +117,7 @@ LIMIT 10;
 
 ```sql
 SELECT id, name, epistemic_status, gate_passed, verified_at
-FROM ziele
+FROM goals
 WHERE epistemic_status IN ('CAUSAL_CREDIT', 'BOUNDED_ADMISSION', 'CONTROL_INFLUENCE');
 -- These statuses must have a complete CVIR packet chain; no rung may be skipped.
 ```
@@ -128,14 +128,14 @@ A goal starts at `epistemic_status = 'MEASURED'` after the first instrumented ob
 
 ```sql
 -- Pseudo-SQL; the actual transition is mediated by the gate service, not raw UPDATE
-UPDATE ziele
+UPDATE goals
 SET epistemic_status = 'FALSIFY',
     updated_at = now()
 WHERE id = '<goal-id>'
   AND epistemic_status = 'MEASURED'
   AND EXISTS (
     SELECT 1 FROM cvir_packets
-    WHERE hypothesis_id = ziele.id
+    WHERE hypothesis_id = goals.id
       AND promotion_level = 'MEASURE'
   );
 ```

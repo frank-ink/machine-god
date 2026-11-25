@@ -9,26 +9,26 @@ pub struct Provider {
     pub id: String,
     pub name: String,
     pub url: String,
-    pub kategorie: String,
+    pub category: String,
     pub gratis: String,
     pub quelle: String,
     pub status: String,
-    pub eingerichtet: bool,
-    pub seit: String, // ISO date string YYYY-MM-DD
+    pub configured: bool,
+    pub since: String, // ISO date string YYYY-MM-DD
 }
 
 /// Wiki file structure
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WikiFile {
-    pub stand: String,
-    pub anbieter: Vec<Provider>,
+    pub as_of: String,
+    pub providers: Vec<Provider>,
 }
 
 /// Parsed provider with typed date for sorting
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedProvider {
     pub provider: Provider,
-    pub seit_date: NaiveDate,
+    pub since_date: NaiveDate,
 }
 
 /// Session state for tracking picked providers
@@ -57,29 +57,26 @@ pub fn parse_wiki_file(json: &str) -> anyhow::Result<WikiFile> {
     Ok(wiki)
 }
 
-/// Parse providers and convert seit to NaiveDate for sorting
+/// Parse providers and convert since to NaiveDate for sorting
 pub fn parse_providers(wiki: WikiFile) -> anyhow::Result<Vec<ParsedProvider>> {
     let mut parsed = Vec::new();
-    for provider in wiki.anbieter {
-        let seit_date = NaiveDate::parse_from_str(&provider.seit, "%Y-%m-%d")
-            .map_err(|e| anyhow::anyhow!("Invalid date format for provider {}: {}", provider.id, e))?;
-        parsed.push(ParsedProvider { provider, seit_date });
+    for provider in wiki.providers {
+        let since_date = NaiveDate::parse_from_str(&provider.since, "%Y-%m-%d").map_err(|e| {
+            anyhow::anyhow!("Invalid date format for provider {}: {}", provider.id, e)
+        })?;
+        parsed.push(ParsedProvider { provider, since_date });
     }
     Ok(parsed)
 }
 
-/// Filter providers that are not yet set up (eingerichtet = false)
+/// Filter providers that are not yet set up (configured = false)
 pub fn filter_unsetup_providers(providers: &[ParsedProvider]) -> Vec<ParsedProvider> {
-    providers
-        .iter()
-        .filter(|p| !p.provider.eingerichtet)
-        .cloned()
-        .collect()
+    providers.iter().filter(|p| !p.provider.configured).cloned().collect()
 }
 
-/// Sort providers by seit descending (newest first)
-pub fn sort_by_seit_desc(providers: &mut [ParsedProvider]) {
-    providers.sort_by(|a, b| b.seit_date.cmp(&a.seit_date));
+/// Sort providers by since descending (newest first)
+pub fn sort_by_since_desc(providers: &mut [ParsedProvider]) {
+    providers.sort_by(|a, b| b.since_date.cmp(&a.since_date));
 }
 
 /// Pick at most one provider per session (newest first, not already picked)
@@ -101,10 +98,47 @@ pub fn detect_language(input: &str) -> Language {
     let lower = input.to_lowercase();
     // German indicators
     let de_indicators = [
-        "und", "der", "die", "das", "ist", "ein", "eine", "für", "mit", "auf", "von", "zu",
-        "wie", "was", "wo", "wann", "warum", "wer", "kann", "soll", "muss", "will", "hat",
-        "bin", "bist", "sind", "war", "waren", "habe", "hast", "haben", "keine", "neuen",
-        "anbieter", "zeige", "welche", "gibt", "es", "gibt", "frei", "kostenlos",
+        "und",
+        "der",
+        "die",
+        "das",
+        "ist",
+        "ein",
+        "eine",
+        "für",
+        "mit",
+        "auf",
+        "von",
+        "zu",
+        "wie",
+        "was",
+        "wo",
+        "wann",
+        "warum",
+        "wer",
+        "kann",
+        "soll",
+        "muss",
+        "will",
+        "hat",
+        "bin",
+        "bist",
+        "sind",
+        "war",
+        "waren",
+        "habe",
+        "hast",
+        "haben",
+        "keine",
+        "neuen",
+        "anbieter",
+        "zeige",
+        "welche",
+        "gibt",
+        "es",
+        "gibt",
+        "frei",
+        "kostenlos",
     ];
     for word in de_indicators {
         if lower.split_whitespace().any(|w| w == word) {
@@ -120,10 +154,7 @@ pub fn render_de_tip(provider: &ParsedProvider) -> RenderedTip {
         "💡 **Neuer kostenloser Anbieter: {}**\n\n```\n{}\n{}\n```",
         provider.provider.name, provider.provider.url, provider.provider.gratis
     );
-    RenderedTip {
-        message: msg,
-        provider_id: provider.provider.id.clone(),
-    }
+    RenderedTip { message: msg, provider_id: provider.provider.id.clone() }
 }
 
 /// Render a tip message in English
@@ -132,10 +163,7 @@ pub fn render_en_tip(provider: &ParsedProvider) -> RenderedTip {
         "💡 **New free provider: {}**\n\n```\n{}\n{}\n```",
         provider.provider.name, provider.provider.url, provider.provider.gratis
     );
-    RenderedTip {
-        message: msg,
-        provider_id: provider.provider.id.clone(),
-    }
+    RenderedTip { message: msg, provider_id: provider.provider.id.clone() }
 }
 
 /// Render tip based on language
@@ -192,9 +220,9 @@ pub fn wiki_dir() -> PathBuf {
         .join("wiki")
 }
 
-/// Load and parse anbieter.json - returns Ok(None) if file missing
-pub fn load_anbieter_json() -> anyhow::Result<Option<WikiFile>> {
-    let path = wiki_dir().join("anbieter.json");
+/// Load and parse providers.json - returns Ok(None) if file missing
+pub fn load_providers_json() -> anyhow::Result<Option<WikiFile>> {
+    let path = wiki_dir().join("providers.json");
     match std::fs::read_to_string(&path) {
         Ok(content) => Ok(Some(parse_wiki_file(&content)?)),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -202,9 +230,9 @@ pub fn load_anbieter_json() -> anyhow::Result<Option<WikiFile>> {
     }
 }
 
-/// Load and parse neu.json - returns Ok(None) if file missing
-pub fn load_neu_json() -> anyhow::Result<Option<WikiFile>> {
-    let path = wiki_dir().join("neu.json");
+/// Load and parse new.json - returns Ok(None) if file missing
+pub fn load_new_json() -> anyhow::Result<Option<WikiFile>> {
+    let path = wiki_dir().join("new.json");
     match std::fs::read_to_string(&path) {
         Ok(content) => Ok(Some(parse_wiki_file(&content)?)),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -212,54 +240,51 @@ pub fn load_neu_json() -> anyhow::Result<Option<WikiFile>> {
     }
 }
 
-/// Merge providers from both files, deduplicating by id (neu.json takes precedence)
-pub fn merge_providers(anbieter: Option<WikiFile>, neu: Option<WikiFile>) -> WikiFile {
+/// Merge providers from both files, deduplicating by id (new.json takes precedence)
+pub fn merge_providers(providers: Option<WikiFile>, new: Option<WikiFile>) -> WikiFile {
     let mut seen = HashSet::new();
     let mut merged = Vec::new();
-    let mut stand = String::new();
+    let mut as_of = String::new();
 
-    // neu.json first (newer entries take precedence)
-    if let Some(neu_wiki) = neu {
-        stand = neu_wiki.stand;
-        for p in neu_wiki.anbieter {
+    // new.json first (newer entries take precedence)
+    if let Some(new_wiki) = new {
+        as_of = new_wiki.as_of;
+        for p in new_wiki.providers {
             if seen.insert(p.id.clone()) {
                 merged.push(p);
             }
         }
     }
-    // then anbieter.json
-    if let Some(anbieter_wiki) = anbieter {
-        if stand.is_empty() {
-            stand = anbieter_wiki.stand;
+    // then providers.json
+    if let Some(providers_wiki) = providers {
+        if as_of.is_empty() {
+            as_of = providers_wiki.as_of;
         }
-        for p in anbieter_wiki.anbieter {
+        for p in providers_wiki.providers {
             if seen.insert(p.id.clone()) {
                 merged.push(p);
             }
         }
     }
 
-    WikiFile {
-        stand,
-        anbieter: merged,
-    }
+    WikiFile { as_of, providers: merged }
 }
 
 /// Full pipeline: load, merge, filter, sort, pick, render
 pub fn get_next_tip(session: &mut SessionState, user_input: &str) -> anyhow::Result<String> {
-    let anbieter = load_anbieter_json()?;
-    let neu = load_neu_json()?;
-    
+    let providers = load_providers_json()?;
+    let new = load_new_json()?;
+
     // If both files missing, return honest unavailable message
-    if anbieter.is_none() && neu.is_none() {
+    if providers.is_none() && new.is_none() {
         let lang = detect_language(user_input);
         return Ok(render_unavailable(lang));
     }
-    
-    let merged = merge_providers(anbieter, neu);
+
+    let merged = merge_providers(providers, new);
     let mut providers = parse_providers(merged)?;
     let unsetup = filter_unsetup_providers(&providers);
-    sort_by_seit_desc(&mut providers);
+    sort_by_since_desc(&mut providers);
     let lang = detect_language(user_input);
 
     if let Some(picked) = pick_one_per_session(&providers, session) {
@@ -274,106 +299,106 @@ pub fn get_next_tip(session: &mut SessionState, user_input: &str) -> anyhow::Res
 mod tests {
     use super::*;
 
-    const ANBIETER_JSON: &str = r#"{
-  "stand": "2026-01-15",
-  "anbieter": [
+    const PROVIDERS_JSON: &str = r#"{
+  "as_of": "2026-01-15",
+  "providers": [
     {
       "id": "provider1",
       "name": "Test Provider 1",
       "url": "https://example1.com",
-      "kategorie": "LLM",
+      "category": "LLM",
       "gratis": "1000 tokens/day",
       "quelle": "website",
       "status": "active",
-      "eingerichtet": false,
-      "seit": "2026-01-10"
+      "configured": false,
+      "since": "2026-01-10"
     },
     {
       "id": "provider2",
       "name": "Test Provider 2",
       "url": "https://example2.com",
-      "kategorie": "Embedding",
+      "category": "Embedding",
       "gratis": "500 req/day",
       "quelle": "api",
       "status": "active",
-      "eingerichtet": true,
-      "seit": "2026-01-12"
+      "configured": true,
+      "since": "2026-01-12"
     },
     {
       "id": "provider3",
       "name": "Test Provider 3",
       "url": "https://example3.com",
-      "kategorie": "LLM",
+      "category": "LLM",
       "gratis": "unlimited",
       "quelle": "github",
       "status": "beta",
-      "eingerichtet": false,
-      "seit": "2026-01-08"
+      "configured": false,
+      "since": "2026-01-08"
     }
   ]
 }"#;
 
-    const NEU_JSON: &str = r#"{
-  "stand": "2026-01-20",
-  "anbieter": [
+    const NEW_JSON: &str = r#"{
+  "as_of": "2026-01-20",
+  "providers": [
     {
       "id": "provider4",
       "name": "New Provider 4",
       "url": "https://example4.com",
-      "kategorie": "Image",
+      "category": "Image",
       "gratis": "100 images/day",
       "quelle": "website",
       "status": "active",
-      "eingerichtet": false,
-      "seit": "2026-01-18"
+      "configured": false,
+      "since": "2026-01-18"
     },
     {
       "id": "provider1",
       "name": "Test Provider 1 Updated",
       "url": "https://example1-updated.com",
-      "kategorie": "LLM",
+      "category": "LLM",
       "gratis": "2000 tokens/day",
       "quelle": "website",
       "status": "active",
-      "eingerichtet": false,
-      "seit": "2026-01-19"
+      "configured": false,
+      "since": "2026-01-19"
     }
   ]
 }"#;
 
     const EMPTY_JSON: &str = r#"{
-  "stand": "2026-01-20",
-  "anbieter": []
+  "as_of": "2026-01-20",
+  "providers": []
 }"#;
 
     #[test]
-    fn test_parse_anbieter_json() {
-        let wiki = parse_wiki_file(ANBIETER_JSON).expect("Failed to parse anbieter.json");
-        assert_eq!(wiki.stand, "2026-01-15");
-        assert_eq!(wiki.anbieter.len(), 3);
-        assert_eq!(wiki.anbieter[0].id, "provider1");
-        assert_eq!(wiki.anbieter[0].name, "Test Provider 1");
-        assert!(!wiki.anbieter[0].eingerichtet);
-        assert_eq!(wiki.anbieter[1].id, "provider2");
-        assert!(wiki.anbieter[1].eingerichtet);
-        assert_eq!(wiki.anbieter[2].id, "provider3");
-        assert!(!wiki.anbieter[2].eingerichtet);
+    fn test_parse_providers_json() {
+        let wiki = parse_wiki_file(PROVIDERS_JSON).expect("Failed to parse providers.json");
+        assert_eq!(wiki.as_of, "2026-01-15");
+        assert_eq!(wiki.providers.len(), 3);
+        assert_eq!(wiki.providers[0].id, "provider1");
+        assert_eq!(wiki.providers[0].name, "Test Provider 1");
+        assert!(!wiki.providers[0].configured);
+        assert_eq!(wiki.providers[1].id, "provider2");
+        assert!(wiki.providers[1].configured);
+        assert_eq!(wiki.providers[2].id, "provider3");
+        assert!(!wiki.providers[2].configured);
     }
 
     #[test]
     fn test_parse_neu_json() {
-        let wiki = parse_wiki_file(NEU_JSON).expect("Failed to parse neu.json");
-        assert_eq!(wiki.stand, "2026-01-20");
-        assert_eq!(wiki.anbieter.len(), 2);
-        assert_eq!(wiki.anbieter[0].id, "provider4");
-        assert!(!wiki.anbieter[0].eingerichtet);
-        assert_eq!(wiki.anbieter[1].id, "provider1");
-        assert!(!wiki.anbieter[1].eingerichtet);
+        let wiki = parse_wiki_file(NEW_JSON).expect("Failed to parse new.json");
+        assert_eq!(wiki.as_of, "2026-01-20");
+        assert_eq!(wiki.providers.len(), 2);
+        assert_eq!(wiki.providers[0].id, "provider4");
+        assert!(!wiki.providers[0].configured);
+        assert_eq!(wiki.providers[1].id, "provider1");
+        assert!(!wiki.providers[1].configured);
     }
 
     #[test]
     fn test_filter_unsetup_providers() {
-        let wiki = parse_wiki_file(ANBIETER_JSON).unwrap();
+        let wiki = parse_wiki_file(PROVIDERS_JSON).unwrap();
         let providers = parse_providers(wiki).unwrap();
         let unsetup = filter_unsetup_providers(&providers);
         assert_eq!(unsetup.len(), 2);
@@ -382,10 +407,10 @@ mod tests {
     }
 
     #[test]
-    fn test_sort_by_seit_desc() {
-        let wiki = parse_wiki_file(ANBIETER_JSON).unwrap();
+    fn test_sort_by_since_desc() {
+        let wiki = parse_wiki_file(PROVIDERS_JSON).unwrap();
         let mut providers = parse_providers(wiki).unwrap();
-        sort_by_seit_desc(&mut providers);
+        sort_by_since_desc(&mut providers);
         // provider2 (2026-01-12) should be first, then provider1 (2026-01-10), then provider3 (2026-01-08)
         assert_eq!(providers[0].provider.id, "provider2");
         assert_eq!(providers[1].provider.id, "provider1");
@@ -394,23 +419,23 @@ mod tests {
 
     #[test]
     fn test_pick_one_per_session() {
-        let wiki = parse_wiki_file(ANBIETER_JSON).unwrap();
+        let wiki = parse_wiki_file(PROVIDERS_JSON).unwrap();
         let mut providers = parse_providers(wiki).unwrap();
-        sort_by_seit_desc(&mut providers);
+        sort_by_since_desc(&mut providers);
         let unsetup = filter_unsetup_providers(&providers);
-        
+
         let mut session = SessionState::default();
-        
+
         // First pick - should get provider1 (newest unsetup)
         let picked1 = pick_one_per_session(&unsetup, &mut session);
         assert!(picked1.is_some());
         assert_eq!(picked1.unwrap().provider.id, "provider1");
-        
+
         // Second pick - should get provider3 (next unsetup)
         let picked2 = pick_one_per_session(&unsetup, &mut session);
         assert!(picked2.is_some());
         assert_eq!(picked2.unwrap().provider.id, "provider3");
-        
+
         // Third pick - none left
         let picked3 = pick_one_per_session(&unsetup, &mut session);
         assert!(picked3.is_none());
@@ -418,10 +443,10 @@ mod tests {
 
     #[test]
     fn test_render_de_message() {
-        let wiki = parse_wiki_file(ANBIETER_JSON).unwrap();
+        let wiki = parse_wiki_file(PROVIDERS_JSON).unwrap();
         let providers = parse_providers(wiki).unwrap();
         let provider = &providers[0]; // provider1
-        
+
         let rendered = render_de_tip(provider);
         assert!(rendered.message.contains("Neuer kostenloser Anbieter"));
         assert!(rendered.message.contains("Test Provider 1"));
@@ -433,10 +458,10 @@ mod tests {
 
     #[test]
     fn test_render_en_message() {
-        let wiki = parse_wiki_file(ANBIETER_JSON).unwrap();
+        let wiki = parse_wiki_file(PROVIDERS_JSON).unwrap();
         let providers = parse_providers(wiki).unwrap();
         let provider = &providers[0]; // provider1
-        
+
         let rendered = render_en_tip(provider);
         assert!(rendered.message.contains("New free provider"));
         assert!(rendered.message.contains("Test Provider 1"));
@@ -470,7 +495,7 @@ mod tests {
         let providers = parse_providers(wiki).unwrap();
         let unsetup = filter_unsetup_providers(&providers);
         assert!(unsetup.is_empty());
-        
+
         let msg = render_empty(Language::De);
         assert_eq!(msg, "ℹ️ Keine neuen Anbieter verfügbar.");
     }
@@ -481,7 +506,7 @@ mod tests {
         let providers = parse_providers(wiki).unwrap();
         let unsetup = filter_unsetup_providers(&providers);
         assert!(unsetup.is_empty());
-        
+
         let msg = render_empty(Language::En);
         assert_eq!(msg, "ℹ️ No new providers available.");
     }
@@ -500,72 +525,70 @@ mod tests {
 
     #[test]
     fn test_merge_providers_deduplicates_neu_takes_precedence() {
-        let anbieter = parse_wiki_file(ANBIETER_JSON).unwrap();
-        let neu = parse_wiki_file(NEU_JSON).unwrap();
-        let merged = merge_providers(Some(anbieter), Some(neu));
-        
-        // Should have 4 unique providers (provider1 from neu, provider2, provider3 from anbieter, provider4 from neu)
-        assert_eq!(merged.anbieter.len(), 4);
-        
-        // provider1 should be from neu (updated)
-        let p1 = merged.anbieter.iter().find(|p| p.id == "provider1").unwrap();
+        let providers = parse_wiki_file(PROVIDERS_JSON).unwrap();
+        let new = parse_wiki_file(NEW_JSON).unwrap();
+        let merged = merge_providers(Some(providers), Some(new));
+
+        // Should have 4 unique providers (provider1 from new, provider2, provider3 from providers, provider4 from new)
+        assert_eq!(merged.providers.len(), 4);
+
+        // provider1 should be from new (updated)
+        let p1 = merged.providers.iter().find(|p| p.id == "provider1").unwrap();
         assert_eq!(p1.name, "Test Provider 1 Updated");
         assert_eq!(p1.url, "https://example1-updated.com");
         assert_eq!(p1.gratis, "2000 tokens/day");
-        
+
         // provider4 should be present
-        let p4 = merged.anbieter.iter().find(|p| p.id == "provider4").unwrap();
+        let p4 = merged.providers.iter().find(|p| p.id == "provider4").unwrap();
         assert_eq!(p4.name, "New Provider 4");
     }
 
     #[test]
-    fn test_merge_providers_only_anbieter() {
-        let anbieter = parse_wiki_file(ANBIETER_JSON).unwrap();
-        let merged = merge_providers(Some(anbieter), None);
-        
-        assert_eq!(merged.anbieter.len(), 3);
-        assert_eq!(merged.stand, "2026-01-15");
+    fn test_merge_providers_only_providers() {
+        let providers = parse_wiki_file(PROVIDERS_JSON).unwrap();
+        let merged = merge_providers(Some(providers), None);
+
+        assert_eq!(merged.providers.len(), 3);
+        assert_eq!(merged.as_of, "2026-01-15");
     }
 
     #[test]
     fn test_merge_providers_only_neu() {
-        let neu = parse_wiki_file(NEU_JSON).unwrap();
-        let merged = merge_providers(None, Some(neu));
-        
-        assert_eq!(merged.anbieter.len(), 2);
-        assert_eq!(merged.stand, "2026-01-20");
+        let new = parse_wiki_file(NEW_JSON).unwrap();
+        let merged = merge_providers(None, Some(new));
+
+        assert_eq!(merged.providers.len(), 2);
+        assert_eq!(merged.as_of, "2026-01-20");
     }
 
     #[test]
     fn test_merge_providers_both_none() {
         let merged = merge_providers(None, None);
-        
-        assert_eq!(merged.anbieter.len(), 0);
-        assert_eq!(merged.stand, "");
+
+        assert_eq!(merged.providers.len(), 0);
+        assert_eq!(merged.as_of, "");
     }
 
     #[test]
     fn test_full_pipeline_picks_newest_unsetup_first() {
-        let anbieter = parse_wiki_file(ANBIETER_JSON).unwrap();
-        let neu = parse_wiki_file(NEU_JSON).unwrap();
-        let merged = merge_providers(Some(anbieter), Some(neu));
+        let providers = parse_wiki_file(PROVIDERS_JSON).unwrap();
+        let new = parse_wiki_file(NEW_JSON).unwrap();
+        let merged = merge_providers(Some(providers), Some(new));
         let mut providers = parse_providers(merged).unwrap();
-        
+
         // Filter unsetup
         let unsetup = filter_unsetup_providers(&providers);
-        
-        // Sort by seit desc
-        sort_by_seit_desc(&mut providers);
-        let unsetup_sorted: Vec<_> = providers.iter()
-            .filter(|p| !p.provider.eingerichtet)
-            .cloned()
-            .collect();
-        
-        // Should be: provider1 (2026-01-19 from neu), provider4 (2026-01-18), provider3 (2026-01-08)
+
+        // Sort by since desc
+        sort_by_since_desc(&mut providers);
+        let unsetup_sorted: Vec<_> =
+            providers.iter().filter(|p| !p.provider.configured).cloned().collect();
+
+        // Should be: provider1 (2026-01-19 from new), provider4 (2026-01-18), provider3 (2026-01-08)
         assert_eq!(unsetup_sorted[0].provider.id, "provider1");
         assert_eq!(unsetup_sorted[1].provider.id, "provider4");
         assert_eq!(unsetup_sorted[2].provider.id, "provider3");
-        
+
         let mut session = SessionState::default();
         let picked = pick_one_per_session(&unsetup_sorted, &mut session);
         assert!(picked.is_some());
@@ -576,10 +599,10 @@ mod tests {
     fn test_no_network_calls_in_pure_functions() {
         // All functions tested above are pure - no network calls
         // This test documents the requirement
-        let wiki = parse_wiki_file(ANBIETER_JSON).unwrap();
+        let wiki = parse_wiki_file(PROVIDERS_JSON).unwrap();
         let providers = parse_providers(wiki).unwrap();
         let unsetup = filter_unsetup_providers(&providers);
-        sort_by_seit_desc(&mut providers.clone());
+        sort_by_since_desc(&mut providers.clone());
         let mut session = SessionState::default();
         pick_one_per_session(&unsetup, &mut session);
         detect_language("test");

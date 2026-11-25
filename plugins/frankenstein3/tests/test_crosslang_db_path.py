@@ -3,7 +3,7 @@
 Cross-language DB path parity test.
 
 Verifies that Rust (src/zero/entity.rs), TypeScript (agent-sdk/src/zero/health.ts),
-and Python (plugins/frankenstein3/f3_pfade.py) resolve the identical DB path
+and Python (plugins/frankenstein3/f3_paths.py) resolve the identical DB path
 under identical environment variable combinations.
 
 Tests at least 5 env combinations:
@@ -32,7 +32,7 @@ from typing import Dict, List, Tuple
 FRANK3_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(FRANK3_ROOT))
 
-from f3_pfade import resolve_db_path_with_env
+from f3_paths import resolve_db_path_with_env
 
 
 def run_rust_resolver(env: Dict[str, str]) -> str:
@@ -299,7 +299,7 @@ def test_all_resolvers() -> bool:
 
 def test_manifest_db_path_derives_from_data_dir():
     """db_path must equal data_dir / unified.db for all dir-based precedence levels."""
-    from f3_pfade import resolve_data_dir_with_env
+    from f3_paths import resolve_data_dir_with_env
 
     cases = [
         {"FRANK3_DATA": "/data/env"},

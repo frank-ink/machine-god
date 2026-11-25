@@ -12,7 +12,7 @@
       },
     },
     "agent-sdk": {
-      "name": "@srothgan/claude-rs-agent-bridge",
+      "name": "machine-god-agent-bridge",
       "version": "0.0.1",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "0.3.323",
@@ -160,7 +160,7 @@
 
     "@oxc-resolver/binding-win32-x64-msvc": ["@oxc-resolver/binding-win32-x64-msvc@11.24.2", "", { "os": "win32", "cpu": "x64" }, "sha512-UqGPmo56KDfLlfXFAFIrNflHT8tFxWGEivWg3Zeyp4Uy2NlKN1FGPr6/BxcLGG3+kZ6Wp14g5Uj+n71boqZfiw=="],
 
-    "@srothgan/claude-rs-agent-bridge": ["@srothgan/claude-rs-agent-bridge@workspace:agent-sdk"],
+    "machine-god-agent-bridge": ["machine-god-agent-bridge@workspace:agent-sdk"],
 
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 

@@ -35,12 +35,13 @@ pub(super) fn resolver_fixture() -> ResolverFixture {
     // Keep every bounded ancestor search inside this fixture.
     let isolated = dir.path().join("0/1/2/3/4/5/6/7/8");
     let root = isolated.as_path();
-    let runtime = if cfg!(windows) { "machine-god-bridge-bun.exe" } else { "machine-god-bridge-bun" };
+    let runtime =
+        if cfg!(windows) { "machine-god-bridge-bun.exe" } else { "machine-god-bridge-bun" };
     ResolverFixture {
         installed_exe: write_file(root, "package/vendor/x86_64/machine-god"),
         npm_platform_exe: write_file(
             root,
-            "npm-prefix/node_modules/@gschaidergabriel/machine-god-win32-x64-msvc/bin/claude-rs",
+            "npm-prefix/node_modules/@gschaidergabriel/machine-god-win32-x64-msvc/bin/machine-god-core.exe",
         ),
         unbundled_exe: write_file(root, "other/vendor/x86_64/machine-god"),
         cargo_target_exe: write_file(root, "manifest/target/debug/machine-god"),

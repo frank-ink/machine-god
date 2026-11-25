@@ -2,10 +2,10 @@
 //! Pure functions for login detection, subprocess execution, and free pool requests.
 //! No credential handling; uses user's own Claude Code subscription.
 
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::{Child, Command};
-use serde::{Deserialize, Serialize};
 
 /// Current operation mode of the agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -108,11 +108,7 @@ pub fn detect_claude_login() -> LoginStatus {
         .map(|s| !s.is_empty())
         .unwrap_or(false);
 
-    if has_oauth {
-        LoginStatus::LoggedIn
-    } else {
-        LoginStatus::NotLoggedIn
-    }
+    if has_oauth { LoginStatus::LoggedIn } else { LoginStatus::NotLoggedIn }
 }
 
 /// Pure function: build a default Omnipool request for free pool mode.
@@ -138,9 +134,17 @@ pub fn run_claude_code(args: Vec<String>) -> std::io::Result<ChildProcess> {
         .env_clear() // Start clean, then explicitly pass needed vars
         .envs(std::env::vars().filter(|(k, _)| {
             // Pass through standard environment variables
-            matches!(k.as_str(),
-                "HOME" | "USER" | "PATH" | "SHELL" | "TERM" | "LANG" | "LC_ALL" |
-                "CLAUDE_CONFIG_DIR" | "ANTHROPIC_API_KEY" // User may have this set
+            matches!(
+                k.as_str(),
+                "HOME"
+                    | "USER"
+                    | "PATH"
+                    | "SHELL"
+                    | "TERM"
+                    | "LANG"
+                    | "LC_ALL"
+                    | "CLAUDE_CONFIG_DIR"
+                    | "ANTHROPIC_API_KEY" // User may have this set
             )
         }));
 
@@ -151,8 +155,7 @@ pub fn run_claude_code(args: Vec<String>) -> std::io::Result<ChildProcess> {
 /// Get setup explanation for Claude Code login (German or English).
 pub fn explain_claude_setup(lang: &str) -> String {
     match lang {
-        "de" | "DE" | "de_DE" | "de-DE" => {
-            r#"## Claude Code Setup
+        "de" | "DE" | "de_DE" | "de-DE" => r#"## Claude Code Setup
 
 Um den **Claude Code Modus** zu nutzen, müssen Sie sich einmalig bei Claude Code anmelden:
 
@@ -168,10 +171,9 @@ Die Anmeldedaten werden lokal in `~/.claude/.credentials.json` gespeichert.
 - Claude Code nutzt Ihr eigenes Abonnement
 - Der Standard-Modus bleibt **Free Pool (Omnipool)**
 
-Nach dem Login können Sie im Menü auf "Claude Code" umschalten."#.to_string()
-        }
-        _ => {
-            r#"## Claude Code Setup
+Nach dem Login können Sie im Menü auf "Claude Code" umschalten."#
+            .to_string(),
+        _ => r#"## Claude Code Setup
 
 To use **Claude Code mode**, you need to log in once:
 
@@ -187,8 +189,8 @@ Credentials are stored locally in `~/.claude/.credentials.json`.
 - Claude Code uses your own subscription
 - Default mode stays **Free Pool (Omnipool)**
 
-After login, you can switch to "Claude Code" in the menu."#.to_string()
-        }
+After login, you can switch to "Claude Code" in the menu."#
+            .to_string(),
     }
 }
 
@@ -239,9 +241,7 @@ impl ModeState {
                 self.current_mode = Mode::FreePool;
                 Ok(())
             }
-            (current, target) if current == target => {
-                Ok(())
-            }
+            (current, target) if current == target => Ok(()),
             _ => Err(format!("Invalid mode transition: {:?} -> {:?}", self.current_mode, target)),
         }
     }

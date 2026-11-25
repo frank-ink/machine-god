@@ -80,10 +80,7 @@ pub(crate) fn build_composer_hint_rows(app: &App) -> Vec<Line<'static>> {
     {
         rows.push(Line::from(vec![
             Span::styled("Suggestion: ", Style::default().fg(theme::DIM)),
-            Span::styled(
-                suggestion.trim().to_owned(),
-                Style::default().fg(theme::ACCENT),
-            ),
+            Span::styled(suggestion.trim().to_owned(), Style::default().fg(theme::ACCENT)),
             Span::styled("    Tab to accept", Style::default().fg(theme::DIM)),
         ]));
     }

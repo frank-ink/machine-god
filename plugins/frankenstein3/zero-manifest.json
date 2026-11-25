@@ -5,12 +5,12 @@
   "paths": {
     "plugin_root": {
       "source": "bundle_location",
-      "resolver": "f3_pfade.py::resolve_plugin_root",
+      "resolver": "f3_paths.py::resolve_plugin_root",
       "note": "Directory of this bundle; no environment override."
     },
     "data_dir": {
       "derives_from": "env_precedence",
-      "resolver": "f3_pfade.py::resolve_data_dir",
+      "resolver": "f3_paths.py::resolve_data_dir",
       "precedence": [
         "FRANK3_DATA",
         "FRANKENSTEIN3_ROOT",
@@ -23,7 +23,7 @@
     },
     "db_path": {
       "derives_from": "data_dir",
-      "resolver": "f3_pfade.py::resolve_db_path",
+      "resolver": "f3_paths.py::resolve_db_path",
       "precedence": [
         "FRANK3_DATA/unified.db",
         "FRANKENSTEIN3_ROOT/unified.db",
@@ -34,7 +34,7 @@
         "USERPROFILE/AppData/Local/frankenstein3/unified.db"
       ]
     },
-    "resolver": "f3_pfade.py",
+    "resolver": "f3_paths.py",
     "contract": "docs/zero/contract_env.json"
   },
   "path_precedence": [

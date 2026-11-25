@@ -14,7 +14,7 @@ Scans in-scope plugin files for:
 Byte-compiles in-scope Python scripts to verify syntax.
 
 In-scope files (relative to plugin root):
-  - f3_pfade.py
+  - f3_paths.py
   - install.sh
   - README.md
   - scripts/status.py
@@ -23,8 +23,8 @@ In-scope files (relative to plugin root):
   - scripts/star/frank_profile.py
 
 Read-only files (NOT scanned, NOT modified):
-  - scripts/star/stern*.py
-  - scripts/star/f3_pfade.py
+  - scripts/star/star_cli*.py
+  - scripts/star/f3_paths.py
   - .claude-plugin/
   - hooks/hooks.json
 """
@@ -42,7 +42,7 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 
 # Files to scan for hard-coded paths (relative to plugin root)
 SCAN_FILES = [
-    "f3_pfade.py",
+    "f3_paths.py",
     "install.sh",
     "README.md",
     "scripts/status.py",
@@ -53,7 +53,7 @@ SCAN_FILES = [
 
 # Python files to byte-compile (subset of SCAN_FILES)
 PYTHON_FILES = [
-    "f3_pfade.py",
+    "f3_paths.py",
     "scripts/status.py",
     "scripts/digest.py",
     "scripts/reentry.py",
@@ -182,7 +182,7 @@ def byte_compile_python_file(filepath: Path) -> Tuple[bool, str]:
 def run_grep_check() -> Tuple[bool, List[str]]:
     """Run grep -RInE '/home/[a-z]|/Users/[a-z]|/mnt/|/opt/|C:/' over the changed files."""
     changed_files = [
-        "f3_pfade.py",
+        "f3_paths.py",
         "install.sh",
         "README.md",
         "scripts/status.py",

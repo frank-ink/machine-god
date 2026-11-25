@@ -199,7 +199,8 @@ fn run_worker(
             return finish_worker(paths, None, method, latest_version, &Err(error));
         }
     };
-    let _ = writeln!(&log, "Installing machine-god v{latest_version} ({} install).", method.label());
+    let _ =
+        writeln!(&log, "Installing machine-god v{latest_version} ({} install).", method.label());
     let result = install(&InstallIo::Log { file: &log, deadline: Instant::now() + timeout });
     finish_worker(paths, Some(&log), method, latest_version, &result)
 }
@@ -371,11 +372,7 @@ fn install(
 
 fn run_npm_update(latest_version: &str, io: &InstallIo<'_>) -> Result<ExitStatus, String> {
     let npm = resolve_npm().map_err(|error| format!("failed to resolve npm: {error}"))?;
-    io.run(Command::new(&npm).args([
-        "install",
-        "-g",
-        &format!("machine-god@{latest_version}"),
-    ]))
+    io.run(Command::new(&npm).args(["install", "-g", &format!("machine-god@{latest_version}")]))
 }
 
 #[cfg(not(target_os = "windows"))]

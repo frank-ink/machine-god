@@ -30,7 +30,7 @@
     },
     "precedence": {
       "type": "array",
-      "description": "Data directory resolution precedence (highest to lowest). Must match f3_pfade.py get_data_dir() order exactly for directory-root variables. F3_DB_PATH is a path variable with a resolution rule (it resolves the database file only) and is never a precedence entry.",
+      "description": "Data directory resolution precedence (highest to lowest). Must match f3_paths.py get_data_dir() order exactly for directory-root variables. F3_DB_PATH is a path variable with a resolution rule (it resolves the database file only) and is never a precedence entry.",
       "items": {
         "type": "string",
         "enum": [
@@ -46,7 +46,7 @@
     },
     "data_dir_precedence": {
       "type": "array",
-      "description": "Data directory resolution precedence (highest to lowest). Must match f3_pfade.py get_data_dir() order exactly for directory-root variables. F3_DB_PATH is a path variable with a resolution rule (it resolves the database file only), not a separate directory-root precedence entry.",
+      "description": "Data directory resolution precedence (highest to lowest). Must match f3_paths.py get_data_dir() order exactly for directory-root variables. F3_DB_PATH is a path variable with a resolution rule (it resolves the database file only), not a separate directory-root precedence entry.",
       "items": {
         "type": "string",
         "enum": [
@@ -62,7 +62,7 @@
     },
     "hook_env_writes": {
       "type": "array",
-      "description": "Environment variables that hooks write for downstream consumers. Must match f3_pfade.py HOOK_ENV_WRITES.",
+      "description": "Environment variables that hooks write for downstream consumers. Must match f3_paths.py HOOK_ENV_WRITES.",
       "items": {
         "type": "string",
         "enum": [
@@ -77,7 +77,7 @@
     },
     "ambient_passthrough": {
       "type": "array",
-      "description": "Environment variables passed through from ambient environment (read-only for resolver). Must match f3_pfade.py AMBIENT_PASSTHROUGH.",
+      "description": "Environment variables passed through from ambient environment (read-only for resolver). Must match f3_paths.py AMBIENT_PASSTHROUGH.",
       "items": {
         "type": "string",
         "enum": [
@@ -176,7 +176,7 @@
       "properties": {
         "install_sh": { "type": "string", "pattern": "^\\.\\./\\.\\./plugins/frankenstein3/install\\.sh$" },
         "status_py": { "type": "string", "pattern": "^\\.\\./\\.\\./plugins/frankenstein3/tests/status\\.py$" },
-        "path_resolution": { "type": "string", "pattern": "^\\.\\./\\.\\./plugins/frankenstein3/scripts/star/f3_pfade\\.py$" },
+        "path_resolution": { "type": "string", "pattern": "^\\.\\./\\.\\./plugins/frankenstein3/scripts/star/f3_paths\\.py$" },
         "rust": { "type": "string", "pattern": "^\\.\\./\\.\\./src/zero$" },
         "typescript": { "type": "string", "pattern": "^\\.\\./\\.\\./agent-sdk/src/zero$" }
       }

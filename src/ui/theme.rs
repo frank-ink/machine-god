@@ -6,7 +6,8 @@ use ratatui::style::Color;
 pub(crate) fn colors_enabled() -> bool {
     static CACHE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *CACHE.get_or_init(|| {
-        std::io::IsTerminal::is_terminal(&std::io::stdout()) && std::env::var_os("NO_COLOR").is_none()
+        std::io::IsTerminal::is_terminal(&std::io::stdout())
+            && std::env::var_os("NO_COLOR").is_none()
     })
 }
 
@@ -113,10 +114,7 @@ mod tests {
     }
 
     fn is_blue_or_cyan(c: Color) -> bool {
-        matches!(
-            c,
-            Color::Blue | Color::LightBlue | Color::Cyan | Color::LightCyan
-        )
+        matches!(c, Color::Blue | Color::LightBlue | Color::Cyan | Color::LightCyan)
     }
 
     fn all_theme_colors() -> Vec<Color> {
@@ -192,22 +190,14 @@ mod tests {
     #[test]
     fn no_blue_or_cyan_constants_in_theme() {
         for c in all_theme_colors() {
-            assert!(
-                !is_blue_or_cyan(c),
-                "theme color must not be blue/cyan: {:?}",
-                c
-            );
+            assert!(!is_blue_or_cyan(c), "theme color must not be blue/cyan: {:?}", c);
         }
     }
 
     #[test]
     fn test_palette_constraints() {
         for c in all_theme_colors() {
-            assert!(
-                channel_ok(c),
-                "theme color violates b <= r or gray invariant: {:?}",
-                c
-            );
+            assert!(channel_ok(c), "theme color violates b <= r or gray invariant: {:?}", c);
         }
     }
 

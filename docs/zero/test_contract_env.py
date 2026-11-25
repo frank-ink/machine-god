@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Validation test for docs/zero/contract_env.json against its schema and against
-the real data-directory resolver (f3_pfade.py :: get_data_dir).
+the real data-directory resolver (f3_paths.py :: get_data_dir).
 
 The expected precedence is DERIVED from the resolver implementation (controlled
 execution and/or source inspection), never from contract_env.json, so the
@@ -33,7 +33,7 @@ DATA_DIR_ENV_NAMES = (
 # Variables that are deliberately NOT part of the data-directory precedence.
 NON_PRECEDENCE_ENV_NAMES = frozenset({"F3_DB_PATH", "F3_DRY_RUN"})
 
-RESOLVER_FILENAME = "f3_pfade.py"
+RESOLVER_FILENAME = "f3_paths.py"
 RESOLVER_FUNCTION = "get_data_dir"
 
 SKIP_DIRS = frozenset({
@@ -133,7 +133,7 @@ def _preferred_roots():
 
 
 def find_resolver() -> Path:
-    """Locate the authoritative f3_pfade.py implementing get_data_dir()."""
+    """Locate the authoritative f3_paths.py implementing get_data_dir()."""
     if "path" in _RESOLVER_CACHE:
         return _RESOLVER_CACHE["path"]
 
@@ -261,7 +261,7 @@ def _regex_order(path: Path) -> list:
 # --------------------------------------------------------------------------
 
 def _load_resolver_module(path: Path):
-    spec = importlib.util.spec_from_file_location("_f3_pfade_contract_probe", path)
+    spec = importlib.util.spec_from_file_location("_f3_paths_contract_probe", path)
     if spec is None or spec.loader is None:
         return None
     module = importlib.util.module_from_spec(spec)
@@ -461,7 +461,7 @@ def test_contract_validates_against_schema():
 
 
 def test_resolver_is_discoverable():
-    """The authoritative resolver (f3_pfade.py::get_data_dir) must be present."""
+    """The authoritative resolver (f3_paths.py::get_data_dir) must be present."""
     resolver = find_resolver()
     assert resolver.is_file(), f"resolver not found: {resolver}"
     source = resolver.read_text(encoding="utf-8", errors="replace")
@@ -469,8 +469,8 @@ def test_resolver_is_discoverable():
         f"{resolver} does not define {RESOLVER_FUNCTION}()"
 
 
-def test_precedence_matches_f3_pfade(tmp_path):
-    """Precedence arrays must match f3_pfade.py get_data_dir() resolution order.
+def test_precedence_matches_f3_paths(tmp_path):
+    """Precedence arrays must match f3_paths.py get_data_dir() resolution order.
 
     The expectation is derived from the resolver implementation itself
     (controlled execution and/or source inspection), never from
@@ -534,7 +534,7 @@ def test_field_names_match_readme():
     assert "hook_env_writes" in contract, "hook_env_writes field missing"
     assert "ambient_passthrough" in contract, "ambient_passthrough field missing"
 
-    # Values must match f3_pfade.py (4-entry model: F3_DB_PATH removed from hook writes)
+    # Values must match f3_paths.py (4-entry model: F3_DB_PATH removed from hook writes)
     expected_hook_writes = ["FRANK3_DATA", "CLAUDE_PLUGIN_DATA"]
     expected_ambient = ["F3_DRY_RUN", "XDG_DATA_HOME", "HOME"]
 
@@ -590,7 +590,7 @@ if __name__ == "__main__":
         tmp_path = Path(tmp)
         test_contract_validates_against_schema()
         test_resolver_is_discoverable()
-        test_precedence_matches_f3_pfade(tmp_path)
+        test_precedence_matches_f3_paths(tmp_path)
         test_f3_dry_run_not_in_precedence()
         test_f3_db_path_not_in_precedence()
         test_field_names_match_readme()

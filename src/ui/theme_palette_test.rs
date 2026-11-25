@@ -43,21 +43,18 @@ fn channel_ok(c: Color) -> bool {
 }
 
 fn is_forbidden_variant(c: Color) -> bool {
-    matches!(
-        c,
-        Color::Cyan | Color::LightCyan | Color::Blue | Color::LightBlue
-    )
+    matches!(c, Color::Cyan | Color::LightCyan | Color::Blue | Color::LightBlue)
 }
 
 /// Allowed Rgb tuples (r, g, b) from the palette.
 fn allowed_rgb_tuples() -> Vec<(u8, u8, u8)> {
     vec![
-        (200, 30, 40),  // ACCENT / ROLE_ASSISTANT
-        (160, 40, 45),  // BTW_ACCENT
-        (130, 30, 35),  // ULTRACODE_ACCENT
-        (38, 14, 16),   // USER_MSG_BG
-        (255, 80, 80),  // STATUS_ERROR
-        (180, 60, 60),  // SLASH_COMMAND
+        (200, 30, 40),   // ACCENT / ROLE_ASSISTANT
+        (160, 40, 45),   // BTW_ACCENT
+        (130, 30, 35),   // ULTRACODE_ACCENT
+        (38, 14, 16),    // USER_MSG_BG
+        (255, 80, 80),   // STATUS_ERROR
+        (180, 60, 60),   // SLASH_COMMAND
         (110, 110, 110), // SUBAGENT_TOKEN
     ]
 }
@@ -120,18 +117,23 @@ fn grep_ui_for_forbidden_colors_and_stray_rgb() {
         let content = fs::read_to_string(&path).expect("read file");
         let file_name = path.file_name().unwrap().to_string_lossy();
         // Test fixtures may use any color; only shipped rendering code is checked.
-        if file_name.ends_with("_test.rs") || file_name.ends_with("_tests.rs") || file_name == "tests.rs" {
+        if file_name.ends_with("_test.rs")
+            || file_name.ends_with("_tests.rs")
+            || file_name == "tests.rs"
+        {
             continue;
         }
         // Everything after a top-level `#[cfg(test)]` is test code.
-        let content: String = content.split("\n#[cfg(test)]\nmod ").next().unwrap_or("").to_string();
+        let content: String =
+            content.split("\n#[cfg(test)]\nmod ").next().unwrap_or("").to_string();
 
         // Check each line for forbidden patterns
         for (line_num, line) in content.lines().enumerate() {
             let trimmed = line.trim();
 
             // Skip comments and doc comments
-            if trimmed.starts_with("//") || trimmed.starts_with("///") || trimmed.starts_with("#[") {
+            if trimmed.starts_with("//") || trimmed.starts_with("///") || trimmed.starts_with("#[")
+            {
                 continue;
             }
 
@@ -162,11 +164,9 @@ fn grep_ui_for_forbidden_colors_and_stray_rgb() {
                     let tuple_str = &after[..end];
                     let parts: Vec<&str> = tuple_str.split(',').map(|s| s.trim()).collect();
                     if parts.len() == 3 {
-                        if let (Ok(r), Ok(g), Ok(b)) = (
-                            parts[0].parse::<u8>(),
-                            parts[1].parse::<u8>(),
-                            parts[2].parse::<u8>(),
-                        ) {
+                        if let (Ok(r), Ok(g), Ok(b)) =
+                            (parts[0].parse::<u8>(), parts[1].parse::<u8>(), parts[2].parse::<u8>())
+                        {
                             if !rgb_tuple_allowed(r, g, b) {
                                 violations.push(format!(
                                     "{}:{}: non-palette Color::Rgb({},{},{}) found: {}",
@@ -198,12 +198,7 @@ mod tests {
     fn test_palette_constraints_duplicate_check() {
         // This duplicates the inline test in theme.rs to ensure the separate test file works.
         for (name, color) in palette_colors() {
-            assert!(
-                channel_ok(color),
-                "{} violates constraint: {:?}",
-                name,
-                color
-            );
+            assert!(channel_ok(color), "{} violates constraint: {:?}", name, color);
         }
     }
 }

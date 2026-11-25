@@ -3,7 +3,7 @@
 """
 Cross-language test fixture for F3_DRY_RUN truthy semantics alignment.
 
-Verifies that install.sh's _normalize_f3_dry_run() and f3_pfade.is_dry_run()
+Verifies that install.sh's _normalize_f3_dry_run() and f3_paths.is_dry_run()
 agree on the unified truthy set: {'1','true','yes','on'} (case-insensitive).
 
 Run: python3 -m pytest plugins/frankenstein3/tests/test_f3_dry_run_crosslang.py -v
@@ -23,7 +23,7 @@ STAR_DIR = PLUGIN_ROOT / "scripts" / "star"
 if str(STAR_DIR) not in sys.path:
     sys.path.insert(0, str(STAR_DIR))
 
-from f3_pfade import is_dry_run  # noqa: E402
+from f3_paths import is_dry_run  # noqa: E402
 
 INSTALL_SH = PLUGIN_ROOT / "install.sh"
 
@@ -125,7 +125,7 @@ _normalize_f3_dry_run "{raw_value}"
 
 
 def test_crosslang_truthy_alignment():
-    """install.sh normalize and f3_pfade.is_dry_run must agree on every test case."""
+    """install.sh normalize and f3_paths.is_dry_run must agree on every test case."""
     for raw, expected_norm, expected_dry in TEST_CASES:
         # Test install.sh normalization
         norm = _run_install_sh_normalize(raw)
@@ -133,7 +133,7 @@ def test_crosslang_truthy_alignment():
             f"install.sh _normalize_f3_dry_run({raw!r}) = {norm!r}, expected {expected_norm!r}"
         )
 
-        # Test f3_pfade.is_dry_run
+        # Test f3_paths.is_dry_run
         old = os.environ.get("F3_DRY_RUN")
         try:
             if raw == "":
@@ -142,9 +142,9 @@ def test_crosslang_truthy_alignment():
                 os.environ["F3_DRY_RUN"] = raw
             # Need to re-import to pick up new env (module uses os.environ.get at call time)
             from importlib import reload
-            import f3_pfade
-            reload(f3_pfade)
-            from f3_pfade import is_dry_run as is_dry_run_fresh
+            import f3_paths
+            reload(f3_paths)
+            from f3_paths import is_dry_run as is_dry_run_fresh
             result = is_dry_run_fresh()
         finally:
             if old is None:
@@ -153,7 +153,7 @@ def test_crosslang_truthy_alignment():
                 os.environ["F3_DRY_RUN"] = old
 
         assert result == expected_dry, (
-            f"f3_pfade.is_dry_run() with F3_DRY_RUN={raw!r} = {result}, expected {expected_dry}"
+            f"f3_paths.is_dry_run() with F3_DRY_RUN={raw!r} = {result}, expected {expected_dry}"
         )
 
     print("All cross-language truthy alignment tests passed!")
@@ -206,14 +206,14 @@ def test_acceptance_criteria_python():
     try:
         os.environ["F3_DRY_RUN"] = "false"
         from importlib import reload
-        import f3_pfade
-        reload(f3_pfade)
-        from f3_pfade import is_dry_run as is_dry_run_fresh
+        import f3_paths
+        reload(f3_paths)
+        from f3_paths import is_dry_run as is_dry_run_fresh
         assert is_dry_run_fresh() is False, "F3_DRY_RUN='false' should be False"
 
         os.environ["F3_DRY_RUN"] = "1"
-        reload(f3_pfade)
-        from f3_pfade import is_dry_run as is_dry_run_fresh2
+        reload(f3_paths)
+        from f3_paths import is_dry_run as is_dry_run_fresh2
         assert is_dry_run_fresh2() is True, "F3_DRY_RUN='1' should be True"
     finally:
         if old is None:
@@ -232,9 +232,9 @@ def test_dry_run_isolation_frank3_data_set():
     ignoring FRANK3_DATA/CLAUDE_PLUGIN_DATA/XDG/HOME completely.
     """
     from importlib import reload
-    import f3_pfade
-    reload(f3_pfade)
-    from f3_pfade import _resolve_db_path, PfadeError
+    import f3_paths
+    reload(f3_paths)
+    from f3_paths import _resolve_db_path, PathsError
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -262,8 +262,8 @@ def test_dry_run_isolation_frank3_data_set():
             os.environ.pop("CLAUDE_PLUGIN_DATA", None)
             os.environ.pop("XDG_DATA_HOME", None)
 
-            reload(f3_pfade)
-            from f3_pfade import _resolve_db_path as resolve_fresh
+            reload(f3_paths)
+            from f3_paths import _resolve_db_path as resolve_fresh
 
             result = resolve_fresh()
 
@@ -286,11 +286,11 @@ def test_dry_run_isolation_frank3_data_set():
 
 
 def test_dry_run_isolation_without_f3_db_path_raises():
-    """ACCEPTANCE: F3_DRY_RUN=1 without F3_DB_PATH must raise PfadeError (not fall back)."""
+    """ACCEPTANCE: F3_DRY_RUN=1 without F3_DB_PATH must raise PathsError (not fall back)."""
     from importlib import reload
-    import f3_pfade
-    reload(f3_pfade)
-    from f3_pfade import _resolve_db_path, PfadeError
+    import f3_paths
+    reload(f3_paths)
+    from f3_paths import _resolve_db_path, PathsError
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -311,15 +311,15 @@ def test_dry_run_isolation_without_f3_db_path_raises():
             os.environ.pop("CLAUDE_PLUGIN_DATA", None)
             os.environ.pop("XDG_DATA_HOME", None)
 
-            reload(f3_pfade)
-            from f3_pfade import _resolve_db_path as resolve_fresh
+            reload(f3_paths)
+            from f3_paths import _resolve_db_path as resolve_fresh
 
             try:
                 resolve_fresh()
-                assert False, "Expected PfadeError: dry-run requires F3_DB_PATH"
-            except PfadeError as e:
+                assert False, "Expected PathsError: dry-run requires F3_DB_PATH"
+            except PathsError as e:
                 assert "F3_DRY_RUN=1 requires F3_DB_PATH" in str(e)
-                print("ACCEPTANCE PASSED: Dry-run without F3_DB_PATH raises PfadeError")
+                print("ACCEPTANCE PASSED: Dry-run without F3_DB_PATH raises PathsError")
 
         finally:
             for key, val in old_env.items():

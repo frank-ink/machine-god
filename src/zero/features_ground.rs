@@ -12,8 +12,8 @@
 //! user's language without inventing capability claims.
 
 use crate::zero::features::{
-    detect_language, explain_entry, render_ground_summary, Capability, CapabilityRegistry,
-    CapabilityStatus, Language,
+    Capability, CapabilityRegistry, CapabilityStatus, Language, detect_language, explain_entry,
+    render_ground_summary,
 };
 
 /// Exact match first, then a mention match inside free text.
@@ -21,9 +21,7 @@ pub fn find_capability<'a>(
     registry: &'a CapabilityRegistry,
     question: &str,
 ) -> Option<&'a Capability> {
-    registry
-        .find(question)
-        .or_else(|| registry.find_mentioned(question))
+    registry.find(question).or_else(|| registry.find_mentioned(question))
 }
 
 /// Explain one capability by name in the requested language.
@@ -42,23 +40,17 @@ pub fn answer_question(registry: &CapabilityRegistry, question: &str) -> String 
         return explain_entry(cap, language);
     }
     let lower = question.to_lowercase();
-    let asks_for_list = [
-        "feature",
-        "fähig",
-        "faehig",
-        "capabilit",
-        "can you do",
-        "kannst du",
-        "what can",
-    ]
-    .iter()
-    .any(|needle| lower.contains(needle));
+    let asks_for_list =
+        ["feature", "fähig", "faehig", "capabilit", "can you do", "kannst du", "what can"]
+            .iter()
+            .any(|needle| lower.contains(needle));
     if asks_for_list {
         return render_ground_summary(registry, language);
     }
     match language {
         Language::German => {
-            "Diese Faehigkeit ist im kanonischen Register nicht bekannt; Status: UNKNOWN.".to_string()
+            "Diese Faehigkeit ist im kanonischen Register nicht bekannt; Status: UNKNOWN."
+                .to_string()
         }
         Language::English => {
             "This capability is not listed in the canonical registry; status: UNKNOWN.".to_string()

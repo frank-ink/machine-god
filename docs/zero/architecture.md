@@ -16,7 +16,7 @@ module zero40_fusion {
     path TSBridge -> RustHost : HealthReport { plugin: PluginId, status: HealthStatus, metrics: PluginMetrics }
     
     // Feedback loops (GRF: R_{t+1} = F(R_t, E_t))
-    path RustHost -> RustHost : SelfMeasurement { schema: UnifiedDBSchema, goals: ZieleTable }
+    path RustHost -> RustHost : SelfMeasurement { schema: UnifiedDBSchema, goals: GoalsTable }
     path TSBridge -> TSBridge : BridgeHealth { latency_p99: Duration, error_rate: Ratio }
     path PythonZero -> PythonZero : OrganRegistrySync { discovered: Vec<OrganId>, failed: Vec<OrganId> }
   }
@@ -33,11 +33,11 @@ module zero40_fusion {
     responsibilities = [
       "Plugin manifest loading (bundled, no network)" [MEASURED],
       "UnifiedDB schema ownership (single writer)" [MEASURED],
-      "Ziele table exposure (read-only view)" [MEASURED],
-      "AustrittGate enforcement (secret exit)" [HYPOTHESIS],
+      "Goals table exposure (read-only view)" [MEASURED],
+      "ExitGate enforcement (secret exit)" [HYPOTHESIS],
       "Health aggregation across boundaries" [HYPOTHESIS]
     ];
-    tests = ["src/zero/plugin_manifest_test.rs", "src/zero/unified_db_test.rs", "src/zero/ziele_test.rs", "src/zero/austritt_gate_test.rs"];
+    tests = ["src/zero/plugin_manifest_test.rs", "src/zero/unified_db_test.rs", "src/zero/goals_test.rs", "src/zero/exit_gate_test.rs"];
   }
   
   component TSBridge {
@@ -58,7 +58,7 @@ module zero40_fusion {
     responsibilities = [
       "Organ registry (dynamic discovery)" [MEASURED],
       "GRID/GWT workspace management" [HYPOTHESIS],
-      "Star/Stern coordination" [HYPOTHESIS],
+      "Star/StarCli coordination" [HYPOTHESIS],
       "Invocation routing with receipts" [MEASURED]
     ];
     tests = ["zero/test_organ_registry.py", "zero/test_grid_workspace.py", "zero/test_invocation_routing.py"];
@@ -71,18 +71,18 @@ module zero40_fusion {
       "Organ implementations (hooks, tools, memory)" [MEASURED],
       "GRID cell operations" [HYPOTHESIS],
       "GWT broadcast/receive" [HYPOTHESIS],
-      "Star/Stern pattern execution" [UNKNOWN]
+      "Star/StarCli pattern execution" [UNKNOWN]
     ];
     tests = ["plugins/frankenstein3/test_organs.py", "plugins/frankenstein3/test_grid.py", "plugins/frankenstein3/test_gwt.py"];
   }
   
   // GRF Transition Function: R_{t+1} = F(R_t, E_t)
   fn F(R_t: SystemState, E_t: EvidenceBundle) -> SystemState {
-    // R_t = { unified_db: UnifiedDBState, ziele: ZieleTable, plugin_health: HealthMap, bridge_health: BridgeHealth, organ_registry: OrganRegistry }
+    // R_t = { unified_db: UnifiedDBState, goals: GoalsTable, plugin_health: HealthMap, bridge_health: BridgeHealth, organ_registry: OrganRegistry }
     // E_t = { manifest_checksum: Blake3, invocation_receipts: Vec<Receipt>, test_results: Vec<TestResult>, measurement_samples: Vec<Sample> }
     let R_next = SystemState {
       unified_db: R_t.unified_db.apply_migrations(E_t.manifest_checksum),
-      ziele: R_t.ziele.update_progress(E_t.test_results),
+      goals: R_t.goals.update_progress(E_t.test_results),
       plugin_health: R_t.plugin_health.merge(E_t.invocation_receipts),
       bridge_health: R_t.bridge_health.update_latency(E_t.measurement_samples),
       organ_registry: R_t.organ_registry.sync(E_t.invocation_receipts),
@@ -127,9 +127,9 @@ module zero40_fusion {
   
   // Hypotheses (explicit, falsifiable, with promotion path)
   hypothesis H_AUSTRIEGATE_ENFORCEMENT {
-    claim: "AustrittGate prevents secret leakage by intercepting all outbound network calls at the Rust host boundary"
+    claim: "ExitGate prevents secret leakage by intercepting all outbound network calls at the Rust host boundary"
     class: HYPOTHESIS
-    falsification: "Network call observed bypassing AustrittGate in integration test"
+    falsification: "Network call observed bypassing ExitGate in integration test"
     promotion: MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE
   }
   
@@ -140,8 +140,8 @@ module zero40_fusion {
     promotion: MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE
   }
   
-  hypothesis H_STAR_STERN_COORDINATION {
-    claim: "Star/Stern pattern reduces organ invocation latency variance by >30% vs round-robin"
+  hypothesis H_STAR_STAR_COORDINATION {
+    claim: "Star/StarCli pattern reduces organ invocation latency variance by >30% vs round-robin"
     class: HYPOTHESIS
     falsification: "Latency variance reduction < 10% in controlled benchmark (n >= 1000)"
     promotion: MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE
@@ -161,8 +161,8 @@ module zero40_fusion {
     promotion: MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE
   }
   
-  hypothesis H_ZIELE_TABLE_HONEST_UNKNOWN {
-    claim: "Ziele table reports UNKNOWN (not 0, not 0.5) for any goal where measurement infrastructure is absent"
+  hypothesis H_GOALS_TABLE_HONEST_UNKNOWN {
+    claim: "Goals table reports UNKNOWN (not 0, not 0.5) for any goal where measurement infrastructure is absent"
     class: HYPOTHESIS
     falsification: "Any goal row shows numeric progress without corresponding measurement test"
     promotion: MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE
@@ -222,8 +222,8 @@ module zero40_fusion {
 |-------|-----------------|-----------|----------------|--------|
 | Plugin manifest loads from bundled bytes (no network) | MEASURED | `src/zero/plugin_manifest_test.rs::test_load_bundled_manifest` | 100% success (n=50) | `cargo test -p zero plugin_manifest` |
 | UnifiedDB schema owned by single writer | MEASURED | `src/zero/unified_db_test.rs::test_single_writer_invariant` | 0 concurrent writers detected (n=1000 attempts) | `cargo test -p zero unified_db` |
-| Ziele table exposes read-only view | MEASURED | `src/zero/ziele_test.rs::test_read_only_view` | 0 write attempts succeeded (n=100) | `cargo test -p zero ziele` |
-| AustrittGate intercepts outbound network calls | HYPOTHESIS | `src/zero/austritt_gate_test.rs::test_network_intercept` | NOT YET MEASURED | PENDING |
+| Goals table exposes read-only view | MEASURED | `src/zero/goals_test.rs::test_read_only_view` | 0 write attempts succeeded (n=100) | `cargo test -p zero goals` |
+| ExitGate intercepts outbound network calls | HYPOTHESIS | `src/zero/exit_gate_test.rs::test_network_intercept` | NOT YET MEASURED | PENDING |
 | Health aggregation produces valid HealthReport | HYPOTHESIS | `src/zero/health_test.rs::test_aggregation` | NOT YET MEASURED | PENDING |
 
 ### 2.2 TS Bridge (`agent-sdk/src/zero/`)
@@ -243,7 +243,7 @@ module zero40_fusion {
 | Organ registry discovers organs dynamically | MEASURED | `zero/test_organ_registry.py::test_dynamic_discovery` | 12/12 organs registered | `python -m pytest zero/test_organ_registry.py` |
 | Invocation routing delivers payload to correct organ | MEASURED | `zero/test_invocation_routing.py::test_route_delivery` | 100% correct routing (n=200) | `python -m pytest zero/test_invocation_routing.py` |
 | GRID/GWT workspace manages cell state | HYPOTHESIS | `zero/test_grid_workspace.py::test_cell_state` | NOT YET MEASURED | PENDING |
-| Star/Stern coordination executes pattern | UNKNOWN | `zero/test_star_stern.py::test_pattern_execution` | NO TEST YET | NOT IMPLEMENTED |
+| Star/StarCli coordination executes pattern | UNKNOWN | `zero/test_star_star.py::test_pattern_execution` | NO TEST YET | NOT IMPLEMENTED |
 
 ### 2.4 Frankenstein3 Organs (`plugins/frankenstein3/`)
 
@@ -252,14 +252,14 @@ module zero40_fusion {
 | Organ implementations load without hard-coded paths | MEASURED | `plugins/frankenstein3/test_organs.py::test_portable_load` | Loads on 3 different machines | `python -m pytest plugins/frankenstein3/test_organs.py` |
 | GRID cell operations maintain consistency | HYPOTHESIS | `plugins/frankenstein3/test_grid.py::test_cell_consistency` | NOT YET MEASURED | PENDING |
 | GWT broadcast/receive delivers to all subscribers | HYPOTHESIS | `plugins/frankenstein3/test_gwt.py::test_broadcast_delivery` | NOT YET MEASURED | PENDING |
-| Star/Stern pattern executes without error | UNKNOWN | `plugins/frankenstein3/test_star_stern.py::test_execution` | NO TEST YET | NOT IMPLEMENTED |
+| Star/StarCli pattern executes without error | UNKNOWN | `plugins/frankenstein3/test_star_star.py::test_execution` | NO TEST YET | NOT IMPLEMENTED |
 
 ## 3. Fusion Data Flow (GRF: T_Omega = ∫ R_t ⊗ E_t dt)
 
 ```
 R_t (SystemState) = {
   unified_db: UnifiedDBState { schema_version: u32, writer_pid: Pid, last_migration: Timestamp },
-  ziele: ZieleTable { goals: Vec<GoalRow>, last_measured: Timestamp },
+  goals: GoalsTable { goals: Vec<GoalRow>, last_measured: Timestamp },
   plugin_health: HealthMap { plugin_id -> HealthStatus { kind, since, failureCount, evidenceRef } },
   bridge_health: BridgeHealth { latency_p99: Duration, error_rate: f64, last_check: Timestamp },
   organ_registry: OrganRegistry { organs: Vec<OrganSpec>, discovered_at: Timestamp }
@@ -274,7 +274,7 @@ E_t (EvidenceBundle) = {
 
 F(R_t, E_t) -> R_{t+1} = {
   unified_db: migrate_if_checksum_changed(R_t.unified_db, E_t.manifest_checksum),
-  ziele: update_goal_progress(R_t.ziele, E_t.test_results),
+  goals: update_goal_progress(R_t.goals, E_t.test_results),
   plugin_health: aggregate_health(R_t.plugin_health, E_t.invocation_receipts),
   bridge_health: update_latency(R_t.bridge_health, E_t.measurement_samples),
   organ_registry: sync_registry(R_t.organ_registry, E_t.invocation_receipts)
@@ -298,9 +298,9 @@ F(R_t, E_t) -> R_{t+1} = {
 
 | Ladder Step | Zero40 Instantiation | Gate (Measured) |
 |-------------|---------------------|-----------------|
-| Reliable Memory | UnifiedDB + Ziele table + OrganRegistry | `test_persistence_across_restarts` passes |
+| Reliable Memory | UnifiedDB + Goals table + OrganRegistry | `test_persistence_across_restarts` passes |
 | Self-Measurement | HealthReport + BridgeHealth + OrganMetrics | All components emit `Sample { method != "self_report" }` |
-| Self-Correction Under Gates | AustrittGate + MAX_CAPACITY_1 + single_writer | `test_gate_enforcement_under_load` passes |
+| Self-Correction Under Gates | ExitGate + MAX_CAPACITY_1 + single_writer | `test_gate_enforcement_under_load` passes |
 | Transfer Without New Code | Portable plugin bundle + fs-based discovery | `test_clean_machine_copy` passes |
 
 ## 6. Health State Machine (ClayCode: **SPEC** — health-contract v1 (r006))

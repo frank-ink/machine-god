@@ -20,7 +20,7 @@ This document specifies the unified database path resolution logic shared across
 |----------|------|----------|
 | Rust | `src/zero/entity.rs` | `resolve_db_path()` |
 | TypeScript | `agent-sdk/src/zero/health.ts` | `resolveDbPath()` |
-| Python | `plugins/frankenstein3/f3_pfade.py` | `resolve_db_path()` / `_resolve_data_dir()` |
+| Python | `plugins/frankenstein3/f3_paths.py` | `resolve_db_path()` / `_resolve_data_dir()` |
 
 ## Test Matrix
 
@@ -58,7 +58,7 @@ cd agent-sdk && npm test
 
 **Python:**
 ```bash
-cd plugins/frankenstein3 && python -m pytest tests/test_f3_pfade.py -v
+cd plugins/frankenstein3 && python -m pytest tests/test_f3_paths.py -v
 ```
 
 **Cross-Language Parity (requires all three runtimes):**
@@ -72,7 +72,7 @@ cd plugins/frankenstein3 && python tests/test_crosslang_db_path.py
 2. Add corresponding unit tests in:
    - `plugins/frankenstein3/tests/test_crosslang_db_path.rs` (Rust)
    - `agent-sdk/src/zero/health.test.ts` (TypeScript)
-   - `plugins/frankenstein3/tests/test_f3_pfade.py` (Python)
+   - `plugins/frankenstein3/tests/test_f3_paths.py` (Python)
 3. Ensure all three resolvers handle the new case identically
 
 ## Invariants

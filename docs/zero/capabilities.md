@@ -81,33 +81,33 @@ Exactly one label per capability row. `HYPOTHESIS` replaces the former `PLANNED`
 |---|---|---|---|---|---|---|
 | plugin_manifest_load | HYPOTHESIS | - | zero::plugin_manifest_test::test_load_bundled_manifest | - | cargo test -p machine_god zero::plugin_manifest_test::test_load_bundled_manifest | docs/zero/architecture.md#plugin-manifest-loading |
 | unified_db_single_writer | VERIFIED_OUTCOME | VERIFIED_OUTCOME | zero::unified_db_test::test_single_writer_invariant | gate_receipts/verified_unified_db_single_writer.receipt | cargo test -p machine_god zero::unified_db_test::test_single_writer_invariant | docs/zero/architecture.md#unifieddb-single-writer |
-| ziele_read_only_view | HYPOTHESIS | - | zero::ziele_test::test_read_only_view | - | cargo test -p machine_god zero::ziele_test::test_read_only_view | docs/zero/architecture.md#ziele-read-only-view |
-| austritt_gate_network | HYPOTHESIS | - | zero::austritt_gate_test::test_network_intercept | - | cargo test -p machine_god zero::austritt_gate_test::test_network_intercept | docs/zero/architecture.md#austritt-gate-network |
+| goals_read_only_view | HYPOTHESIS | - | zero::goals_test::test_read_only_view | - | cargo test -p machine_god zero::goals_test::test_read_only_view | docs/zero/architecture.md#goals-read-only-view |
+| exit_gate_network | HYPOTHESIS | - | zero::exit_gate_test::test_network_intercept | - | cargo test -p machine_god zero::exit_gate_test::test_network_intercept | docs/zero/architecture.md#exit-gate-network |
 | plugin_discovery_clean_copy | HYPOTHESIS | - | agent_sdk_zero_plugin_discovery_discovers_all_organs | - | npx vitest run agent-sdk/src/zero/plugin_discovery.test.ts -t "discovers_all_organs" | docs/zero/architecture.md#plugin-discovery |
 | portable_plugin_bundle | HYPOTHESIS | - | agent_sdk_zero_plugin_discovery_test_clean_machine_copy | - | npx vitest run agent-sdk/src/zero/plugin_discovery.test.ts -t "test_clean_machine_copy" | docs/zero/architecture.md#portable-plugin-bundle |
 | grid_workspace_cell_state | HYPOTHESIS | - | zero_test_grid_workspace_test_cell_state | - | python -m pytest zero/test_grid_workspace.py::test_cell_state -v | docs/zero/architecture.md#grid-workspace-cell-state |
 | grid_workspace_coordination | HYPOTHESIS | - | zero_test_grid_workspace_test_coordination_improvement | - | python -m pytest zero/test_grid_workspace.py::test_coordination_improvement -v | docs/zero/architecture.md#grid-workspace-coordination |
 | grid_cell_consistency | HYPOTHESIS | - | plugins_frankenstein3_test_grid_test_cell_consistency | - | python -m pytest plugins/frankenstein3/test_grid.py::test_cell_consistency -v | docs/zero/architecture.md#grid-cell-consistency |
 | gwt_broadcast_delivery | HYPOTHESIS | - | plugins_frankenstein3_test_gwt_test_broadcast_delivery | - | python -m pytest plugins/frankenstein3/test_gwt.py::test_broadcast_delivery -v | docs/zero/architecture.md#gwt-broadcast-delivery |
-| star_stern_latency_variance | HYPOTHESIS | - | plugins_frankenstein3_test_star_stern_test_latency_variance | - | python -m pytest plugins/frankenstein3/test_star_stern.py::test_latency_variance -v | docs/zero/architecture.md#star-stern-latency |
+| star_star_latency_variance | HYPOTHESIS | - | plugins_frankenstein3_test_star_star_test_latency_variance | - | python -m pytest plugins/frankenstein3/test_star_star.py::test_latency_variance -v | docs/zero/architecture.md#star-star-latency |
 | omega_ground_mode | HYPOTHESIS | - | zero::omega_test::test_build_chat_request | - | cargo test -p machine_god zero::omega_test::test_build_chat_request | docs/zero/architecture.md#omega-ground-mode |
 | freewiki_provider_tips | HYPOTHESIS | - | zero::freewiki_test::test_pick_tip | - | cargo test -p machine_god zero::freewiki_test::test_pick_tip | docs/zero/architecture.md#freewiki-provider-tips |
-| retina_own_eye | HYPOTHESIS | - | zero::retina_test::test_read_retina_frage | - | cargo test -p machine_god zero::retina_test::test_read_retina_frage | docs/zero/architecture.md#retina-own-eye |
+| retina_own_eye | HYPOTHESIS | - | zero::retina_test::test_read_retina_question | - | cargo test -p machine_god zero::retina_test::test_read_retina_question | docs/zero/architecture.md#retina-own-eye |
 | grid_entityos_wiring | HYPOTHESIS | - | zero::grid_test::test_health_check | - | cargo test -p machine_god zero::grid_test::test_health_check | docs/zero/architecture.md#grid-entityos-wiring |
-| token_tacho_data | HYPOTHESIS | - | zero::token_tacho_test::test_get_usage_data | - | cargo test -p machine_god zero::token_tacho_test::test_get_usage_data | docs/zero/architecture.md#token-tacho-data |
+| token_tachometer_data | HYPOTHESIS | - | zero::token_tachometer_test::test_get_usage_data | - | cargo test -p machine_god zero::token_tachometer_test::test_get_usage_data | docs/zero/architecture.md#token-tachometer-data |
 | features_command | HYPOTHESIS | - | zero::features::tests::render_table_has_required_columns | - | cargo test -p machine_god zero::features::tests::render_table_has_required_columns | docs/zero/architecture.md#features-command |
 | real_claude_code_mode | HYPOTHESIS | - | zero::claude_code_mode_test::test_switch_mode | - | cargo test -p machine_god zero::claude_code_mode_test::test_switch_mode | docs/zero/architecture.md#real-claude-code-mode |
 | smartphone_link | UNKNOWN | - | - | - | - | docs/zero/smartphone.md |
 | web_scraping_tools | HYPOTHESIS | - | zero::scrape_test::test_fetch_page | - | cargo test -p machine_god zero::scrape_test::test_fetch_page | docs/zero/architecture.md#web-scraping-tools |
 | one_entity_fast_reflex | HYPOTHESIS | - | zero::router_test::test_decide_local_tool_cloud | - | cargo test -p machine_god zero::router_test::test_decide_local_tool_cloud | docs/zero/architecture.md#one-entity-fast-reflex |
 | welt_digest | HYPOTHESIS | - | zero::welt_test::test_load_digest | - | cargo test -p machine_god zero::welt_test::test_load_digest | docs/zero/architecture.md#welt-digest |
-| haltung_stances | HYPOTHESIS | - | zero::haltung_test::test_load_active_stances | - | cargo test -p machine_god zero::haltung_test::test_load_active_stances | docs/zero/architecture.md#haltung-stances |
+| stance_stances | HYPOTHESIS | - | zero::stance_test::test_load_active_stances | - | cargo test -p machine_god zero::stance_test::test_load_active_stances | docs/zero/architecture.md#stance-stances |
 | drift_guard_logging | HYPOTHESIS | - | zero::drift_guard_test::test_log_ground_reply | - | cargo test -p machine_god zero::drift_guard_test::test_log_ground_reply | docs/zero/architecture.md#drift-guard-logging |
-| bild_command | HYPOTHESIS | - | zero::bild_test::test_spawn_url | - | cargo test -p machine_god zero::bild_test::test_spawn_url | docs/zero/architecture.md#bild-command |
+| image_studio_command | HYPOTHESIS | - | zero::image_studio::tests::test_spawn_url | - | cargo test -p machine_god zero::image_studio::tests::test_spawn_url | docs/zero/architecture.md#image-command |
 | health_aggregation | HYPOTHESIS | - | zero::health_test::test_aggregation | - | cargo test -p machine_god zero::health_test::test_aggregation | docs/zero/architecture.md#health-aggregation |
 | plugin_manifest_discovery | HYPOTHESIS | - | zero::plugin_manifest_test::test_discover_plugins | - | cargo test -p machine_god zero::plugin_manifest_test::test_discover_plugins | docs/zero/architecture.md#plugin-manifest-discovery |
 | unified_db_persistence | HYPOTHESIS | - | zero::unified_db_test::test_persistence_across_restarts | - | cargo test -p machine_god zero::unified_db_test::test_persistence_across_restarts | docs/zero/architecture.md#unifieddb-persistence |
-| ziele_honest_unknown | HYPOTHESIS | - | zero::ziele_test::test_honest_unknown | - | cargo test -p machine_god zero::ziele_test::test_honest_unknown | docs/zero/architecture.md#ziele-honest-unknown |
+| goals_honest_unknown | HYPOTHESIS | - | zero::goals_test::test_honest_unknown | - | cargo test -p machine_god zero::goals_test::test_honest_unknown | docs/zero/architecture.md#goals-honest-unknown |
 
 ## Notes
 
@@ -116,7 +116,7 @@ Exactly one label per capability row. `HYPOTHESIS` replaces the former `PLANNED`
 - `MEASURED` by artifact presence applies only to documentation files verified present by tree inspection (see `docs/zero/status.md` Artifact Presence Ledger).
 - CI placeholders are substituted by the workflow `.github/workflows/schema-check.yml` at gate time.
 - **smartphone_link**: marked `UNKNOWN` with no gate; a behavioural handshake test will replace the file-existence check when implementation exists.
-- **bild_command**: demoted from `MEASURED` to `HYPOTHESIS` because no committed gate receipt exists in `docs/zero/gate_receipts/`; the Round-14 function-level table is removed, this canonical registry is the single source of truth.
+- **image_studio_command**: demoted from `MEASURED` to `HYPOTHESIS` because no committed gate receipt exists in `docs/zero/gate_receipts/`; the Round-14 function-level table is removed, this canonical registry is the single source of truth.
 
 ## Contract: ParseResult and Gate Handling
 

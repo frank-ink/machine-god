@@ -87,21 +87,31 @@ fn handle_api_submit(app: &mut App, args: &[&str]) -> bool {
     let url = crate::omnipool::web_url();
     let want = args.join(" ");
     if want.is_empty() {
-        let mut msg = format!("Omnipool web app: {url}\nWhich browser should I use? Answer with /api <number>:\n");
+        let mut msg = format!(
+            "Omnipool web app: {url}\nWhich browser should I use? Answer with /api <number>:\n"
+        );
         for (i, b) in browsers.iter().enumerate() {
             let _ = writeln!(msg, "  {}. {}", i + 1, b.name);
         }
         push_submission_feedback(app, SystemSeverity::Info, &msg);
         return true;
     }
-    let pick = want.parse::<usize>().ok().and_then(|n| n.checked_sub(1)).and_then(|i| browsers.get(i))
+    let pick = want
+        .parse::<usize>()
+        .ok()
+        .and_then(|n| n.checked_sub(1))
+        .and_then(|i| browsers.get(i))
         .or_else(|| browsers.iter().find(|b| b.name.to_lowercase().contains(&want.to_lowercase())));
     let Some(browser) = pick else {
         push_system_message(app, format!("No browser '{want}'. Type /api to see the list."));
         return true;
     };
     match crate::omnipool::open(browser, &url) {
-        Ok(()) => push_submission_feedback(app, SystemSeverity::Info, &format!("Opening {url} in {}.", browser.name)),
+        Ok(()) => push_submission_feedback(
+            app,
+            SystemSeverity::Info,
+            &format!("Opening {url} in {}.", browser.name),
+        ),
         Err(err) => push_system_message(app, format!("Could not start {}: {err}", browser.name)),
     }
     true

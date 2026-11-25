@@ -16,9 +16,9 @@ derived at runtime from environment variables (`$HOME`, `$USERPROFILE`, `$XDG_DA
 `$FRANK3_DATA`, ...) or from the relative bundle layout (directory of the
 plugin file itself). The bundle can be copied to another machine
 and used there without modifications.
-### Path Resolution (f3_pfade.py)
+### Path Resolution (f3_paths.py)
 The canonical portability implementation lives in
-`scripts/star/f3_pfade.py` (and the bundle copy `f3_pfade.py` in the plugin root;
+`scripts/star/f3_paths.py` (and the bundle copy `f3_paths.py` in the plugin root;
 both files are identical in content). All scripts must use this resolver;
 there must be no second, custom path logic.
 
@@ -95,7 +95,7 @@ bundle paths:
 | `plugin_root` | `${PLUGIN_ROOT}` | Root of the installed bundle (resolved relative to the bundle file) |
 | `data_dir` | `${FRANK3_DATA}` | User-specific data directory (fallback `$XDG_DATA_HOME/frankenstein3`, then `$HOME/.local/share/frankenstein3`) |
 | `db_path` | `${F3_DB_PATH}` | Path to `unified.db` in the data directory |
-| `resolver` | `scripts/star/f3_pfade.py` | Relative bundle path of the canonical resolver |
+| `resolver` | `scripts/star/f3_paths.py` | Relative bundle path of the canonical resolver |
 | `contract` | `docs/zero/contract_env.json` | Relative bundle path of the hook contract |
 
 The host replaces `${...}` at runtime; without the host the relative
@@ -114,7 +114,7 @@ The data directory is probed for writability with a one-time temporary
 file test (`NamedTemporaryFile`, `delete=True`); the test file is
 deleted immediately and does not persist.
 
-The dry-run of the hooks (`digest`, `reentry`, `raum_puls`) writes
+The dry-run of the hooks (`digest`, `reentry`, `room_pulse`) writes
 exclusively to the fixture database passed via `F3_DB_PATH`, never to
 the real data directory (`~/.local/share/frankenstein3` or the actual
 file resolved via `$FRANK3_DATA` / `$CLAUDE_PLUGIN_DATA`).
@@ -138,7 +138,7 @@ cd frankenstein3
 # 4. Restart Claude Code or /plugin reload
 ```
 
-The installer creates the data folder, initializes `unified.db` from `daten/schema_leer.sql` (only if the schema is included), runs the status self-check, and registers the marketplace (if `claude` is in PATH). If `claude` is missing, the installer outputs the two manual commands and exits successfully.
+The installer creates the data folder, initializes `unified.db` from `data/schema_empty.sql` (only if the schema is included), runs the status self-check, and registers the marketplace (if `claude` is in PATH). If `claude` is missing, the installer outputs the two manual commands and exits successfully.
 
 ### Dry Run -- Isolation Guaranteed
 ```bash
@@ -186,8 +186,8 @@ F3_DB_PATH="$PWD/fixture/unified.db" \
 F3_DRY_RUN=1 \
 python3 -c "
 import sys; sys.path.insert(0, 'scripts/star')
-import f3_pfade
-print('DB path:', f3_pfade.get_db_path())
+import f3_paths
+print('DB path:', f3_paths.get_db_path())
 # Returns the fixture path - NOT the real data folder
 "
 ```
@@ -203,8 +203,8 @@ TMPDIR="$PWD/custom_tmp" ./install.sh --dry-run
 ```bash
 FRANK3_DATA="$HOME/.local/share/frankenstein3" python3 -c "
 import sys; sys.path.insert(0, 'scripts/star')
-import f3_pfade; f3_pfade.ensure_db()
-print('DB:', f3_pfade.get_db_path())
+import f3_paths; f3_paths.ensure_db()
+print('DB:', f3_paths.get_db_path())
 "
 ## Copying to another machine (portable copy/install)
 The bundle contains no source-machine paths. The data directory is resolved anew on the target machine; no source-machine paths are copied along.
@@ -254,7 +254,7 @@ The following checklist is executable: each item can be verified with a command.
 | Step | Command | Expected Result |
 |---|---|---|
 | 1a | `./install.sh --dry-run` | Exit code 0, no file created, no repository required |
-| 1b | `F3_DRY_RUN=1 F3_DB_PATH="$PWD/fixture/unified.db" python3 -c "import sys; sys.path.insert(0, 'scripts/star'); import f3_pfade; print(f3_pfade.get_db_path())"` | Returns the fixture path, not the real data directory |
+| 1b | `F3_DRY_RUN=1 F3_DB_PATH="$PWD/fixture/unified.db" python3 -c "import sys; sys.path.insert(0, 'scripts/star'); import f3_paths; print(f3_paths.get_db_path())"` | Returns the fixture path, not the real data directory |
 | 1c | `F3_DRY_RUN=1 ./install.sh` (without `F3_DB_PATH`) | Uses temporary directory (requires TMPDIR/TEMP/TMP), exit code 0 |
 | 1d | `F3_DRY_RUN=false ./install.sh --dry-run` | Falsy, but `--dry-run` flag sets `F3_DRY_RUN=true` -> dry run active |
 | 1e | `F3_DRY_RUN=1 F3_DB_PATH="$PWD/fixture/unified.db" ./install.sh` | Exit code 0, DRY-RUN output, **no file in real data directory**, no DB init |
@@ -274,7 +274,7 @@ Truthy values for `F3_DRY_RUN`: `{'1', 'true', 'yes', 'on'}` (case-insensitive).
 |---|---|---|
 | 3a | `tmp="$(mktemp -d)"; cp -R plugins/frankenstein3 "$tmp/plugin"; HOME="$tmp/home" XDG_DATA_HOME="$tmp/xdg" "$tmp/plugin/install.sh" --dry-run` | Exit code 0, no fixed path, no repository root required |
 | 3b | `grep -rnE '/[Hh][Oo][Mm][Ee]/[^/]+' plugins/frankenstein3 --exclude-dir=.git` | No matches (no hardcoded user paths) |
-| 3c | `python3 -m py_compile plugins/frankenstein3/f3_pfade.py plugins/frankenstein3/scripts/star/f3_pfade.py` | Exit code 0 (all bundled scripts compile) |
+| 3c | `python3 -m py_compile plugins/frankenstein3/f3_paths.py plugins/frankenstein3/scripts/star/f3_paths.py` | Exit code 0 (all bundled scripts compile) |
 | 3d | `grep -rnEi 'ai[-_]core[-_]node|local[Hh]ost|127[.]0[.]0[.]1' plugins/frankenstein3` | No machine names or hardcoded host addresses in plugin code |
 | 3e | `python3 -m pytest plugins/frankenstein3/tests/test_portable_paths.py` | All tests pass (optional, if pytest is available) |
 ## ./install.sh --dry-run and Resolver Behavior
@@ -302,7 +302,7 @@ The dry run documents the actual resolver behavior:
 
 ## Questions / Open Points (UNKNOWN)
 
-- The exact content of `daten/schema_leer.sql` is not documented in this
+- The exact content of `data/schema_empty.sql` is not documented in this
   bundle; `ensure_db()` is treated as external until the schema is
   delivered. Status: UNKNOWN.
 - Whether the `claude` CLI is in PATH and registration works automatically
@@ -319,9 +319,9 @@ The dry run documents the actual resolver behavior:
 | `.claude-plugin/plugin.json` | Plugin metadata and root detection |
 | `plugin.json` | Plugin metadata (Name, Version, Author, Marketplace) |
 | `marketplace.json` | Marketplace entry `frankenstein3@frankenstein3` |
-| `daten/schema_leer.sql` | Empty schema for `unified.db` |
-| `scripts/star/f3_pfade.py` | Path resolver and `ensure_db()` (shared with Rust/TS) |
-| `f3_pfade.py` | Bundle copy of path resolver in plugin root |
+| `data/schema_empty.sql` | Empty schema for `unified.db` |
+| `scripts/star/f3_paths.py` | Path resolver and `ensure_db()` (shared with Rust/TS) |
+| `f3_paths.py` | Bundle copy of path resolver in plugin root |
 | `tests/status.py` | PASS/FAIL/UNKNOWN check of data folder and database |
 | `tests/test_portable_paths.py` | Portability tests (env-based resolution, no fixed user paths) |
 | `tests/test_dry_run_fail_closed.py` | Fail-closed dry-run tests (README lines 1c/1g) |
@@ -332,7 +332,7 @@ The dry run documents the actual resolver behavior:
 ### Not Included
 | File / Folder | Reason |
 |---|---|
-| `unified.db` | Created fresh from `daten/schema_leer.sql`, never shipped |
+| `unified.db` | Created fresh from `data/schema_empty.sql`, never shipped |
 | `~/.local/share/frankenstein3` | Created at runtime on target machine |
 | `~/.claude/star` | Never read or modified |
 | Legacy variables (`FRANKENSTEIN_DB`, `FRANKENSTEIN3_DB`, `F3_DB`, `UNIFIED_DB`) | Never set |

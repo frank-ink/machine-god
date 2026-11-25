@@ -77,7 +77,7 @@ test("resolveInstall returns binary and bridge paths when package payload is com
   });
 
   assert.equal(resolved.error, undefined);
-  assert.equal(resolved.binaryPath, path.join("node_modules", "@srothgan", "claude-code-rust-darwin-arm64", "bin", "claude-rs"));
+  assert.equal(resolved.binaryPath, path.join("node_modules", "@srothgan", "claude-code-rust-darwin-arm64", "bin", "machine-god-core"));
   assert.equal(
     resolved.bundledBridgeScript,
     path.join("node_modules", "machine-god", "agent-sdk", "dist", "bridge.js")

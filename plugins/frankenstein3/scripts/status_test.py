@@ -88,8 +88,8 @@ class StatusCheckTests(unittest.TestCase):
             root = Path(tmp)
             schema = root / "schema.sql"
             schema.write_text(
-                "CREATE TABLE ziele (id INTEGER PRIMARY KEY, titel TEXT);\n"
-                "CREATE TABLE notizen (id INTEGER PRIMARY KEY);\n",
+                "CREATE TABLE goals (id INTEGER PRIMARY KEY, title TEXT);\n"
+                "CREATE TABLE notes (id INTEGER PRIMARY KEY);\n",
                 encoding="utf-8",
             )
             expected, err = status.read_expected_schema(schema)
@@ -97,20 +97,20 @@ class StatusCheckTests(unittest.TestCase):
             assert expected is not None
             db = root / "unified.db"
             conn = sqlite3.connect(str(db))
-            conn.execute("CREATE TABLE notizen (id INTEGER PRIMARY KEY)")
+            conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY)")
             conn.commit()
             conn.close()
             ok, msg = status.check_database_schema(db, expected)
             self.assertFalse(ok)
-            self.assertIn("missing tables: ziele", msg)
+            self.assertIn("missing tables: goals", msg)
 
     def test_matching_schema_passes_and_lists_tables(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             schema = root / "schema.sql"
             schema.write_text(
-                "CREATE TABLE ziele (id INTEGER PRIMARY KEY, titel TEXT);\n"
-                "CREATE TABLE notizen (id INTEGER PRIMARY KEY);\n",
+                "CREATE TABLE goals (id INTEGER PRIMARY KEY, title TEXT);\n"
+                "CREATE TABLE notes (id INTEGER PRIMARY KEY);\n",
                 encoding="utf-8",
             )
             expected, err = status.read_expected_schema(schema)
@@ -124,14 +124,14 @@ class StatusCheckTests(unittest.TestCase):
             ok, msg = status.check_database_schema(db, expected)
             self.assertTrue(ok, msg)
             self.assertIn("PASS — tables:", msg)
-            self.assertIn("ziele", msg)
+            self.assertIn("goals", msg)
 
     def test_missing_column_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             schema = root / "schema.sql"
             schema.write_text(
-                "CREATE TABLE ziele (id INTEGER PRIMARY KEY, titel TEXT);\n",
+                "CREATE TABLE goals (id INTEGER PRIMARY KEY, title TEXT);\n",
                 encoding="utf-8",
             )
             expected, err = status.read_expected_schema(schema)
@@ -139,12 +139,12 @@ class StatusCheckTests(unittest.TestCase):
             assert expected is not None
             db = root / "unified.db"
             conn = sqlite3.connect(str(db))
-            conn.execute("CREATE TABLE ziele (id INTEGER PRIMARY KEY)")
+            conn.execute("CREATE TABLE goals (id INTEGER PRIMARY KEY)")
             conn.commit()
             conn.close()
             ok, msg = status.check_database_schema(db, expected)
             self.assertFalse(ok)
-            self.assertIn("missing columns: ziele.titel", msg)
+            self.assertIn("missing columns: goals.title", msg)
 
     def test_writability_probe_leaves_no_residue(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -166,13 +166,13 @@ class StatusCheckTests(unittest.TestCase):
         self.assertIn("c", keys)
 
     def test_resolve_paths_reports_failure_without_traceback(self) -> None:
-        # Trigger the genuine resolution-failure branch: f3_pfade cannot be
+        # Trigger the genuine resolution-failure branch: f3_paths cannot be
         # imported in this standalone harness. resolve_paths must report a FAIL
         # message and never leak a traceback.
         with patch.object(
             status,
-            "_load_pfade",
-            return_value=(None, "ModuleNotFoundError: No module named 'f3_pfade'"),
+            "_load_paths",
+            return_value=(None, "ModuleNotFoundError: No module named 'f3_paths'"),
         ):
             paths, error = status.resolve_paths()
         self.assertIsNone(paths)
@@ -229,15 +229,15 @@ class StatusCheckTests(unittest.TestCase):
             schema.write_text(
                 "CREATE TABLE hook_digest (id INTEGER PRIMARY KEY, event TEXT);\n"
                 "CREATE TABLE hook_reentry (id INTEGER PRIMARY KEY, event TEXT);\n"
-                "CREATE TABLE hook_raum_puls (id INTEGER PRIMARY KEY, event TEXT);\n",
+                "CREATE TABLE hook_room_pulse (id INTEGER PRIMARY KEY, event TEXT);\n",
                 encoding="utf-8",
             )
-            for name in ("digest", "reentry", "raum_puls"):
+            for name in ("digest", "reentry", "room_pulse"):
                 hook = plugin_root / ".claude-plugin" / "hooks" / f"{name}.py"
                 hook.write_text(_pass_hook_source(f"hook_{name}"), encoding="utf-8")
             ok, msg = status.check_hook_dry_runs(plugin_root, schema)
             self.assertTrue(ok, msg)
-            for name in ("digest", "reentry", "raum_puls"):
+            for name in ("digest", "reentry", "room_pulse"):
                 self.assertIn(name, msg)
 
     def test_check_hook_dry_runs_fails_on_missing_hook(self) -> None:
@@ -281,7 +281,7 @@ class StatusCheckTests(unittest.TestCase):
         )
 
     def test_main_exit_code_failure_when_paths_unresolved(self) -> None:
-        with patch.object(status, "resolve_paths", return_value=(None, "cannot import f3_pfade")):
+        with patch.object(status, "resolve_paths", return_value=(None, "cannot import f3_paths")):
             rc = status.main()
         self.assertEqual(rc, 1)
 

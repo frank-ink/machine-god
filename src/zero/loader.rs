@@ -92,9 +92,7 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<(), LoadError> {
     }
 
     if !is_semver_core(&manifest.version) {
-        return Err(validation_error(
-            "version must contain a numeric major.minor.patch core",
-        ));
+        return Err(validation_error("version must contain a numeric major.minor.patch core"));
     }
 
     for (index, hook) in manifest.hooks.iter().enumerate() {
@@ -102,10 +100,7 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<(), LoadError> {
             return Err(validation_error("hook ids must not be empty"));
         }
 
-        if manifest.hooks[..index]
-            .iter()
-            .any(|previous| previous.id == hook.id)
-        {
+        if manifest.hooks[..index].iter().any(|previous| previous.id == hook.id) {
             return Err(validation_error("hook ids must be unique"));
         }
     }
@@ -114,16 +109,13 @@ fn validate_manifest(manifest: &PluginManifest) -> Result<(), LoadError> {
 }
 
 fn validation_error(reason: impl Into<String>) -> LoadError {
-    LoadError::Validation {
-        reason: reason.into(),
-    }
+    LoadError::Validation { reason: reason.into() }
 }
 
 /// Validate the numeric core while permitting semver pre-release/build suffixes.
 fn is_semver_core(version: &str) -> bool {
-    let core_end = version
-        .find(|character| character == '-' || character == '+')
-        .unwrap_or(version.len());
+    let core_end =
+        version.find(|character| character == '-' || character == '+').unwrap_or(version.len());
     let core = &version[..core_end];
     let parts: Vec<&str> = core.split('.').collect();
 
@@ -252,10 +244,7 @@ pub fn measure_health(manifest: &PluginManifest) -> HealthReport {
         measured_at: Epistemic::Unknown,
     };
 
-    HealthReport {
-        plugin,
-        extra_organs: Vec::new(),
-    }
+    HealthReport { plugin, extra_organs: Vec::new() }
 }
 
 /// Measure plugin and organ health with explicit probe results.
@@ -302,13 +291,10 @@ pub fn measure_health_with_probes(
         measured_at: Epistemic::Unknown,
     };
 
-    HealthReport {
-        plugin,
-        extra_organs: Vec::new(),
-    }
+    HealthReport { plugin, extra_organs: Vec::new() }
 }
 
-/// A single goal row from Zero's goal table (ZIELE).
+/// A single goal row from Zero's goal table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GoalRow {
     /// Stable goal identifier.
@@ -358,11 +344,7 @@ pub struct GoalTable {
 /// Real implementations (reading from unified.db, embedded JSON, etc.) replace
 /// this stub while preserving the `Epistemic` wrapper.
 pub fn load_goals() -> GoalTable {
-    GoalTable {
-        rows: Vec::new(),
-        source: "unmeasured".to_string(),
-        loaded_at: Epistemic::Unknown,
-    }
+    GoalTable { rows: Vec::new(), source: "unmeasured".to_string(), loaded_at: Epistemic::Unknown }
 }
 
 /// Attempt to load goals from an embedded JSON source (for testing/stubbing).
@@ -433,21 +415,13 @@ mod tests {
         assert_eq!(manifest.version, "3.0.0");
         assert!(!manifest.description.trim().is_empty());
 
-        let ids: Vec<&str> = manifest
-            .hooks
-            .iter()
-            .map(|hook| hook.id.as_str())
-            .collect();
+        let ids: Vec<&str> = manifest.hooks.iter().map(|hook| hook.id.as_str()).collect();
         assert_eq!(ids, ["session-start", "pre-tool-use", "post-tool-use"]);
 
         let events: Vec<HookEvent> = manifest.hooks.iter().map(|hook| hook.event).collect();
         assert_eq!(
             events,
-            [
-                HookEvent::SessionStart,
-                HookEvent::PreToolUse,
-                HookEvent::PostToolUse,
-            ]
+            [HookEvent::SessionStart, HookEvent::PreToolUse, HookEvent::PostToolUse,]
         );
     }
 
@@ -635,10 +609,7 @@ mod tests {
         ];
         let report = measure_health_with_probes(&manifest, &probes);
 
-        assert_eq!(
-            report.plugin.overall,
-            Epistemic::Measured(OrganStatus::Nominal)
-        );
+        assert_eq!(report.plugin.overall, Epistemic::Measured(OrganStatus::Nominal));
         assert!(report.plugin.overall.is_measured());
         assert_eq!(report.plugin.organs.len(), 3);
         for organ in &report.plugin.organs {
@@ -656,10 +627,7 @@ mod tests {
         ];
         let report = measure_health_with_probes(&manifest, &probes);
 
-        assert_eq!(
-            report.plugin.overall,
-            Epistemic::Measured(OrganStatus::Degraded)
-        );
+        assert_eq!(report.plugin.overall, Epistemic::Measured(OrganStatus::Degraded));
         assert!(report.plugin.overall.is_measured());
         // The degraded organ must be visible per-organ, not collapsed into a bool.
         let degraded: Vec<&OrganHealth> = report
@@ -688,17 +656,12 @@ mod tests {
         // degraded overall; Critical alone without Degraded and without all
         // Nominal stays Unknown because no probe rule covers it.
         let manifest = load_builtin_manifest().expect("manifest must load");
-        let probes = [
-            ("session-start".to_string(), OrganStatus::Critical, "down".to_string()),
-        ];
+        let probes = [("session-start".to_string(), OrganStatus::Critical, "down".to_string())];
         let report = measure_health_with_probes(&manifest, &probes);
 
         assert_eq!(report.plugin.overall, Epistemic::Unknown);
         assert!(!report.plugin.overall.is_measured());
-        assert_eq!(
-            report.plugin.organs[0].status,
-            Epistemic::Measured(OrganStatus::Critical)
-        );
+        assert_eq!(report.plugin.organs[0].status, Epistemic::Measured(OrganStatus::Critical));
     }
 
     #[test]
@@ -778,7 +741,8 @@ mod tests {
 
     #[test]
     fn load_goals_from_json_unknown_status_yields_unknown() {
-        let json = r#"[{"id": "g1", "title": "Goal One", "status": "not_a_status", "evidence_ref": ""}]"#;
+        let json =
+            r#"[{"id": "g1", "title": "Goal One", "status": "not_a_status", "evidence_ref": ""}]"#;
 
         let result = load_goals_from_json(Some(json));
         let measured = result.value().expect("must be Measured");

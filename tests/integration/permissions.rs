@@ -89,8 +89,8 @@ async fn permission_for_unknown_tool_call_auto_rejects() {
 
 #[tokio::test]
 async fn duplicate_permission_preserves_original_and_neighbor_response_ownership() {
-    use machine_god::app::handle_terminal_event;
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+    use machine_god::app::handle_terminal_event;
     let options = |prefix: &str| {
         vec![
             model::PermissionOption::new(

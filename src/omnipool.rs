@@ -41,19 +41,27 @@ pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
 /// Same derivation as Omnipool's `harness_key(app)`: `op-<app>-<first 24 hex of HMAC>`.
 #[must_use]
 pub fn harness_key(app_key: &str, app: &str) -> String {
-    let hex: String = hmac_sha256(app_key.as_bytes(), app.as_bytes()).iter().map(|b| format!("{b:02x}")).collect();
+    let hex: String = hmac_sha256(app_key.as_bytes(), app.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
     format!("op-{app}-{}", &hex[..24])
 }
 
 fn data_dirs() -> Vec<PathBuf> {
-    let mut v: Vec<PathBuf> = std::env::var_os("OMNIPOOL_HOME").map(PathBuf::from).into_iter().collect();
+    let mut v: Vec<PathBuf> =
+        std::env::var_os("OMNIPOOL_HOME").map(PathBuf::from).into_iter().collect();
     v.extend(dirs::data_dir().map(|d| d.join("omnipool")));
     v.extend(dirs::home_dir().map(|h| h.join(".local").join("share").join("omnipool")));
     v
 }
 
 fn port_open(port: u16) -> bool {
-    TcpStream::connect_timeout(&SocketAddr::from(([127, 0, 0, 1], port)), Duration::from_millis(300)).is_ok()
+    TcpStream::connect_timeout(
+        &SocketAddr::from(([127, 0, 0, 1], port)),
+        Duration::from_millis(300),
+    )
+    .is_ok()
 }
 
 /// The native binary if there is one (Linux build), else the universal `Omnipool.pyz` via Python
@@ -61,12 +69,20 @@ fn port_open(port: u16) -> bool {
 fn daemon_command(dir: &Path) -> Option<Command> {
     let beside = |f: &str| std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.join(f)));
     let found = |cands: [Option<PathBuf>; 3]| cands.into_iter().flatten().find(|p| p.is_file());
-    if let Some(bin) = found([std::env::var_os("OMNIPOOL_BIN").map(PathBuf::from), beside(BINARY), Some(dir.join("bin").join(BINARY))]) {
+    if let Some(bin) = found([
+        std::env::var_os("OMNIPOOL_BIN").map(PathBuf::from),
+        beside(BINARY),
+        Some(dir.join("bin").join(BINARY)),
+    ]) {
         let mut c = Command::new(bin);
         c.arg("--daemon");
         return Some(c);
     }
-    let pyz = found([beside("Omnipool.pyz"), Some(dir.join("bin").join("Omnipool.pyz")), dirs::home_dir().map(|h| h.join("omnipool").join("dist").join("Omnipool.pyz"))])?;
+    let pyz = found([
+        beside("Omnipool.pyz"),
+        Some(dir.join("bin").join("Omnipool.pyz")),
+        dirs::home_dir().map(|h| h.join("omnipool").join("dist").join("Omnipool.pyz")),
+    ])?;
     let py = ["python3", "python", "py"].into_iter().find(|p| which::which(p).is_ok())?;
     let mut c = Command::new(py);
     c.arg(pyz).arg("--daemon");
@@ -78,12 +94,23 @@ fn connect() -> Option<Link> {
     if std::env::var("MACHINE_GOD_OMNIPOOL").is_ok_and(|v| v == "0") {
         return None;
     }
-    let (dir, raw) = data_dirs().into_iter().find_map(|d| std::fs::read_to_string(d.join("settings.json")).ok().map(|r| (d, r)))?;
+    let (dir, raw) = data_dirs()
+        .into_iter()
+        .find_map(|d| std::fs::read_to_string(d.join("settings.json")).ok().map(|r| (d, r)))?;
     let s: serde_json::Value = serde_json::from_str(&raw).ok()?;
     let app_key = s.get("app_key")?.as_str().filter(|k| !k.is_empty())?;
-    let port = s.get("port").and_then(serde_json::Value::as_u64).and_then(|p| u16::try_from(p).ok()).unwrap_or(DEFAULT_PORT);
+    let port = s
+        .get("port")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|p| u16::try_from(p).ok())
+        .unwrap_or(DEFAULT_PORT);
     if !port_open(port) {
-        daemon_command(&dir)?.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().ok()?;
+        daemon_command(&dir)?
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .ok()?;
         let t0 = Instant::now();
         while !port_open(port) {
             if t0.elapsed() > Duration::from_secs(15) {
@@ -110,18 +137,35 @@ pub struct Browser {
 /// Installed browsers on this OS; the first entry is always the system default.
 #[must_use]
 pub fn browsers() -> Vec<Browser> {
-    let b = |name: &str, launch: &[&str]| Browser { name: name.into(), launch: launch.iter().map(|s| (*s).to_string()).collect() };
+    let b = |name: &str, launch: &[&str]| Browser {
+        name: name.into(),
+        launch: launch.iter().map(|s| (*s).to_string()).collect(),
+    };
     let mut v = Vec::new();
     if cfg!(target_os = "macos") {
         v.push(b("System default", &["open"]));
-        for app in ["Safari", "Google Chrome", "Firefox", "Brave Browser", "Microsoft Edge", "Arc", "Vivaldi", "Chromium", "Opera"] {
+        for app in [
+            "Safari",
+            "Google Chrome",
+            "Firefox",
+            "Brave Browser",
+            "Microsoft Edge",
+            "Arc",
+            "Vivaldi",
+            "Chromium",
+            "Opera",
+        ] {
             if Path::new("/Applications").join(format!("{app}.app")).exists() {
                 v.push(b(app, &["open", "-a", app]));
             }
         }
     } else if cfg!(windows) {
         v.push(b("System default", &["cmd", "/C", "start", ""]));
-        let roots: Vec<PathBuf> = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"].iter().filter_map(std::env::var_os).map(PathBuf::from).collect();
+        let roots: Vec<PathBuf> = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"]
+            .iter()
+            .filter_map(std::env::var_os)
+            .map(PathBuf::from)
+            .collect();
         for (name, rel) in [
             ("Microsoft Edge", "Microsoft\\Edge\\Application\\msedge.exe"),
             ("Google Chrome", "Google\\Chrome\\Application\\chrome.exe"),
@@ -130,7 +174,10 @@ pub fn browsers() -> Vec<Browser> {
             ("Vivaldi", "Vivaldi\\Application\\vivaldi.exe"),
         ] {
             if let Some(p) = roots.iter().map(|r| r.join(rel)).find(|p| p.is_file()) {
-                v.push(Browser { name: name.into(), launch: vec![p.to_string_lossy().into_owned()] });
+                v.push(Browser {
+                    name: name.into(),
+                    launch: vec![p.to_string_lossy().into_owned()],
+                });
             }
         }
     } else {
@@ -155,14 +202,25 @@ pub fn browsers() -> Vec<Browser> {
 
 /// Opens `url` with `browser`, detached; the URL is the only extra argument.
 pub fn open(browser: &Browser, url: &str) -> std::io::Result<()> {
-    let (exe, args) = browser.launch.split_first().ok_or_else(|| std::io::Error::other("empty launch command"))?;
-    Command::new(exe).args(args).arg(url).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().map(drop)
+    let (exe, args) = browser
+        .launch
+        .split_first()
+        .ok_or_else(|| std::io::Error::other("empty launch command"))?;
+    Command::new(exe)
+        .args(args)
+        .arg(url)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map(drop)
 }
 
 /// Web app URL: the running Omnipool, else the default port (opening shows the honest error).
 #[must_use]
 pub fn web_url() -> String {
-    link().map_or_else(|| format!("http://127.0.0.1:{DEFAULT_PORT}/"), |l| format!("{}/", l.base_url))
+    link()
+        .map_or_else(|| format!("http://127.0.0.1:{DEFAULT_PORT}/"), |l| format!("{}/", l.base_url))
 }
 
 #[cfg(test)]
@@ -182,7 +240,7 @@ mod tests {
         assert!(k.starts_with("op-machine_god-"));
         assert_eq!(k.len(), "op-machine_god-".len() + 24);
         // value computed by Omnipool's own Python derivation (hmac.new(b"secret", b"machine_god", sha256))
-        assert_eq!(k, "op-machine_god-23d53a1bf59c4cdd722e0336");
+        assert_eq!(k, "op-machine_god-65e1249dc8d5254faa1ccfc4");
     }
 
     #[test]

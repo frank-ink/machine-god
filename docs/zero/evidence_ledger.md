@@ -18,15 +18,15 @@ CVIR promotion ladder (no rung may be skipped):
 - Classification: HYPOTHESIS
 - CVIR promotion stage: MEASURE
 - Gate: `cargo test -p machine_god zero::freewiki_test::test_pick_tip -- --nocapture 2>&1 | tee /tmp/freewiki_gate.log && sha256sum /tmp/freewiki_gate.log | cut -d' ' -f1`
-- Falsification condition: Test fails if (a) tip picked for provider with `eingerichtet=true`, (b) more than one tip returned per session, (c) tip contains provider not present in `anbieter.json`, (d) output lacks fenced code box with URL, (e) new providers not prioritized over older ones.
+- Falsification condition: Test fails if (a) tip picked for provider with `configured=true`, (b) more than one tip returned per session, (c) tip contains provider not present in `providers.json`, (d) output lacks fenced code box with URL, (e) new providers not prioritized over older ones.
 - Gate receipt hash: `UNMEASURED`
 - Evidence: design anchor `docs/zero/architecture.md#freewiki-provider-tips`
 
 ## Item 8: Retina own eye (`src/zero/retina.rs`)
 - Classification: HYPOTHESIS
 - CVIR promotion stage: MEASURE
-- Gate: `cargo test -p machine_god zero::retina_test::test_read_retina_frage -- --nocapture 2>&1 | tee /tmp/retina_gate.log && sha256sum /tmp/retina_gate.log | cut -d' ' -f1`
-- Falsification condition: Test fails if (a) subprocess calls non-loopback address, (b) GRID push target is not 127.0.0.1:8490 (or `MACHINE_GOD_GRID_PORT`), (c) unified.db write uses kind != 'retina', (d) missing Retina returns invented content instead of "Retina nicht verfuegbar", (e) `--zeile` output not parsed into one-line state.
+- Gate: `cargo test -p machine_god zero::retina_test::test_read_retina_question -- --nocapture 2>&1 | tee /tmp/retina_gate.log && sha256sum /tmp/retina_gate.log | cut -d' ' -f1`
+- Falsification condition: Test fails if (a) subprocess calls non-loopback address, (b) GRID push target is not 127.0.0.1:8490 (or `MACHINE_GOD_GRID_PORT`), (c) unified.db write uses kind != 'retina', (d) missing Retina returns invented content instead of "Retina not available", (e) `--line` output not parsed into one-line state.
 - Gate receipt hash: `UNMEASURED`
 - Evidence: design anchor `docs/zero/architecture.md#retina-own-eye`
 

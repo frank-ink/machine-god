@@ -40,7 +40,7 @@ done
 # Normalize F3_DRY_RUN to '1' (truthy) or '0' (falsy) using the unified truthy set:
 #   truthy  = {'1','true','yes','on'}  (case-insensitive)
 #   falsy   = {'0','false','no','off',''} (case-insensitive)
-# This matches Python's _normalize_dry_run() in f3_pfade.py exactly.
+# This matches Python's _normalize_dry_run() in f3_paths.py exactly.
 # UNKNOWN values are an ERROR (fail-closed): refuse/abort, never default to proceed.
 _normalize_f3_dry_run() {
   local raw="${1:-}"
@@ -174,7 +174,7 @@ temp_dir() {
   printf '%s' "$base"
 }
 
-# Data dir resolution with UNIFIED precedence (matches f3_pfade.py exactly).
+# Data dir resolution with UNIFIED precedence (matches f3_paths.py exactly).
 # Prints ONLY the resolved path on stdout. On error, prints to stderr and returns non-zero.
 resolve_data_dir() {
   local raw=""
@@ -236,9 +236,9 @@ DB_PATH="$DATA/unified.db"
 chmod +x "$ROOT"/scripts/*.py "$ROOT"/scripts/star/*.py 2>/dev/null || true
 
 # Initialise a fresh database from the bundled empty schema (stdlib only, no network).
-if [ ! -f "$DB_PATH" ] && [ -f "$ROOT/daten/schema_leer.sql" ]; then
+if [ ! -f "$DB_PATH" ] && [ -f "$ROOT/data/schema_empty.sql" ]; then
   if command -v python3 >/dev/null 2>&1; then
-    if python3 - "$DB_PATH" "$ROOT/daten/schema_leer.sql" <<'PY'
+    if python3 - "$DB_PATH" "$ROOT/data/schema_empty.sql" <<'PY'
 import pathlib
 import sqlite3
 import sys

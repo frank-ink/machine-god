@@ -1,0 +1,7 @@
+#!/bin/sh
+# Shim: starts the ChatGPT image studio CLI (omega-browser/studio/bild.py). No fixed user paths.
+for d in "${OMEGA_BROWSER:-}" "$HOME/omega-browser"; do
+  [ -n "$d" ] && [ -f "$d/studio/bild.py" ] && exec python3 "$d/studio/bild.py" "$@"
+done
+echo "image_studio: omega-browser/studio/bild.py not found (set OMEGA_BROWSER)" >&2
+exit 127

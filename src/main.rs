@@ -17,13 +17,11 @@ fn main() {
             if let Some(app_error) = extract_app_error(&err) {
                 let mut stderr = std::io::stderr().lock();
                 let detail = format!("{err:#}");
-                if let Err(report_error) =
-                    machine_god::failure::write_app_error_report_with_detail(
-                        &mut stderr,
-                        &app_error,
-                        Some(&detail),
-                    )
-                {
+                if let Err(report_error) = machine_god::failure::write_app_error_report_with_detail(
+                    &mut stderr,
+                    &app_error,
+                    Some(&detail),
+                ) {
                     eprintln!("{}", app_error.user_message());
                     eprintln!("failed to write failure report: {report_error}");
                 }

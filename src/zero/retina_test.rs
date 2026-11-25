@@ -45,29 +45,20 @@ struct MockCli {
 
 impl MockCli {
     fn line(text: &str) -> Self {
-        Self {
-            stdout: Some(text.to_string()),
-            fail: false,
-        }
+        Self { stdout: Some(text.to_string()), fail: false }
     }
 
     fn missing() -> Self {
-        Self {
-            stdout: None,
-            fail: false,
-        }
+        Self { stdout: None, fail: false }
     }
 
     fn failing() -> Self {
-        Self {
-            stdout: None,
-            fail: true,
-        }
+        Self { stdout: None, fail: true }
     }
 }
 
 impl RetinaCli for MockCli {
-    fn read_zeile(&mut self) -> Result<String, RetinaError> {
+    fn read_line_reading(&mut self) -> Result<String, RetinaError> {
         if self.fail {
             return Err(RetinaError::CliFailed("mock cli failure".to_string()));
         }
@@ -83,12 +74,8 @@ impl RetinaCli for MockCli {
 fn unique_dir(tag: &str) -> PathBuf {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let dir = std::env::temp_dir().join(format!(
-        "zero-retina-{}-{}-{}",
-        tag,
-        std::process::id(),
-        n
-    ));
+    let dir =
+        std::env::temp_dir().join(format!("zero-retina-{}-{}-{}", tag, std::process::id(), n));
     fs::create_dir_all(&dir).expect("create temp dir");
     dir
 }
@@ -106,51 +93,43 @@ fn write_script(dir: &PathBuf, name: &str, body: &str) -> PathBuf {
 }
 
 fn sqlite_available() -> bool {
-    Command::new("sqlite3")
-        .arg("-version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    Command::new("sqlite3").arg("-version").output().map(|o| o.status.success()).unwrap_or(false)
 }
 
 // ---------------------------------------------------------------- pure functions
 
 #[test]
-fn test_parse_zeile_single_line() {
-    let reading = parse_zeile("retina-zeile-eins\nzweite zeile\n");
+fn test_parse_line_single_line() {
+    let reading = parse_line("retina-zeile-eins\nzweite zeile\n");
     match reading {
-        RetinaReading::Zeile { line, raw, ts_ms } => {
+        RetinaReading::Line { line, raw, ts_ms } => {
             assert_eq!(line, "retina-zeile-eins");
             assert_eq!(raw, "retina-zeile-eins\nzweite zeile");
             assert!(ts_ms > 0);
         }
-        RetinaReading::Unavailable { .. } => panic!("expected Zeile"),
+        RetinaReading::Unavailable { .. } => panic!("expected Line"),
     }
 }
 
 #[test]
-fn test_parse_zeile_empty_is_unavailable() {
-    let reading = parse_zeile("");
+fn test_parse_line_empty_is_unavailable() {
+    let reading = parse_line("");
     match reading {
         RetinaReading::Unavailable { reason, .. } => {
             assert!(!reason.is_empty());
         }
-        RetinaReading::Zeile { .. } => panic!("expected Unavailable"),
+        RetinaReading::Line { .. } => panic!("expected Unavailable"),
     }
 }
 
 #[test]
-fn test_parse_zeile_under_50ms() {
+fn test_parse_line_under_50ms() {
     let start = Instant::now();
     for _ in 0..1000 {
-        parse_zeile("retina-timing-line");
+        parse_line("retina-timing-line");
     }
     let elapsed = start.elapsed();
-    assert!(
-        elapsed.as_millis() < 50,
-        "one-line parse too slow: {:?}",
-        elapsed
-    );
+    assert!(elapsed.as_millis() < 50, "one-line parse too slow: {:?}", elapsed);
 }
 
 #[test]
@@ -161,7 +140,7 @@ fn test_build_grid_event_json() {
         grid_port: 8490,
         db_path: PathBuf::from("unified.db"),
     };
-    let reading = RetinaReading::Zeile {
+    let reading = RetinaReading::Line {
         line: "test-zeile".to_string(),
         raw: "test-zeile\n".to_string(),
         ts_ms: 1700000000000,
@@ -179,7 +158,7 @@ fn test_build_grid_event_json() {
 
 #[test]
 fn test_build_db_insert_kind_retina() {
-    let reading = RetinaReading::Zeile {
+    let reading = RetinaReading::Line {
         line: "db-zeile".to_string(),
         raw: "db-zeile\n".to_string(),
         ts_ms: 1700000000000,
@@ -206,11 +185,7 @@ fn test_enforce_loopback_only() {
 fn test_push_grid_event_rejects_non_loopback() {
     let mut cfg = RetinaConfig::default();
     cfg.grid_host = "10.0.0.1".to_string();
-    let reading = RetinaReading::Zeile {
-        line: "x".to_string(),
-        raw: "x\n".to_string(),
-        ts_ms: 1,
-    };
+    let reading = RetinaReading::Line { line: "x".to_string(), raw: "x\n".to_string(), ts_ms: 1 };
     let event = build_grid_event(&reading, &cfg);
     let err = push_grid_event(&event, &cfg).expect_err("non-loopback must be rejected");
     match err {
@@ -232,10 +207,7 @@ fn test_non_loopback_grid_url_rejected() {
         "http://localhost:8490",
     ] {
         let err = parse_grid_url(url).expect_err("non-loopback URL must be rejected");
-        assert!(
-            matches!(err, RetinaError::LoopbackViolation(_)),
-            "url {url} produced {err:?}"
-        );
+        assert!(matches!(err, RetinaError::LoopbackViolation(_)), "url {url} produced {err:?}");
     }
 }
 
@@ -256,10 +228,7 @@ fn test_loopback_grid_url_accepted() {
         parse_grid_url("http://127.0.0.1:not-a-port"),
         Err(RetinaError::ParseFailed(_))
     ));
-    assert!(matches!(
-        parse_grid_url("ftp://127.0.0.1:8490"),
-        Err(RetinaError::ParseFailed(_))
-    ));
+    assert!(matches!(parse_grid_url("ftp://127.0.0.1:8490"), Err(RetinaError::ParseFailed(_))));
 }
 
 #[test]
@@ -293,13 +262,10 @@ fn test_spawn_missing_cli_returns_error() {
         cli_path: dir.join("retina-frage-does-not-exist"),
         ..RetinaConfig::default()
     };
-    let err = spawn_retina_zeile(&cfg).expect_err("missing CLI must fail");
+    let err = spawn_retina_line(&cfg).expect_err("missing CLI must fail");
     assert!(matches!(err, RetinaError::CliNotFound(_)));
     assert_eq!(RETINA_UNAVAILABLE_DE, "Retina nicht verfuegbar");
-    assert!(
-        err.to_string().contains("Retina nicht verfuegbar"),
-        "error text: {err}"
-    );
+    assert!(err.to_string().contains("Retina nicht verfuegbar"), "error text: {err}");
 }
 
 #[test]
@@ -327,7 +293,7 @@ fn test_read_and_push_missing_cli_is_honest_and_publishes_nothing() {
         RetinaReading::Unavailable { reason, .. } => {
             assert_eq!(reason, RETINA_UNAVAILABLE_DE);
         }
-        RetinaReading::Zeile { .. } => panic!("expected Unavailable"),
+        RetinaReading::Line { .. } => panic!("expected Unavailable"),
     }
     assert!(!cfg.db_path.exists(), "no db row may be invented");
 }
@@ -335,15 +301,12 @@ fn test_read_and_push_missing_cli_is_honest_and_publishes_nothing() {
 #[test]
 fn test_failing_cli_returns_honest_unavailable_text() {
     let mut cli = MockCli::failing();
-    assert_eq!(
-        retina_context_text_with(&mut cli),
-        "Retina nicht verfuegbar"
-    );
+    assert_eq!(retina_context_text_with(&mut cli), "Retina nicht verfuegbar");
 }
 
 #[cfg(unix)]
 #[test]
-fn test_spawn_retina_zeile_with_local_script() {
+fn test_spawn_retina_line_with_local_script() {
     let dir = unique_dir("script");
     let path = write_script(
         &dir,
@@ -353,19 +316,19 @@ fn test_spawn_retina_zeile_with_local_script() {
 
     let mut cfg = RetinaConfig::default();
     cfg.cli_path = path;
-    let output = spawn_retina_zeile(&cfg).expect("local script must run");
+    let output = spawn_retina_line(&cfg).expect("local script must run");
     assert!(output.contains("retina-script-line"));
 }
 
 #[cfg(unix)]
 #[test]
-fn test_spawn_retina_zeile_failing_script_is_error() {
+fn test_spawn_retina_line_failing_script_is_error() {
     let dir = unique_dir("script-fail");
     let path = write_script(&dir, "retina-frage-fail", "echo boom >&2\nexit 3\n");
 
     let mut cfg = RetinaConfig::default();
     cfg.cli_path = path;
-    let err = spawn_retina_zeile(&cfg).expect_err("failing CLI must fail");
+    let err = spawn_retina_line(&cfg).expect_err("failing CLI must fail");
     assert!(matches!(err, RetinaError::CliFailed(_)));
     assert!(err.to_string().contains("Retina nicht verfuegbar"));
 }
@@ -374,24 +337,17 @@ fn test_spawn_retina_zeile_failing_script_is_error() {
 
 #[test]
 fn test_mock_pipeline_pushes_event_and_row() {
-    let mut cli = MockCli::line("mock-zeile\n");
+    let mut cli = MockCli::line("mock-line\n");
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
-    let target = GridTarget {
-        host: "127.0.0.1".to_string(),
-        port: 8490,
-    };
-    let mut rt = RetinaRuntime {
-        target: target.clone(),
-        cli: &mut cli,
-        grid: &mut grid,
-        db: &mut db,
-    };
+    let target = GridTarget { host: "127.0.0.1".to_string(), port: 8490 };
+    let mut rt =
+        RetinaRuntime { target: target.clone(), cli: &mut cli, grid: &mut grid, db: &mut db };
 
     let reading = read_and_push_with(&mut rt).expect("pipeline must succeed");
     match &reading {
-        RetinaReading::Zeile { line, .. } => assert_eq!(line, "mock-zeile"),
-        RetinaReading::Unavailable { .. } => panic!("expected Zeile"),
+        RetinaReading::Line { line, .. } => assert_eq!(line, "mock-line"),
+        RetinaReading::Unavailable { .. } => panic!("expected Line"),
     }
 
     assert_eq!(grid.events.len(), 1, "exactly one GRID event");
@@ -401,11 +357,11 @@ fn test_mock_pipeline_pushes_event_and_row() {
     assert_eq!(event.r#type, "retina_reading");
     assert_eq!(event.host, "127.0.0.1");
     assert_eq!(event.port, 8490);
-    assert_eq!(event.payload["zeile"].as_str(), Some("mock-zeile"));
+    assert_eq!(event.payload["zeile"].as_str(), Some("mock-line"));
 
     assert_eq!(db.rows.len(), 1, "exactly one unified.db row");
     assert_eq!(db.rows[0].kind, "retina");
-    assert!(db.rows[0].payload.contains("mock-zeile"));
+    assert!(db.rows[0].payload.contains("mock-line"));
     assert!(db.rows[0].sql.contains("'retina'"));
     assert!(db.rows[0].sql.contains("INSERT INTO memory"));
 }
@@ -416,10 +372,7 @@ fn test_mock_pipeline_missing_cli_publishes_nothing() {
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
     let mut rt = RetinaRuntime {
-        target: GridTarget {
-            host: "127.0.0.1".to_string(),
-            port: 8490,
-        },
+        target: GridTarget { host: "127.0.0.1".to_string(), port: 8490 },
         cli: &mut cli,
         grid: &mut grid,
         db: &mut db,
@@ -437,10 +390,7 @@ fn test_mock_pipeline_empty_output_is_unknown_and_publishes_nothing() {
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
     let mut rt = RetinaRuntime {
-        target: GridTarget {
-            host: "127.0.0.1".to_string(),
-            port: 8490,
-        },
+        target: GridTarget { host: "127.0.0.1".to_string(), port: 8490 },
         cli: &mut cli,
         grid: &mut grid,
         db: &mut db,
@@ -473,7 +423,7 @@ fn test_mock_grid_endpoint_receives_perception_event() {
         grid_port: port,
         db_path: PathBuf::from("unified.db"),
     };
-    let reading = RetinaReading::Zeile {
+    let reading = RetinaReading::Line {
         line: "tcp-zeile".to_string(),
         raw: "tcp-zeile\n".to_string(),
         ts_ms: 1700000000002,
@@ -515,7 +465,7 @@ fn test_sqlite_db_inserts_retina_row() {
     }
     let dir = unique_dir("sqlite");
     let db_path = dir.join("unified.db");
-    let reading = RetinaReading::Zeile {
+    let reading = RetinaReading::Line {
         line: "sqlite-zeile".to_string(),
         raw: "sqlite-zeile\n".to_string(),
         ts_ms: 1700000000000,
@@ -544,25 +494,17 @@ fn test_retina_cli_one_line_state() {
     let mut cli = MockCli::line("retina-one-line-state\n");
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
-    let target = GridTarget {
-        host: "127.0.0.1".to_string(),
-        port: 8490,
-    };
-    let mut rt = RetinaRuntime {
-        target,
-        cli: &mut cli,
-        grid: &mut grid,
-        db: &mut db,
-    };
+    let target = GridTarget { host: "127.0.0.1".to_string(), port: 8490 };
+    let mut rt = RetinaRuntime { target, cli: &mut cli, grid: &mut grid, db: &mut db };
 
     let reading = read_and_push_with(&mut rt).expect("pipeline must succeed");
     match reading {
-        RetinaReading::Zeile { line, raw, ts_ms } => {
+        RetinaReading::Line { line, raw, ts_ms } => {
             assert_eq!(line, "retina-one-line-state");
             assert_eq!(raw, "retina-one-line-state");
             assert!(ts_ms > 0);
         }
-        RetinaReading::Unavailable { .. } => panic!("expected Zeile reading"),
+        RetinaReading::Unavailable { .. } => panic!("expected Line reading"),
     }
 }
 
@@ -586,7 +528,7 @@ fn test_push_to_grid_loopback() {
         grid_port: port,
         db_path: PathBuf::from("unified.db"),
     };
-    let reading = RetinaReading::Zeile {
+    let reading = RetinaReading::Line {
         line: "loopback-test-zeile".to_string(),
         raw: "loopback-test-zeile\n".to_string(),
         ts_ms: 1700000000003,
@@ -613,7 +555,7 @@ fn test_push_to_entityos_unified_db() {
     }
     let dir = unique_dir("entityos");
     let db_path = dir.join("unified.db");
-    let reading = RetinaReading::Zeile {
+    let reading = RetinaReading::Line {
         line: "entityos-test-zeile".to_string(),
         raw: "entityos-test-zeile\n".to_string(),
         ts_ms: 1700000000004,

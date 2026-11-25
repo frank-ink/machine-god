@@ -6,7 +6,7 @@
 //! module retina {
 //!   architecture Retina {
 //!     stateAuthority unified.db(kind='retina') + GRID(perception event)
-//!     path cli(retina-frage --zeile) -> parse_zeile -> GRID push -> unified.db insert
+//!     path cli(retina-frage --zeile) -> parse_line -> GRID push -> unified.db insert
 //!   }
 //!   invariant loopback_only        { grid_host == "127.0.0.1" ON_VIOLATION -> TriggerEmergencyDeescalation }
 //!   invariant one_reading_per_call { grid_events <= 1 AND db_rows <= 1 ON_VIOLATION -> TriggerEmergencyDeescalation }
@@ -62,16 +62,9 @@ pub const GRID_TIMEOUT_MS: u64 = 2000;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RetinaReading {
     /// One-line state from `retina-frage --zeile`.
-    Zeile {
-        line: String,
-        raw: String,
-        ts_ms: u64,
-    },
+    Line { line: String, raw: String, ts_ms: u64 },
     /// Honest unavailability marker (UNKNOWN, not a measurement).
-    Unavailable {
-        reason: String,
-        ts_ms: u64,
-    },
+    Unavailable { reason: String, ts_ms: u64 },
 }
 
 /// Compound variable: GRID perception event.
@@ -128,12 +121,8 @@ impl RetinaConfig {
     /// `MACHINE_GOD_GRID_URL` (optional, loopback only) and `MACHINE_GOD_GRID_PORT`
     /// (default 8490) select the GRID target. A non-loopback URL is rejected.
     pub fn from_env() -> Result<Self, RetinaError> {
-        let url = std::env::var(GRID_URL_ENV)
-            .ok()
-            .filter(|v| !v.trim().is_empty());
-        let port = std::env::var(GRID_PORT_ENV)
-            .ok()
-            .filter(|v| !v.trim().is_empty());
+        let url = std::env::var(GRID_URL_ENV).ok().filter(|v| !v.trim().is_empty());
+        let port = std::env::var(GRID_PORT_ENV).ok().filter(|v| !v.trim().is_empty());
         let target = grid_target_from_parts(url.as_deref(), port.as_deref())?;
         Ok(Self {
             cli_path: PathBuf::from(RETINA_CLI),
@@ -163,10 +152,7 @@ pub enum RetinaError {
 
 /// Wall-clock milliseconds. Used for timestamps only, never as a causal clock.
 pub fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 /// unified.db path from the environment (default: relative `unified.db`).
@@ -178,34 +164,29 @@ pub fn db_path_from_env() -> PathBuf {
 
 /// sqlite executable used for unified.db writes.
 pub fn sqlite_binary() -> PathBuf {
-    std::env::var_os(SQLITE_BIN_ENV)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("sqlite3"))
+    std::env::var_os(SQLITE_BIN_ENV).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("sqlite3"))
 }
 
 /// Pure: parse `retina-frage --zeile` output into a tagged reading.
-pub fn parse_zeile_at(raw: &str, ts_ms: u64) -> RetinaReading {
+pub fn parse_line_at(raw: &str, ts_ms: u64) -> RetinaReading {
     let raw = raw.trim_end().to_string();
     let line = raw.lines().next().unwrap_or("").trim().to_string();
     if line.is_empty() {
-        RetinaReading::Unavailable {
-            reason: "empty zeile output".to_string(),
-            ts_ms,
-        }
+        RetinaReading::Unavailable { reason: "empty zeile output".to_string(), ts_ms }
     } else {
-        RetinaReading::Zeile { line, raw, ts_ms }
+        RetinaReading::Line { line, raw, ts_ms }
     }
 }
 
 /// Parse `retina-frage --zeile` output into a tagged reading (timestamped now).
-pub fn parse_zeile(raw: &str) -> RetinaReading {
-    parse_zeile_at(raw, now_ms())
+pub fn parse_line(raw: &str) -> RetinaReading {
+    parse_line_at(raw, now_ms())
 }
 
 /// Pure: build a GRID perception event from a reading and an admissible target.
 pub fn build_grid_event_at(reading: &RetinaReading, target: &GridTarget, ts_ms: u64) -> GridEvent {
     let payload = match reading {
-        RetinaReading::Zeile { line, raw, .. } => serde_json::json!({
+        RetinaReading::Line { line, raw, .. } => serde_json::json!({
             "zeile": line,
             "raw": raw,
         }),
@@ -232,10 +213,7 @@ pub fn build_grid_event_for(reading: &RetinaReading, target: &GridTarget) -> Gri
 
 /// Build a GRID perception event from a reading. Host/port come from config.
 pub fn build_grid_event(reading: &RetinaReading, cfg: &RetinaConfig) -> GridEvent {
-    let target = GridTarget {
-        host: cfg.grid_host.clone(),
-        port: cfg.grid_port,
-    };
+    let target = GridTarget { host: cfg.grid_host.clone(), port: cfg.grid_port };
     build_grid_event_for(reading, &target)
 }
 
@@ -247,12 +225,7 @@ pub fn build_db_insert_at(reading: &RetinaReading, ts_ms: u64) -> DbInsert {
         escape_sql(&payload),
         ts_ms
     );
-    DbInsert {
-        kind: RETINA_KIND.to_string(),
-        payload,
-        sql,
-        ts_ms,
-    }
+    DbInsert { kind: RETINA_KIND.to_string(), payload, sql, ts_ms }
 }
 
 /// Build the unified.db insert record (timestamped now).
@@ -282,9 +255,7 @@ pub fn parse_grid_url(url: &str) -> Result<GridTarget, RetinaError> {
     let without_scheme = match trimmed.split_once("://") {
         Some((scheme, rest)) => {
             if !scheme.eq_ignore_ascii_case("http") && !scheme.eq_ignore_ascii_case("udp") {
-                return Err(RetinaError::ParseFailed(format!(
-                    "unsupported GRID scheme: {scheme}"
-                )));
+                return Err(RetinaError::ParseFailed(format!("unsupported GRID scheme: {scheme}")));
             }
             rest
         }
@@ -296,9 +267,9 @@ pub fn parse_grid_url(url: &str) -> Result<GridTarget, RetinaError> {
     }
     let (host, port) = match authority.rsplit_once(':') {
         Some((host, port_text)) => {
-            let port = port_text.parse::<u16>().map_err(|_| {
-                RetinaError::ParseFailed(format!("invalid GRID port: {port_text}"))
-            })?;
+            let port = port_text
+                .parse::<u16>()
+                .map_err(|_| RetinaError::ParseFailed(format!("invalid GRID port: {port_text}")))?;
             if port == 0 {
                 return Err(RetinaError::ParseFailed(
                     "GRID port must be greater than zero".to_string(),
@@ -320,18 +291,15 @@ pub fn grid_target_from_parts(
     url: Option<&str>,
     port: Option<&str>,
 ) -> Result<GridTarget, RetinaError> {
-    let mut target = GridTarget {
-        host: "127.0.0.1".to_string(),
-        port: DEFAULT_GRID_PORT,
-    };
+    let mut target = GridTarget { host: "127.0.0.1".to_string(), port: DEFAULT_GRID_PORT };
     if let Some(url) = url {
         target = parse_grid_url(url)?;
     }
     if let Some(port) = port {
         let trimmed = port.trim();
-        let parsed = trimmed.parse::<u16>().map_err(|_| {
-            RetinaError::ParseFailed(format!("invalid {GRID_PORT_ENV}: {trimmed}"))
-        })?;
+        let parsed = trimmed
+            .parse::<u16>()
+            .map_err(|_| RetinaError::ParseFailed(format!("invalid {GRID_PORT_ENV}: {trimmed}")))?;
         if parsed == 0 {
             return Err(RetinaError::ParseFailed(format!(
                 "{GRID_PORT_ENV} must be greater than zero"
@@ -343,7 +311,7 @@ pub fn grid_target_from_parts(
 }
 
 /// Run an already-configured `Command` and capture stdout. Fails closed on error.
-pub fn run_zeile_command(cmd: &mut Command) -> Result<String, RetinaError> {
+pub fn run_line_command(cmd: &mut Command) -> Result<String, RetinaError> {
     let program = cmd.get_program().to_os_string();
     let output = cmd.output().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
@@ -364,13 +332,13 @@ pub fn run_zeile_command(cmd: &mut Command) -> Result<String, RetinaError> {
 }
 
 /// Spawn `retina-frage --zeile` and capture stdout. Fails closed on missing/broken CLI.
-pub fn spawn_retina_zeile(cfg: &RetinaConfig) -> Result<String, RetinaError> {
+pub fn spawn_retina_line(cfg: &RetinaConfig) -> Result<String, RetinaError> {
     if !cfg.cli_path.exists() {
         return Err(RetinaError::CliNotFound(cfg.cli_path.clone()));
     }
     let mut cmd = Command::new(&cfg.cli_path);
     cmd.arg("--zeile");
-    run_zeile_command(&mut cmd)
+    run_line_command(&mut cmd)
 }
 
 /// Push a GRID event to the local GRID. Loopback is enforced before any socket operation.
@@ -389,15 +357,9 @@ pub fn push_grid_event_to(event: &GridEvent, host: &str, port: u16) -> Result<()
     let mut stream = TcpStream::connect_timeout(&addr, timeout)
         .map_err(|e| RetinaError::GridPush(format!("connect {addr}: {e}")))?;
     let _ = stream.set_write_timeout(Some(timeout));
-    stream
-        .write_all(payload.as_bytes())
-        .map_err(|e| RetinaError::GridPush(e.to_string()))?;
-    stream
-        .write_all(b"\n")
-        .map_err(|e| RetinaError::GridPush(e.to_string()))?;
-    stream
-        .flush()
-        .map_err(|e| RetinaError::GridPush(e.to_string()))?;
+    stream.write_all(payload.as_bytes()).map_err(|e| RetinaError::GridPush(e.to_string()))?;
+    stream.write_all(b"\n").map_err(|e| RetinaError::GridPush(e.to_string()))?;
+    stream.flush().map_err(|e| RetinaError::GridPush(e.to_string()))?;
     Ok(())
 }
 
@@ -413,7 +375,7 @@ pub trait GridSink {
 
 /// Source contract for the local Retina CLI (mockable in tests).
 pub trait RetinaCli {
-    fn read_zeile(&mut self) -> Result<String, RetinaError>;
+    fn read_line_reading(&mut self) -> Result<String, RetinaError>;
 }
 
 /// Production CLI source: local `retina-frage --zeile` subprocess.
@@ -423,8 +385,8 @@ pub struct ProcessCli {
 }
 
 impl RetinaCli for ProcessCli {
-    fn read_zeile(&mut self) -> Result<String, RetinaError> {
-        spawn_retina_zeile(&self.cfg)
+    fn read_line_reading(&mut self) -> Result<String, RetinaError> {
+        spawn_retina_line(&self.cfg)
     }
 }
 
@@ -452,27 +414,18 @@ pub struct SqliteDb {
 
 impl SqliteDb {
     pub fn new(db_path: impl Into<PathBuf>) -> Self {
-        Self {
-            db_path: db_path.into(),
-            sqlite_bin: sqlite_binary(),
-        }
+        Self { db_path: db_path.into(), sqlite_bin: sqlite_binary() }
     }
 
     pub fn with_binary(db_path: impl Into<PathBuf>, sqlite_bin: impl Into<PathBuf>) -> Self {
-        Self {
-            db_path: db_path.into(),
-            sqlite_bin: sqlite_bin.into(),
-        }
+        Self { db_path: db_path.into(), sqlite_bin: sqlite_bin.into() }
     }
 }
 
 impl RetinaDb for SqliteDb {
     fn insert(&mut self, insert: &DbInsert) -> Result<(), RetinaError> {
         if insert.kind != RETINA_KIND {
-            return Err(RetinaError::DbWrite(format!(
-                "refusing non-retina kind: {}",
-                insert.kind
-            )));
+            return Err(RetinaError::DbWrite(format!("refusing non-retina kind: {}", insert.kind)));
         }
         let bin = self.sqlite_bin.clone();
         let db_path = self.db_path.clone();
@@ -480,17 +433,10 @@ impl RetinaDb for SqliteDb {
             "CREATE TABLE IF NOT EXISTS {DB_TABLE} (kind TEXT NOT NULL, payload TEXT NOT NULL, ts_ms INTEGER NOT NULL); {}",
             insert.sql
         );
-        let output = Command::new(&bin)
-            .arg("--batch")
-            .arg(&db_path)
-            .arg(&sql)
-            .output()
-            .map_err(|e| {
+        let output =
+            Command::new(&bin).arg("--batch").arg(&db_path).arg(&sql).output().map_err(|e| {
                 if e.kind() == std::io::ErrorKind::NotFound {
-                    RetinaError::DbWrite(format!(
-                        "sqlite executable not found: {}",
-                        bin.display()
-                    ))
+                    RetinaError::DbWrite(format!("sqlite executable not found: {}", bin.display()))
                 } else {
                     RetinaError::DbWrite(e.to_string())
                 }
@@ -527,8 +473,8 @@ pub struct RetinaRuntime<'a> {
 /// `RetinaReading::Unavailable` and is not published. A missing or failed CLI is an
 /// error (fail-closed) and nothing is published.
 pub fn read_and_push_with(rt: &mut RetinaRuntime<'_>) -> Result<RetinaReading, RetinaError> {
-    let raw = rt.cli.read_zeile()?;
-    let reading = parse_zeile(&raw);
+    let raw = rt.cli.read_line_reading()?;
+    let reading = parse_line(&raw);
     if matches!(reading, RetinaReading::Unavailable { .. }) {
         return Ok(reading);
     }
@@ -546,10 +492,7 @@ pub fn read_and_push_strict(cfg: &RetinaConfig) -> Result<RetinaReading, RetinaE
     let mut grid = UdpGridSink { cfg: cfg.clone() };
     let mut db = SqliteDb::new(cfg.db_path.clone());
     let mut rt = RetinaRuntime {
-        target: GridTarget {
-            host: cfg.grid_host.clone(),
-            port: cfg.grid_port,
-        },
+        target: GridTarget { host: cfg.grid_host.clone(), port: cfg.grid_port },
         cli: &mut cli,
         grid: &mut grid,
         db: &mut db,
@@ -586,16 +529,16 @@ pub fn read_and_push_text(cfg: &RetinaConfig) -> Result<String, RetinaError> {
 /// "Retina nicht verfuegbar" when the CLI is missing, failed or empty.
 /// Never invents content. This function has no side effects.
 pub fn retina_context_text(cfg: &RetinaConfig) -> String {
-    match spawn_retina_zeile(cfg) {
-        Ok(raw) => reading_text(&parse_zeile(&raw)),
+    match spawn_retina_line(cfg) {
+        Ok(raw) => reading_text(&parse_line(&raw)),
         Err(_) => RETINA_UNAVAILABLE_DE.to_string(),
     }
 }
 
 /// Honest context text from an injected CLI source (mockable).
 pub fn retina_context_text_with(cli: &mut dyn RetinaCli) -> String {
-    match cli.read_zeile() {
-        Ok(raw) => reading_text(&parse_zeile(&raw)),
+    match cli.read_line_reading() {
+        Ok(raw) => reading_text(&parse_line(&raw)),
         Err(_) => RETINA_UNAVAILABLE_DE.to_string(),
     }
 }
@@ -603,7 +546,7 @@ pub fn retina_context_text_with(cli: &mut dyn RetinaCli) -> String {
 /// Pure: user-visible text of a reading (line or honest unavailability sentence).
 pub fn reading_text(reading: &RetinaReading) -> String {
     match reading {
-        RetinaReading::Zeile { line, .. } => line.clone(),
+        RetinaReading::Line { line, .. } => line.clone(),
         RetinaReading::Unavailable { .. } => RETINA_UNAVAILABLE_DE.to_string(),
     }
 }
@@ -613,13 +556,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_zeile_tags_empty_as_unavailable() {
-        match parse_zeile_at("   \n", 42) {
+    fn parse_line_tags_empty_as_unavailable() {
+        match parse_line_at("   \n", 42) {
             RetinaReading::Unavailable { reason, ts_ms } => {
                 assert!(!reason.is_empty());
                 assert_eq!(ts_ms, 42);
             }
-            RetinaReading::Zeile { .. } => panic!("expected Unavailable"),
+            RetinaReading::Line { .. } => panic!("expected Unavailable"),
         }
     }
 
@@ -637,19 +580,13 @@ mod tests {
             parse_grid_url("http://10.0.0.1:8490"),
             Err(RetinaError::LoopbackViolation(_))
         ));
-        assert!(matches!(
-            parse_grid_url("http://127.0.0.1:8490"),
-            Ok(_)
-        ));
+        assert!(matches!(parse_grid_url("http://127.0.0.1:8490"), Ok(_)));
     }
 
     #[test]
     fn db_insert_kind_is_retina() {
-        let reading = RetinaReading::Zeile {
-            line: "inline".to_string(),
-            raw: "inline".to_string(),
-            ts_ms: 7,
-        };
+        let reading =
+            RetinaReading::Line { line: "inline".to_string(), raw: "inline".to_string(), ts_ms: 7 };
         let insert = build_db_insert_at(&reading, 7);
         assert_eq!(insert.kind, RETINA_KIND);
         assert!(insert.sql.contains("'retina'"));

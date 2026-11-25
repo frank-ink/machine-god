@@ -9,7 +9,7 @@ Isolation contract (machine-checkable):
   * every resolved data directory is asserted to live inside a temporary tree,
   * no test reads or writes the real ``$HOME``,
   * the documented precedence is verified behaviourally (measured): install.sh and
-    f3_pfade.py are both executed under controlled environments and must resolve
+    f3_paths.py are both executed under controlled environments and must resolve
     to the same path,
   * README markers are parsed at test time (not hard-coded) and compared to the
     measured behaviour,
@@ -34,7 +34,7 @@ PLUGIN_DIR = Path(__file__).resolve().parents[1]
 README = PLUGIN_DIR / "README.md"
 INSTALL_SH = PLUGIN_DIR / "install.sh"
 PLUGIN_JSON = PLUGIN_DIR / ".claude-plugin" / "plugin.json"
-F3_PFADE_PY = PLUGIN_DIR / "scripts" / "star" / "f3_pfade.py"
+F3_PATHS_PY = PLUGIN_DIR / "scripts" / "star" / "f3_paths.py"
 THIS_TEST_FILE = Path(__file__).resolve()
 
 #: Real HOME is captured once, only to PROVE that no test touches it.
@@ -263,11 +263,11 @@ class ReadmeDocumentationTest(unittest.TestCase):
     def test_no_conflicting_location_claim(self) -> None:
         lowered = self.readme_text.lower()
         for phrase in (
-            "neben",
-            "ausserhalb",
+            "besides",
+            "outside",
             "outside",
             "sibling",
-            "elternordner",
+            "parent folder",
             "parent directory",
         ):
             self.assertNotIn(
@@ -281,7 +281,7 @@ class ReadmeDocumentationTest(unittest.TestCase):
         both = [
             line
             for line in self.readme_text.splitlines()
-            if "install.sh" in line and "f3_pfade.py" in line
+            if "install.sh" in line and "f3_paths.py" in line
         ]
         self.assertTrue(
             both, "README does not state that installer and Python agree"
@@ -289,9 +289,9 @@ class ReadmeDocumentationTest(unittest.TestCase):
 
     def test_referenced_implementations_exist(self) -> None:
         self.assertTrue(INSTALL_SH.is_file())
-        matches = sorted(PLUGIN_DIR.glob("**/f3_pfade.py"))
+        matches = sorted(PLUGIN_DIR.glob("**/f3_paths.py"))
         self.assertEqual(
-            1, len(matches), f"expected exactly one f3_pfade.py, got {matches}"
+            1, len(matches), f"expected exactly one f3_paths.py, got {matches}"
         )
 
 
@@ -397,7 +397,7 @@ class MetadataAgreementTest(unittest.TestCase):
 class DataDirResolutionBehaviourTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.module = load_module(F3_PFADE_PY, "f3_pfade_under_test")
+        cls.module = load_module(F3_PATHS_PY, "f3_paths_under_test")
         cls.readme_text = README.read_text(encoding="utf-8")
         cls.documented_order = parse_readme_documented_order(cls.readme_text)
 
@@ -478,7 +478,7 @@ class DataDirResolutionBehaviourTest(unittest.TestCase):
             return resolved
 
     def test_frank3_data_level_installer_and_python_agree(self) -> None:
-        """FRANK3_DATA: set only that env var, run install.sh and f3_pfade.py, assert same path."""
+        """FRANK3_DATA: set only that env var, run install.sh and f3_paths.py, assert same path."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             frank = root / "frank"
@@ -501,7 +501,7 @@ class DataDirResolutionBehaviourTest(unittest.TestCase):
             self.assertEqual(install_path, python_path)
 
     def test_claude_plugin_data_level_installer_and_python_agree(self) -> None:
-        """CLAUDE_PLUGIN_DATA: set only that env var, run install.sh and f3_pfade.py, assert same path."""
+        """CLAUDE_PLUGIN_DATA: set only that env var, run install.sh and f3_paths.py, assert same path."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             claude = root / "claude"
@@ -526,7 +526,7 @@ class DataDirResolutionBehaviourTest(unittest.TestCase):
             self.assertEqual(install_path, python_path)
 
     def test_xdg_data_home_level_installer_and_python_agree(self) -> None:
-        """XDG_DATA_HOME: set only that env var, run install.sh and f3_pfade.py, assert same path."""
+        """XDG_DATA_HOME: set only that env var, run install.sh and f3_paths.py, assert same path."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             xdg = root / "xdg"
@@ -597,32 +597,32 @@ class DataDirResolutionBehaviourTest(unittest.TestCase):
             f"README first marker {self.documented_order[0]!r} != measured first winner {SLOT_FRANK3_DATA!r}",
         )
 
-    def test_relative_xdg_data_home_raises_pfade_error(self) -> None:
+    def test_relative_xdg_data_home_raises_paths_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             with isolated_env(root):
                 with patched_env(XDG_DATA_HOME="relative/xdg"):
-                    with self.assertRaises(self.module.PfadeError) as ctx:
+                    with self.assertRaises(self.module.PathsError) as ctx:
                         self.module.data_dir()
-            self.assertIn("relativer Pfad nicht erlaubt", str(ctx.exception))
+            self.assertIn("relative path not allowed", str(ctx.exception))
 
-    def test_relative_frank3_data_raises_pfade_error(self) -> None:
+    def test_relative_frank3_data_raises_paths_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             with isolated_env(root):
                 with patched_env(FRANK3_DATA="relative/data"):
-                    with self.assertRaises(self.module.PfadeError) as ctx:
+                    with self.assertRaises(self.module.PathsError) as ctx:
                         self.module.data_dir()
-            self.assertIn("relativer Pfad nicht erlaubt", str(ctx.exception))
+            self.assertIn("relative path not allowed", str(ctx.exception))
 
-    def test_relative_claude_plugin_data_raises_pfade_error(self) -> None:
+    def test_relative_claude_plugin_data_raises_paths_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             with isolated_env(root):
                 with patched_env(CLAUDE_PLUGIN_DATA="relative/data"):
-                    with self.assertRaises(self.module.PfadeError) as ctx:
+                    with self.assertRaises(self.module.PathsError) as ctx:
                         self.module.data_dir()
-            self.assertIn("relativer Pfad nicht erlaubt", str(ctx.exception))
+            self.assertIn("relative path not allowed", str(ctx.exception))
 
     def test_ensure_db_target_inside_tmp(self) -> None:
         """ensure_db() must only ever target a path inside the temp tree."""
@@ -666,7 +666,7 @@ class PluginRootNameIndependenceTest(unittest.TestCase):
             copy_name = "zzz-copied-plugin-any-name"
             target = root / copy_name
             shutil.copytree(PLUGIN_DIR, target)
-            module = load_module(target / "scripts" / "star" / "f3_pfade.py", "f3_pfade_copied")
+            module = load_module(target / "scripts" / "star" / "f3_paths.py", "f3_paths_copied")
 
             with patched_env(PLUGIN_ROOT=str(target)):
                 resolved = module.plugin_root()
@@ -683,14 +683,14 @@ class PluginRootNameIndependenceTest(unittest.TestCase):
             root = Path(tmp).resolve()
             target = root / "another-name"
             target.mkdir()
-            module = load_module(F3_PFADE_PY, "f3_pfade_env_root")
+            module = load_module(F3_PATHS_PY, "f3_paths_env_root")
             with patched_env(PLUGIN_ROOT=str(target)):
                 self.assertEqual(target.resolve(), module.plugin_root())
 
-    def test_plugin_root_relative_env_raises_pfade_error(self) -> None:
-        module = load_module(F3_PFADE_PY, "f3_pfade_rel_root")
+    def test_plugin_root_relative_env_raises_paths_error(self) -> None:
+        module = load_module(F3_PATHS_PY, "f3_paths_rel_root")
         with patched_env(PLUGIN_ROOT="relative/path"):
-            with self.assertRaises(module.PfadeError):
+            with self.assertRaises(module.PathsError):
                 module.plugin_root()
 
 
@@ -758,15 +758,15 @@ class InstallerIsolationTest(unittest.TestCase):
                         f"installer wrote outside the temp tree: {candidate}",
                     )
 
-    def test_f3_pfade_works_in_isolated_tmpdir(self) -> None:
-        """Copy plugin to temp dir, import f3_pfade.py, verify data_dir() stays in tmp."""
+    def test_f3_paths_works_in_isolated_tmpdir(self) -> None:
+        """Copy plugin to temp dir, import f3_paths.py, verify data_dir() stays in tmp."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             test_plugin = root / "frankenstein3"
             shutil.copytree(PLUGIN_DIR, test_plugin)
 
-            f3_pfade_path = test_plugin / "scripts" / "star" / "f3_pfade.py"
-            module = load_module(f3_pfade_path, "f3_pfade_test")
+            f3_paths_path = test_plugin / "scripts" / "star" / "f3_paths.py"
+            module = load_module(f3_paths_path, "f3_paths_test")
 
             with isolated_env(root) as home:
                 with patched_env(PLUGIN_ROOT=str(test_plugin)):
@@ -827,9 +827,9 @@ class PortabilityLeakScannerTest(unittest.TestCase):
         )
 
     def test_python_compiles_cleanly(self) -> None:
-        """python3 -m py_compile must succeed on f3_pfade.py."""
+        """python3 -m py_compile must succeed on f3_paths.py."""
         result = subprocess.run(
-            [sys.executable, "-m", "py_compile", str(F3_PFADE_PY)],
+            [sys.executable, "-m", "py_compile", str(F3_PATHS_PY)],
             capture_output=True,
             text=True,
         )
@@ -917,8 +917,8 @@ class PortabilityLeakScannerTest(unittest.TestCase):
         for token in (
             "./frankenstein3/.frankenstein3",
             "$PLUGIN_ROOT/.frankenstein3",
-            "scripts/star/f3_pfade.py",
-            "daten/schema_leer.sql",
+            "scripts/star/f3_paths.py",
+            "data/schema_empty.sql",
             "Frankenstein 3.0",
         ):
             with self.subTest(token=token):

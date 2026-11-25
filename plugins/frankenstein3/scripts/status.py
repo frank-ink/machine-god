@@ -9,7 +9,7 @@ Checks:
   * database schema: required tables/columns derived from the schema file (t2 schema)
   * required hook scripts present
   * Python syntax via ast.parse (never writes __pycache__)
-  * hook dry-run execution (digest, reentry, raum_puls) against a fixture DB
+  * hook dry-run execution (digest, reentry, room_pulse) against a fixture DB
     initialized from the schema; each hook must exit 0, emit JSON that matches
     the contract, echo the event it was asked to process, and persist a row in
     the fixture table hook_<name>. The dry-run gate is non-vacuous: a hook that
@@ -39,7 +39,7 @@ if str(STAR_DIR) not in sys.path:
     sys.path.insert(0, str(STAR_DIR))
 
 REQUIRED_HOOKS = ("session_start.py", "post_tool_use.py", "session_end.py")
-DRY_RUN_HOOKS = ("digest", "reentry", "raum_puls")
+DRY_RUN_HOOKS = ("digest", "reentry", "room_pulse")
 
 # JSON keys accepted for any dry-run hook (generic envelope).
 # 'items' is intentionally absent: a list value must not satisfy the contract.
@@ -54,8 +54,8 @@ HOOK_EXPECTED_KEYS: Dict[str, frozenset] = {
     "reentry": frozenset(
         {"reentry", "reentry_state", "reentry_check", "reentries", "eligible", "state", "status"}
     ),
-    "raum_puls": frozenset(
-        {"raum_puls", "raum", "puls", "pulse", "events", "state", "status"}
+    "room_pulse": frozenset(
+        {"room_pulse", "room", "pulse", "pulse", "events", "state", "status"}
     ),
 }
 
@@ -73,19 +73,19 @@ class Paths(NamedTuple):
 # --------------------------------------------------------------------------- #
 # path resolution (total: errors become FAIL messages, never tracebacks)
 # --------------------------------------------------------------------------- #
-def _load_pfade() -> Tuple[Any, Optional[str]]:
+def _load_paths() -> Tuple[Any, Optional[str]]:
     try:
-        import f3_pfade  # type: ignore
+        import f3_paths  # type: ignore
 
-        return f3_pfade, None
+        return f3_paths, None
     except Exception as exc:  # pragma: no cover - environment dependent
         return None, f"{type(exc).__name__}: {exc}"
 
 
 def resolve_paths() -> Tuple[Optional[Paths], Optional[str]]:
-    module, err = _load_pfade()
+    module, err = _load_paths()
     if module is None:
-        return None, f"cannot import f3_pfade ({err})"
+        return None, f"cannot import f3_paths ({err})"
 
     try:
         data_dir = Path(module.resolve_data_dir())
@@ -500,7 +500,7 @@ def run_hook_dry_run(
 
 
 def check_hook_dry_runs(plugin_root: Path, schema_path: Path) -> Tuple[bool, str]:
-    """Execute digest/reentry/raum_puls in dry-run mode on a fixture DB."""
+    """Execute digest/reentry/room_pulse in dry-run mode on a fixture DB."""
     try:
         schema_sql = schema_path.read_text(encoding="utf-8")
     except Exception as exc:

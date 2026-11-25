@@ -11,7 +11,7 @@ Evidence precedence:
 - `plugin.json` — fallback evidence source only (name/version/id).
 - plugin data directory — owner of `unified.db`.
 
-## Path resolution (f3_pfade precedence)
+## Path resolution (f3_paths precedence)
 
 Plugin directory:
 
@@ -37,21 +37,21 @@ There is no single schema source of truth across the whole plugin bundle. Author
 
 | Schema file | Owner | Scope |
 |---|---|---|
-| `zero/unifieddb/schema.sql` | `zero/` (this repo) | `unified.db` tables owned by Machine God / zero40, notably `durable_memory` rows with `kind=...` used by retina, welt_digest, grund_antwort. |
-| `plugins/frankenstein3/daten/schema_leer.sql` | bundled plugin (`plugins/frankenstein3`) | Plugin-owned schema. `zero/` does not create, migrate, or claim authority over it. |
+| `zero/unifieddb/schema.sql` | `zero/` (this repo) | `unified.db` tables owned by Machine God / zero40, notably `durable_memory` rows with `kind=...` used by retina, welt_digest, reason_answer. |
+| `plugins/frankenstein3/data/schema_empty.sql` | bundled plugin (`plugins/frankenstein3`) | Plugin-owned schema. `zero/` does not create, migrate, or claim authority over it. |
 
 `entity::unified_db_path()` is the canonical resolver for the single `unified.db` file (`<plugin data dir>/unified.db`). Every Machine God organ reads and writes through it.
 
 All Machine God kinds are `durable_memory` rows with `kind=...`, not standalone tables created by `zero/`:
 - `kind='retina'` — perception events (Retina one-line state), north star item 9.
 - `kind='welt_digest'` — today's digest, north star item 21.
-- `kind='grund_antwort'` — ground-mode answers, north star item 23.
+- `kind='reason_answer'` — ground-mode answers, north star item 23.
 
 Missing or malformed evidence for any kind yields `UNKNOWN`; no value is ever invented.
 
 ## Cross-repo contract (external)
 
-The tables `mg_haltung` and `mg_drift_ereignis` live in the service side (`~/welt-organ`, built outside this repo). They are **external** to `zero/` and `plugins/frankenstein3`. The app reads them read-only; veto/rollback remain a CLI for Gabriel (`haltung.py veto|rollback --wer gabriel`), never from the app. `zero/` does not own or migrate these tables.
+The tables `mg_stance` and `mg_drift_event` live in the service side (`~/welt-organ`, built outside this repo). They are **external** to `zero/` and `plugins/frankenstein3`. The app reads them read-only; veto/rollback remain a CLI for Gabriel (`stance.py veto|rollback --wer gabriel`), never from the app. `zero/` does not own or migrate these tables.
 
 ## Health
 

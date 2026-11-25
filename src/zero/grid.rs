@@ -47,17 +47,11 @@ pub struct ComponentStatus {
 
 impl ComponentStatus {
     pub fn measured_at(state: HealthState, at: SystemTime) -> Self {
-        Self {
-            state,
-            last_success: Some(at),
-        }
+        Self { state, last_success: Some(at) }
     }
 
     pub fn unknown() -> Self {
-        Self {
-            state: HealthState::Unknown,
-            last_success: None,
-        }
+        Self { state: HealthState::Unknown, last_success: None }
     }
 
     /// Re-evaluates freshness without mutating the original observation.
@@ -76,10 +70,7 @@ impl ComponentStatus {
     }
 
     pub fn reevaluated(&self, now: SystemTime) -> Self {
-        Self {
-            state: self.effective_state(now),
-            last_success: self.last_success,
-        }
+        Self { state: self.effective_state(now), last_success: self.last_success }
     }
 }
 
@@ -123,13 +114,7 @@ impl Default for StatusLineInput {
 /// MEASURED/OK -> "ok"; a measured degraded observation -> "degraded";
 /// missing or stale evidence -> "UNKNOWN".
 pub fn format_status_line(input: &StatusLineInput) -> String {
-    format_status_line_at(
-        input.now,
-        &input.grid,
-        &input.retina,
-        &input.entityos,
-        &input.omnipool,
-    )
+    format_status_line_at(input.now, &input.grid, &input.retina, &input.entityos, &input.omnipool)
 }
 
 pub fn format_status_line_at(
@@ -200,9 +185,7 @@ impl GridEndpoint {
     /// Only the literal `127.0.0.1` is admissible.
     pub fn new(host: &str, port: u16) -> Result<Self, GridError> {
         let parsed: IpAddr = host.parse().map_err(|_| {
-            GridError::InvalidPort(format!(
-                "host must be the literal {GRID_HOST}, got {host:?}"
-            ))
+            GridError::InvalidPort(format!("host must be the literal {GRID_HOST}, got {host:?}"))
         })?;
 
         if parsed != IpAddr::V4(Ipv4Addr::LOCALHOST) {
@@ -212,15 +195,10 @@ impl GridEndpoint {
         }
 
         if port == 0 {
-            return Err(GridError::InvalidPort(
-                "port must be between 1 and 65535".to_owned(),
-            ));
+            return Err(GridError::InvalidPort("port must be between 1 and 65535".to_owned()));
         }
 
-        Ok(Self {
-            host: parsed,
-            port,
-        })
+        Ok(Self { host: parsed, port })
     }
 
     pub fn from_port(port: u16) -> Result<Self, GridError> {
@@ -258,10 +236,7 @@ pub struct GridPaths {
 
 impl GridPaths {
     pub fn new(health: impl Into<String>, event: impl Into<String>) -> Self {
-        Self {
-            health: health.into(),
-            event: event.into(),
-        }
+        Self { health: health.into(), event: event.into() }
     }
 
     fn validate(&self) -> Result<(), GridError> {
@@ -276,10 +251,7 @@ impl GridPaths {
 
 impl Default for GridPaths {
     fn default() -> Self {
-        Self {
-            health: "/health".to_owned(),
-            event: "/event".to_owned(),
-        }
+        Self { health: "/health".to_owned(), event: "/event".to_owned() }
     }
 }
 
@@ -298,10 +270,7 @@ pub struct GridHttpResponse {
 
 impl GridHttpResponse {
     pub fn ok(body: impl Into<Vec<u8>>) -> Self {
-        Self {
-            status: 200,
-            body: body.into(),
-        }
+        Self { status: 200, body: body.into() }
     }
 }
 
@@ -313,9 +282,7 @@ pub struct GridTransportError {
 
 impl GridTransportError {
     pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
+        Self { message: message.into() }
     }
 }
 
@@ -349,11 +316,7 @@ pub struct GridEvent {
 
 impl GridEvent {
     pub fn new(kind: impl Into<String>, payload: Value) -> Self {
-        Self {
-            kind: kind.into(),
-            payload,
-            source: None,
-        }
+        Self { kind: kind.into(), payload, source: None }
     }
 
     pub fn with_source(mut self, source: impl Into<String>) -> Self {
@@ -379,11 +342,7 @@ impl GridClient {
     pub fn new(port: u16) -> Result<Self, GridError> {
         let endpoint = GridEndpoint::from_port(port)?;
         let transport = TcpGridTransport::new(endpoint.clone())?;
-        Ok(Self {
-            endpoint,
-            paths: GridPaths::default(),
-            transport: Arc::new(transport),
-        })
+        Ok(Self { endpoint, paths: GridPaths::default(), transport: Arc::new(transport) })
     }
 
     pub fn from_env() -> Result<Self, GridError> {
@@ -419,11 +378,7 @@ impl GridClient {
         transport: Arc<dyn GridTransport>,
     ) -> Result<Self, GridError> {
         paths.validate()?;
-        Ok(Self {
-            endpoint,
-            paths,
-            transport,
-        })
+        Ok(Self { endpoint, paths, transport })
     }
 
     pub fn endpoint(&self) -> &GridEndpoint {
@@ -447,9 +402,7 @@ impl GridClient {
 
         let observation = match self.transport.request(&request) {
             Ok(response) => HealthObservation::Response(response),
-            Err(error) => HealthObservation::Unreachable {
-                reason: error.message,
-            },
+            Err(error) => HealthObservation::Unreachable { reason: error.message },
         };
 
         evaluate_health(observation, now)
@@ -467,16 +420,10 @@ impl GridClient {
         if !(200..300).contains(&response.status) {
             let mut body = String::from_utf8_lossy(&response.body).into_owned();
             body.truncate(512);
-            return Err(GridError::Rejected {
-                status: response.status,
-                body,
-            });
+            return Err(GridError::Rejected { status: response.status, body });
         }
 
-        Ok(GridPushReceipt {
-            http_status: response.status,
-            accepted: true,
-        })
+        Ok(GridPushReceipt { http_status: response.status, accepted: true })
     }
 }
 
@@ -580,14 +527,9 @@ impl TcpGridTransport {
         // Re-check at the socket boundary. GridEndpoint fields are private, but
         // this keeps the safety property local to the network implementation.
         if endpoint.host != IpAddr::V4(Ipv4Addr::LOCALHOST) {
-            return Err(GridError::InvalidPort(format!(
-                "host must be the literal {GRID_HOST}"
-            )));
+            return Err(GridError::InvalidPort(format!("host must be the literal {GRID_HOST}")));
         }
-        Ok(Self {
-            endpoint,
-            timeout: DEFAULT_TIMEOUT,
-        })
+        Ok(Self { endpoint, timeout: DEFAULT_TIMEOUT })
     }
 
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
@@ -599,9 +541,7 @@ impl TcpGridTransport {
 impl GridTransport for TcpGridTransport {
     fn request(&self, request: &GridHttpRequest) -> Result<GridHttpResponse, GridTransportError> {
         if self.endpoint.host != IpAddr::V4(Ipv4Addr::LOCALHOST) {
-            return Err(GridTransportError::new(
-                "refusing non-loopback GRID transport",
-            ));
+            return Err(GridTransportError::new("refusing non-loopback GRID transport"));
         }
 
         if request.path.contains('\r') || request.path.contains('\n') {
@@ -616,14 +556,12 @@ impl GridTransport for TcpGridTransport {
         let mut stream = TcpStream::connect_timeout(&self.endpoint.socket_addr(), self.timeout)
             .map_err(|error| GridTransportError::new(format!("connect failed: {error}")))?;
 
-        stream
-            .set_read_timeout(Some(self.timeout))
-            .map_err(|error| GridTransportError::new(format!("read timeout setup failed: {error}")))?;
-        stream
-            .set_write_timeout(Some(self.timeout))
-            .map_err(|error| {
-                GridTransportError::new(format!("write timeout setup failed: {error}"))
-            })?;
+        stream.set_read_timeout(Some(self.timeout)).map_err(|error| {
+            GridTransportError::new(format!("read timeout setup failed: {error}"))
+        })?;
+        stream.set_write_timeout(Some(self.timeout)).map_err(|error| {
+            GridTransportError::new(format!("write timeout setup failed: {error}"))
+        })?;
 
         let mut wire = Vec::with_capacity(256 + body.len());
         wire.extend_from_slice(
@@ -678,9 +616,8 @@ fn read_http_response(stream: &mut TcpStream) -> Result<GridHttpResponse, GridTr
     let body_start = header_end + 4;
     let header_text = String::from_utf8_lossy(&buffer[..header_end]);
     let mut lines = header_text.split("\r\n");
-    let status_line = lines
-        .next()
-        .ok_or_else(|| GridTransportError::new("missing HTTP status line"))?;
+    let status_line =
+        lines.next().ok_or_else(|| GridTransportError::new("missing HTTP status line"))?;
     let status = status_line
         .split_whitespace()
         .nth(1)

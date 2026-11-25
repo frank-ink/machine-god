@@ -1,7 +1,7 @@
 {
   "$schema": "docs/zero/contract_env.schema.json",
   "schema_version": 1,
-  "description": "Machine-readable environment contract for FranKenstein 3.0. Precedence and field names are verified against plugins/frankenstein3/scripts/star/f3_pfade.py and plugins/frankenstein3/README.md. Every entry of sources is a repo-root-relative path written in the canonical ../../<repo-root-relative> form and resolved from this file's directory (docs/zero). Tests fail closed: a missing or unreadable contract is an error, never a skip.",
+  "description": "Machine-readable environment contract for FranKenstein 3.0. Precedence and field names are verified against plugins/frankenstein3/scripts/star/f3_paths.py and plugins/frankenstein3/README.md. Every entry of sources is a repo-root-relative path written in the canonical ../../<repo-root-relative> form and resolved from this file's directory (docs/zero). Tests fail closed: a missing or unreadable contract is an error, never a skip.",
   "precedence": [
     "FRANK3_DATA",
     "CLAUDE_PLUGIN_DATA",
@@ -53,7 +53,7 @@
   "sources": {
     "install_sh": "../../plugins/frankenstein3/install.sh",
     "status_py": "../../plugins/frankenstein3/tests/status.py",
-    "path_resolution": "../../plugins/frankenstein3/scripts/star/f3_pfade.py",
+    "path_resolution": "../../plugins/frankenstein3/scripts/star/f3_paths.py",
     "rust": "../../src/zero",
     "typescript": "../../agent-sdk/src/zero"
   }

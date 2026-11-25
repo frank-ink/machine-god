@@ -5,7 +5,6 @@ mod agents;
 mod autocomplete;
 mod config;
 mod copy;
-pub(crate) mod sacred_banner;
 mod diff;
 pub(crate) mod footer_rows;
 mod git_diff;
@@ -17,24 +16,25 @@ pub(crate) mod input;
 pub(crate) mod input_rows;
 pub(crate) mod layout_control;
 pub(crate) mod live_rows;
+mod machine_god_art;
 mod markdown;
 mod message;
 pub(crate) mod message_layout;
 mod message_rows;
+pub(crate) mod sacred_banner;
 mod session_picker;
 pub(crate) mod spinner_verbs;
 pub(crate) mod terminal_output;
 pub mod theme;
+#[cfg(test)]
+mod theme_palette_test;
 mod tool_call;
 pub(crate) mod tool_display;
 mod trusted;
 mod two_column_list;
 mod update;
-mod machine_god_art;
 mod welcome;
 mod wrap;
-#[cfg(test)]
-mod theme_palette_test;
 
 pub use message::SpinnerState;
 pub(crate) use welcome::{ferris_hello_live, welcome_is_whole_transcript};

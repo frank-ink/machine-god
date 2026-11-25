@@ -15,11 +15,8 @@ struct TempPlugin {
 impl TempPlugin {
     fn new(manifest: &str, plugin: &str) -> Self {
         let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!(
-            "zero-entity-test-{}-{}",
-            std::process::id(),
-            id
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("zero-entity-test-{}-{}", std::process::id(), id));
         fs::create_dir_all(&dir).expect("create temp plugin dir");
         fs::write(dir.join(ZERO_MANIFEST_FILE), manifest).expect("write zero-manifest.json");
         fs::write(dir.join(PLUGIN_FILE), plugin).expect("write plugin.json");
@@ -45,16 +42,13 @@ fn ok_grid(now: SystemTime) -> GridHealth {
     }
 }
 
-/// Independent re-implementation of the documented f3_pfade data-directory
+/// Independent re-implementation of the documented f3_paths data-directory
 /// precedence. Used only as a cross-check against the production resolver.
 fn reference_data_dir(env: &EnvSnapshot, plugin_dir: &Path) -> PathBuf {
-    let explicit = [
-        PLUGIN_DATA_DIR_ENV,
-        FRANKENSTEIN3_DATA_DIR_ENV,
-        FRANKENSTEIN3_PLUGIN_DATA_DIR_ENV,
-    ]
-    .iter()
-    .find_map(|key| env.get(key));
+    let explicit =
+        [PLUGIN_DATA_DIR_ENV, FRANKENSTEIN3_DATA_DIR_ENV, FRANKENSTEIN3_PLUGIN_DATA_DIR_ENV]
+            .iter()
+            .find_map(|key| env.get(key));
 
     if let Some(value) = explicit {
         return PathBuf::from(value);
@@ -63,10 +57,7 @@ fn reference_data_dir(env: &EnvSnapshot, plugin_dir: &Path) -> PathBuf {
         return PathBuf::from(xdg).join(PLUGIN_DATA_DIR_NAME);
     }
     if let Some(home) = env.get(HOME_ENV) {
-        return PathBuf::from(home)
-            .join(".local")
-            .join("share")
-            .join(PLUGIN_DATA_DIR_NAME);
+        return PathBuf::from(home).join(".local").join("share").join(PLUGIN_DATA_DIR_NAME);
     }
     plugin_dir.to_path_buf()
 }
@@ -130,19 +121,13 @@ fn health_check_measured() {
         COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
     fs::create_dir_all(&broken).expect("create temp dir");
-    let broken_paths = PluginPaths {
-        plugin_dir: broken.clone(),
-        data_dir: broken.join("data"),
-    };
+    let broken_paths = PluginPaths { plugin_dir: broken.clone(), data_dir: broken.join("data") };
     let broken_health = entity_health_at(&broken_paths, now);
     let _ = fs::remove_dir_all(&broken);
 
     assert_eq!(broken_health.class, EntityHealthClass::Unknown);
     assert!(broken_health.detail.is_some());
-    assert_eq!(
-        broken_health.status(now).effective_state(now),
-        HealthState::Unknown
-    );
+    assert_eq!(broken_health.status(now).effective_state(now), HealthState::Unknown);
 }
 
 #[test]
@@ -154,10 +139,7 @@ fn db_path_matches_retina() {
 
     let env = EnvSnapshot::from_pairs([
         (PLUGIN_DIR_ENV, plugin.path().to_string_lossy().to_string()),
-        (
-            PLUGIN_DATA_DIR_ENV,
-            plugin.path().join("data").to_string_lossy().to_string(),
-        ),
+        (PLUGIN_DATA_DIR_ENV, plugin.path().join("data").to_string_lossy().to_string()),
     ]);
 
     let paths = resolve_plugin_paths(&env, &bundled_plugin_dir());
@@ -204,10 +186,8 @@ fn entity_reads_plugin_json_identity_as_fallback() {
 
 #[test]
 fn entity_reads_manifest_entity_id() {
-    let plugin = TempPlugin::new(
-        r#"{"entity_id":"zero-1","root_state":{}}"#,
-        r#"{"name":"frankenstein3"}"#,
-    );
+    let plugin =
+        TempPlugin::new(r#"{"entity_id":"zero-1","root_state":{}}"#, r#"{"name":"frankenstein3"}"#);
 
     let snapshot = load_entity_state(plugin.path()).unwrap();
 
@@ -216,10 +196,7 @@ fn entity_reads_manifest_entity_id() {
 
 #[test]
 fn entity_root_state_falls_back_to_manifest_object() {
-    let plugin = TempPlugin::new(
-        r#"{"custom":"value"}"#,
-        r#"{"name":"frankenstein3"}"#,
-    );
+    let plugin = TempPlugin::new(r#"{"custom":"value"}"#, r#"{"name":"frankenstein3"}"#);
 
     let snapshot = load_entity_state(plugin.path()).unwrap();
 
@@ -270,10 +247,7 @@ fn entity_data_dir_precedence() {
         (XDG_DATA_HOME_ENV, "xdg".to_owned()),
         (HOME_ENV, "home".to_owned()),
     ]);
-    assert_eq!(
-        resolve_data_dir(&explicit, &plugin_dir, None),
-        PathBuf::from("explicit")
-    );
+    assert_eq!(resolve_data_dir(&explicit, &plugin_dir, None), PathBuf::from("explicit"));
 
     let xdg = EnvSnapshot::from_pairs([
         (XDG_DATA_HOME_ENV, "xdg".to_owned()),
@@ -287,10 +261,7 @@ fn entity_data_dir_precedence() {
     let home = EnvSnapshot::from_pairs([(HOME_ENV, "home".to_owned())]);
     assert_eq!(
         resolve_data_dir(&home, &plugin_dir, None),
-        PathBuf::from("home")
-            .join(".local")
-            .join("share")
-            .join(PLUGIN_DATA_DIR_NAME)
+        PathBuf::from("home").join(".local").join("share").join(PLUGIN_DATA_DIR_NAME)
     );
 
     let empty = EnvSnapshot::default();
@@ -298,10 +269,7 @@ fn entity_data_dir_precedence() {
 
     // Plugin directory precedence: env wins over the bundled plugin.
     let env_plugin = EnvSnapshot::from_pairs([(PLUGIN_DIR_ENV, "chosen".to_owned())]);
-    assert_eq!(
-        resolve_plugin_dir(&env_plugin, &bundled),
-        PathBuf::from("chosen")
-    );
+    assert_eq!(resolve_plugin_dir(&env_plugin, &bundled), PathBuf::from("chosen"));
     assert_eq!(resolve_plugin_dir(&empty, &bundled), bundled);
 }
 
@@ -312,22 +280,18 @@ fn entity_manifest_declared_data_dir_is_used() {
         r#"{"name":"frankenstein3"}"#,
     );
 
-    let env = EnvSnapshot::from_pairs([(PLUGIN_DIR_ENV, plugin.path().to_string_lossy().to_string())]);
+    let env =
+        EnvSnapshot::from_pairs([(PLUGIN_DIR_ENV, plugin.path().to_string_lossy().to_string())]);
     let paths = resolve_plugin_paths(&env, &bundled_plugin_dir());
 
     assert_eq!(paths.data_dir, plugin.path().join("state"));
-    assert_eq!(
-        paths.unified_db_path(),
-        plugin.path().join("state").join(UNIFIED_DB_FILE)
-    );
+    assert_eq!(paths.unified_db_path(), plugin.path().join("state").join(UNIFIED_DB_FILE));
 }
 
 #[test]
 fn entity_status_line_marks_entity_measured() {
-    let plugin = TempPlugin::new(
-        r#"{"root_state":{"mode":"ground"}}"#,
-        r#"{"name":"frankenstein3"}"#,
-    );
+    let plugin =
+        TempPlugin::new(r#"{"root_state":{"mode":"ground"}}"#, r#"{"name":"frankenstein3"}"#);
     let now = SystemTime::now();
     let snapshot = load_entity_state_at(plugin.path(), now).unwrap();
 
@@ -341,10 +305,8 @@ fn entity_status_line_marks_entity_measured() {
 
 #[test]
 fn entity_status_line_unknown_when_stale() {
-    let plugin = TempPlugin::new(
-        r#"{"root_state":{"mode":"ground"}}"#,
-        r#"{"name":"frankenstein3"}"#,
-    );
+    let plugin =
+        TempPlugin::new(r#"{"root_state":{"mode":"ground"}}"#, r#"{"name":"frankenstein3"}"#);
     let now = SystemTime::now();
     let old = now.checked_sub(Duration::from_secs(31)).unwrap();
     let snapshot = load_entity_state_at(plugin.path(), old).unwrap();
@@ -370,10 +332,7 @@ fn entity_status_line_unknown_components_are_not_failures() {
         now,
     );
 
-    assert_eq!(
-        line,
-        "GRID ok | Retina UNKNOWN | EntityOS UNKNOWN | Omnipool UNKNOWN"
-    );
+    assert_eq!(line, "GRID ok | Retina UNKNOWN | EntityOS UNKNOWN | Omnipool UNKNOWN");
     let labeled = format_entity_status_line_labeled(
         &ok_grid(now),
         &ComponentStatus::unknown(),
@@ -381,10 +340,7 @@ fn entity_status_line_unknown_components_are_not_failures() {
         &ComponentStatus::unknown(),
         now,
     );
-    assert_eq!(
-        labeled,
-        "GRID MEASURED | Retina UNKNOWN | EntityOS UNKNOWN | Omnipool UNKNOWN"
-    );
+    assert_eq!(labeled, "GRID MEASURED | Retina UNKNOWN | EntityOS UNKNOWN | Omnipool UNKNOWN");
 }
 
 #[test]

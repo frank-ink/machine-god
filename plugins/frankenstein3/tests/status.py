@@ -9,7 +9,7 @@ Canonical data-directory precedence (documented, and enforced by install.sh):
 The fixture database is never guessed.  It is always derived from the *same*
 environment through::
 
-    f3_pfade.get_db_path(f3_pfade.resolve_data_dir())
+    f3_paths.get_db_path(f3_paths.resolve_data_dir())
 
 so that the hook subprocess and the test observe one and the same file.
 Only the two documented precedence variables are written into the hook
@@ -34,7 +34,7 @@ STAR_DIR = PLUGIN_ROOT / "scripts" / "star"
 if str(STAR_DIR) not in sys.path:
     sys.path.insert(0, str(STAR_DIR))
 
-import f3_pfade  # noqa: E402  (sys.path bootstrap above)
+import f3_paths  # noqa: E402  (sys.path bootstrap above)
 
 #: Documented precedence variables, highest priority first.
 PRECEDENCE_VARS = ("FRANK3_DATA", "CLAUDE_PLUGIN_DATA", "XDG_DATA_HOME", "HOME")
@@ -74,15 +74,15 @@ def _merge(base: Mapping[str, str], overrides: Mapping[str, object]) -> Dict[str
 def _resolve_under(env: Mapping[str, str]):
     """Resolve ``(data_dir, db_path)`` with *env* as the process environment.
 
-    The resolution is delegated to :mod:`f3_pfade` so that Python and
+    The resolution is delegated to :mod:`f3_paths` so that Python and
     ``install.sh`` cannot drift apart.  The ambient environment is restored
     afterwards, even when the resolution raises.
     """
     saved = dict(os.environ)
     try:
         os.environ.update(_as_env(env))
-        data_dir = Path(f3_pfade.resolve_data_dir())
-        db_path = Path(f3_pfade.get_db_path(data_dir))
+        data_dir = Path(f3_paths.resolve_data_dir())
+        db_path = Path(f3_paths.get_db_path(data_dir))
     finally:
         os.environ.clear()
         os.environ.update(saved)
@@ -94,7 +94,7 @@ def fixture_db_path(env: Optional[Mapping[str, object]] = None) -> Path:
 
     The path is derived from the documented precedence, never guessed::
 
-        f3_pfade.get_db_path(f3_pfade.resolve_data_dir())
+        f3_paths.get_db_path(f3_paths.resolve_data_dir())
     """
     merged = _merge(os.environ, env or {})
     _data_dir, db_path = _resolve_under(merged)
@@ -111,7 +111,7 @@ def _hook_env(*args, **kwargs) -> Dict[str, str]:
 
     Only the documented precedence variables are written:
     ``FRANK3_DATA``, ``CLAUDE_PLUGIN_DATA``, and the derived ``F3_DB_PATH``.
-    The data directory is derived by :mod:`f3_pfade` under the very same
+    The data directory is derived by :mod:`f3_paths` under the very same
     environment, so the hook and the test can never disagree about the
     fixture database.
 

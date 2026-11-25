@@ -794,7 +794,8 @@ mod launch_command_tests {
                 "append_system_prompt": "End every reply with DONE."
             })
         );
-        let inline = startup_command(&["machine-god", "--append-system-prompt", "Answer in German."]);
+        let inline =
+            startup_command(&["machine-god", "--append-system-prompt", "Answer in German."]);
         assert_eq!(
             inline["launch_settings"],
             json!({ "append_system_prompt": "Answer in German." })

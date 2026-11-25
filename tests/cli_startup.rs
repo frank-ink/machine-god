@@ -88,10 +88,7 @@ fn session_options_support_existing_resume_syntax() {
         );
         assert_eq!(cli.initial_prompt(), Some("review prompt"));
         assert_eq!(cli.session_options.model.as_deref(), Some("opus"));
-        assert_eq!(
-            cli.session_options.effort,
-            Some(machine_god::agent::model::EffortLevel::Max)
-        );
+        assert_eq!(cli.session_options.effort, Some(machine_god::agent::model::EffortLevel::Max));
         assert_eq!(cli.session_options.permission_mode.unwrap().as_stored(), "plan");
         assert_eq!(cli.session_options.agent.as_deref(), Some("reviewer"));
         assert_eq!(cli.session_options.name.as_deref(), Some("Experiment"));

@@ -13,7 +13,7 @@
 //! Missing or malformed evidence is reported as an error or UNKNOWN; it is
 //! never replaced by an invented identity or root state.
 //!
-//! Path resolution (f3_pfade.py precedence)
+//! Path resolution (f3_paths.py precedence)
 //! ----------------------------------------
 //! Plugin directory:
 //!   1. `MACHINE_GOD_PLUGIN_DIR`
@@ -35,7 +35,7 @@
 //! both organs address one database file.
 
 use crate::zero::grid::{
-    format_status_line_at, format_status_line_labeled_at, ComponentStatus, GridHealth, HealthState,
+    ComponentStatus, GridHealth, HealthState, format_status_line_at, format_status_line_labeled_at,
 };
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -227,10 +227,7 @@ impl EnvSnapshot {
 
     /// Returns a trimmed, non-empty value for `key`.
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.vars
-            .get(key)
-            .map(|value| value.trim())
-            .filter(|value| !value.is_empty())
+        self.vars.get(key).map(|value| value.trim()).filter(|value| !value.is_empty())
     }
 
     pub fn set(&mut self, key: &str, value: &str) {
@@ -244,20 +241,14 @@ impl EnvSnapshot {
 
 /// Reads and parses a JSON object from disk.
 pub fn read_json_object(path: &Path) -> Result<Value, EntityError> {
-    let text = fs::read_to_string(path).map_err(|source| EntityError::Read {
-        path: path.to_path_buf(),
-        source,
-    })?;
+    let text = fs::read_to_string(path)
+        .map_err(|source| EntityError::Read { path: path.to_path_buf(), source })?;
 
-    let value: Value = serde_json::from_str(&text).map_err(|source| EntityError::Json {
-        path: path.to_path_buf(),
-        source,
-    })?;
+    let value: Value = serde_json::from_str(&text)
+        .map_err(|source| EntityError::Json { path: path.to_path_buf(), source })?;
 
     if !value.is_object() {
-        return Err(EntityError::NotAnObject {
-            path: path.to_path_buf(),
-        });
+        return Err(EntityError::NotAnObject { path: path.to_path_buf() });
     }
 
     Ok(value)
@@ -273,10 +264,7 @@ pub fn manifest_candidates(plugin_dir: &Path) -> Vec<PathBuf> {
 
 /// Candidate locations of `plugin.json` inside a plugin directory.
 pub fn plugin_json_candidates(plugin_dir: &Path) -> Vec<PathBuf> {
-    vec![
-        plugin_dir.join(PLUGIN_FILE),
-        plugin_dir.join(CLAUDE_PLUGIN_DIR).join(PLUGIN_FILE),
-    ]
+    vec![plugin_dir.join(PLUGIN_FILE), plugin_dir.join(CLAUDE_PLUGIN_DIR).join(PLUGIN_FILE)]
 }
 
 fn find_existing_file(candidates: &[PathBuf]) -> Option<PathBuf> {
@@ -293,11 +281,7 @@ pub fn resolve_manifest_path(plugin_dir: &Path) -> Result<PathBuf, EntityError> 
         path: candidates[0].clone(),
         source: io::Error::new(
             io::ErrorKind::NotFound,
-            format!(
-                "{} not found in {}",
-                ZERO_MANIFEST_FILE,
-                plugin_dir.display()
-            ),
+            format!("{} not found in {}", ZERO_MANIFEST_FILE, plugin_dir.display()),
         ),
     })
 }
@@ -348,10 +332,7 @@ pub fn identity_from_values(
         .and_then(Value::as_str)
         .or_else(|| manifest.get("name").and_then(Value::as_str))
         .or_else(|| {
-            manifest
-                .get("entity")
-                .and_then(|entity| entity.get("name"))
-                .and_then(Value::as_str)
+            manifest.get("entity").and_then(|entity| entity.get("name")).and_then(Value::as_str)
         })
         .or_else(|| plugin.get("name").and_then(Value::as_str))
         .map(str::trim)
@@ -394,10 +375,7 @@ pub fn root_state_from_manifest(manifest: &Value, manifest_path: &Path) -> Entit
         .cloned()
         .unwrap_or_else(|| manifest.clone());
 
-    EntityRootState {
-        value,
-        source: manifest_path.to_path_buf(),
-    }
+    EntityRootState { value, source: manifest_path.to_path_buf() }
 }
 
 /// Loads identity and root state from a plugin directory.
@@ -419,11 +397,7 @@ pub fn load_entity_state_at(
     let identity = identity_from_values(&plugin, &manifest, &manifest_path)?;
     let root = root_state_from_manifest(&manifest, &manifest_path);
 
-    Ok(EntitySnapshot {
-        identity,
-        root,
-        observed_at,
-    })
+    Ok(EntitySnapshot { identity, root, observed_at })
 }
 
 /// The bundled plugin directory, resolved relative to the crate root.
@@ -445,7 +419,7 @@ fn find_bundled_plugin(start: &Path) -> PathBuf {
     start.join(BUNDLED_PLUGIN_RELATIVE)
 }
 
-/// Pure plugin-directory resolution (f3_pfade precedence).
+/// Pure plugin-directory resolution (f3_paths precedence).
 pub fn resolve_plugin_dir(env: &EnvSnapshot, bundled: &Path) -> PathBuf {
     env.get(PLUGIN_DIR_ENV)
         .map(PathBuf::from)
@@ -463,7 +437,7 @@ pub fn manifest_data_dir(manifest: Option<&Value>) -> Option<&str> {
         .filter(|value| !value.is_empty())
 }
 
-/// Pure plugin-data-directory resolution (f3_pfade precedence).
+/// Pure plugin-data-directory resolution (f3_paths precedence).
 pub fn resolve_data_dir(env: &EnvSnapshot, plugin_dir: &Path, manifest: Option<&Value>) -> PathBuf {
     if let Some(value) = env.get(PLUGIN_DATA_DIR_ENV) {
         return PathBuf::from(value);
@@ -476,20 +450,13 @@ pub fn resolve_data_dir(env: &EnvSnapshot, plugin_dir: &Path, manifest: Option<&
     }
     if let Some(declared) = manifest_data_dir(manifest) {
         let candidate = PathBuf::from(declared);
-        return if candidate.is_absolute() {
-            candidate
-        } else {
-            plugin_dir.join(candidate)
-        };
+        return if candidate.is_absolute() { candidate } else { plugin_dir.join(candidate) };
     }
     if let Some(xdg) = env.get(XDG_DATA_HOME_ENV) {
         return PathBuf::from(xdg).join(PLUGIN_DATA_DIR_NAME);
     }
     if let Some(home) = env.get(HOME_ENV) {
-        return PathBuf::from(home)
-            .join(".local")
-            .join("share")
-            .join(PLUGIN_DATA_DIR_NAME);
+        return PathBuf::from(home).join(".local").join("share").join(PLUGIN_DATA_DIR_NAME);
     }
     plugin_dir.to_path_buf()
 }
@@ -499,10 +466,7 @@ pub fn resolve_plugin_paths(env: &EnvSnapshot, bundled: &Path) -> PluginPaths {
     let plugin_dir = resolve_plugin_dir(env, bundled);
     let manifest = read_manifest_if_present(&plugin_dir);
     let data_dir = resolve_data_dir(env, &plugin_dir, manifest.as_ref());
-    PluginPaths {
-        plugin_dir,
-        data_dir,
-    }
+    PluginPaths { plugin_dir, data_dir }
 }
 
 /// Plugin directory from the environment, falling back to the bundled plugin.

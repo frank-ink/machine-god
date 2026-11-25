@@ -20,10 +20,7 @@ impl Default for MockTransport {
 
 impl MockTransport {
     fn returning(response: GridHttpResponse) -> Self {
-        Self {
-            requests: Mutex::new(Vec::new()),
-            response: Mutex::new(Ok(response)),
-        }
+        Self { requests: Mutex::new(Vec::new()), response: Mutex::new(Ok(response)) }
     }
 
     fn failing(message: &str) -> Self {
@@ -40,10 +37,7 @@ impl MockTransport {
 
 impl GridTransport for MockTransport {
     fn request(&self, request: &GridHttpRequest) -> Result<GridHttpResponse, GridTransportError> {
-        self.requests
-            .lock()
-            .expect("mock lock")
-            .push(request.clone());
+        self.requests.lock().expect("mock lock").push(request.clone());
         self.response.lock().expect("mock lock").clone()
     }
 }
@@ -64,19 +58,9 @@ fn grid_default_port_is_8490() {
 
 #[test]
 fn grid_endpoint_rejects_non_loopback_hosts() {
-    for host in [
-        "0.0.0.0",
-        "192.168.1.10",
-        "localhost",
-        "::1",
-        "example.com",
-        "127.0.0.2",
-    ] {
+    for host in ["0.0.0.0", "192.168.1.10", "localhost", "::1", "example.com", "127.0.0.2"] {
         let error = GridEndpoint::new(host, DEFAULT_GRID_PORT).unwrap_err();
-        assert!(
-            error.to_string().contains("127.0.0.1"),
-            "unexpected error for {host}: {error}"
-        );
+        assert!(error.to_string().contains("127.0.0.1"), "unexpected error for {host}: {error}");
     }
 }
 
@@ -95,9 +79,7 @@ fn grid_endpoint_rejects_port_zero() {
 
 #[test]
 fn grid_health_ok_is_measured() {
-    let transport = Arc::new(MockTransport::returning(GridHttpResponse::ok(
-        r#"{"status":"ok"}"#,
-    )));
+    let transport = Arc::new(MockTransport::returning(GridHttpResponse::ok(r#"{"status":"ok"}"#)));
     let client = client_with(transport);
     let now = SystemTime::now();
 
@@ -111,9 +93,8 @@ fn grid_health_ok_is_measured() {
 
 #[test]
 fn grid_health_degraded_is_measured() {
-    let transport = Arc::new(MockTransport::returning(GridHttpResponse::ok(
-        r#"{"status":"degraded"}"#,
-    )));
+    let transport =
+        Arc::new(MockTransport::returning(GridHttpResponse::ok(r#"{"status":"degraded"}"#)));
     let client = client_with(transport);
 
     let health = client.check_health_at(SystemTime::now());
@@ -180,9 +161,7 @@ fn grid_event_push_rejects_non_success_response() {
     }));
     let client = client_with(transport);
 
-    let error = client
-        .push_event(&GridEvent::new("test", Value::Null))
-        .unwrap_err();
+    let error = client.push_event(&GridEvent::new("test", Value::Null)).unwrap_err();
 
     assert!(matches!(error, GridError::Rejected { status: 503, .. }));
 }
@@ -192,9 +171,7 @@ fn grid_event_push_targets_loopback_authority_only() {
     let transport = Arc::new(MockTransport::returning(GridHttpResponse::ok("{}")));
     let client = client_with(transport.clone());
 
-    client
-        .push_event(&GridEvent::new("test", Value::Null))
-        .unwrap();
+    client.push_event(&GridEvent::new("test", Value::Null)).unwrap();
 
     assert_eq!(client.endpoint().host().to_string(), "127.0.0.1");
     assert_eq!(client.endpoint().port(), DEFAULT_GRID_PORT);
@@ -212,10 +189,7 @@ fn status_line_formats_measured_components() {
         omnipool: measured,
     };
 
-    assert_eq!(
-        format_status_line(&input),
-        "GRID ok | Retina ok | EntityOS ok | Omnipool ok"
-    );
+    assert_eq!(format_status_line(&input), "GRID ok | Retina ok | EntityOS ok | Omnipool ok");
     assert_eq!(
         format_status_line_labeled(&input),
         "GRID MEASURED | Retina MEASURED | EntityOS MEASURED | Omnipool MEASURED"
@@ -255,10 +229,7 @@ fn status_line_formats_degraded_component() {
         omnipool: ComponentStatus::measured_at(HealthState::Ok, now),
     };
 
-    assert_eq!(
-        format_status_line(&input),
-        "GRID degraded | Retina ok | EntityOS ok | Omnipool ok"
-    );
+    assert_eq!(format_status_line(&input), "GRID degraded | Retina ok | EntityOS ok | Omnipool ok");
     assert_eq!(
         format_status_line_labeled(&input),
         "GRID MEASURED | Retina MEASURED | EntityOS MEASURED | Omnipool MEASURED"

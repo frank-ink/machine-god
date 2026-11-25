@@ -4,10 +4,10 @@ Validation test for FranKenstein 3.0 environment contract (bundle copy).
 
 Validates docs/zero/contract_env.json against docs/zero/contract_env.schema.json
 using a stdlib-only JSON Schema (draft-07 subset) validator, and checks the
-contract precedence against the real resolver scripts/star/f3_pfade.py
+contract precedence against the real resolver scripts/star/f3_paths.py
 (import + get_data_dir call).
 
-Resolver semantics (scripts/star/f3_pfade.py):
+Resolver semantics (scripts/star/f3_paths.py):
     get_data_dir() -> ONE resolved path (a directory or a path inside one).
 
 Contract semantics (docs/zero/contract_env.json):
@@ -39,7 +39,7 @@ import pytest
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 CONTRACT_PATH = PLUGIN_ROOT / "docs/zero" / "contract_env.json"
 SCHEMA_PATH = PLUGIN_ROOT / "docs/zero" / "contract_env.schema.json"
-RESOLVER_PATH = PLUGIN_ROOT / "scripts" / "star" / "f3_pfade.py"
+RESOLVER_PATH = PLUGIN_ROOT / "scripts" / "star" / "f3_paths.py"
 
 
 def load_json(path: Path):
@@ -260,7 +260,7 @@ def _precedence_directories(contract, resolver):
 
 
 def _load_resolver():
-    spec = importlib.util.spec_from_file_location("f3_pfade", RESOLVER_PATH)
+    spec = importlib.util.spec_from_file_location("f3_paths", RESOLVER_PATH)
     resolver = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(resolver)
     return resolver

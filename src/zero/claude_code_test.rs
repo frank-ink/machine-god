@@ -2,8 +2,8 @@
 //! These tests verify the mode switch logic with realistic scenarios.
 
 use crate::zero::claude_code::*;
-use std::fs;
 use std::env;
+use std::fs;
 
 #[test]
 fn test_full_mode_switch_flow_logged_in() {
@@ -103,10 +103,7 @@ fn test_omnipool_request_with_custom_values() {
     req.model = "custom-model".to_string();
     req.max_tokens = Some(2048);
     req.temperature = Some(0.5);
-    req.messages.push(OmnipoolMessage {
-        role: "user".to_string(),
-        content: "Hello".to_string(),
-    });
+    req.messages.push(OmnipoolMessage { role: "user".to_string(), content: "Hello".to_string() });
 
     assert_eq!(req.model, "custom-model");
     assert_eq!(req.max_tokens, Some(2048));
@@ -136,7 +133,10 @@ fn test_detect_claude_login_no_credentials_file() {
     // by checking the function doesn't panic and returns a valid status
     let status = detect_claude_login();
     // Should be one of the three valid states
-    assert!(matches!(status, LoginStatus::LoggedIn | LoginStatus::NotLoggedIn | LoginStatus::Unknown));
+    assert!(matches!(
+        status,
+        LoginStatus::LoggedIn | LoginStatus::NotLoggedIn | LoginStatus::Unknown
+    ));
 }
 
 #[test]

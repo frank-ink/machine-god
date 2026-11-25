@@ -1,9 +1,9 @@
 {
   "$schema": "contract_env.schema.json",
   "schema_version": 1,
-  "description": "Machine-readable environment contract for FranKenstein 3.0. Precedence and field names are verified against f3_pfade.py (top-level authoritative resolver) and README.md. Tests fail closed: a missing or unreadable contract is an error, never a skip. hook_env_writes is intentionally absent: no hook writes environment variables (a hook subprocess export cannot affect the parent process), so the contract declares no hook env writes. ambient_passthrough lists variables that are only read from the ambient environment.",
-  "resolver": "f3_pfade.py",
-  "precedence_source": "f3_pfade.py",
+  "description": "Machine-readable environment contract for FranKenstein 3.0. Precedence and field names are verified against f3_paths.py (top-level authoritative resolver) and README.md. Tests fail closed: a missing or unreadable contract is an error, never a skip. hook_env_writes is intentionally absent: no hook writes environment variables (a hook subprocess export cannot affect the parent process), so the contract declares no hook env writes. ambient_passthrough lists variables that are only read from the ambient environment.",
+  "resolver": "f3_paths.py",
+  "precedence_source": "f3_paths.py",
   "precedence": [
     "FRANK3_DATA",
     "FRANKENSTEIN3_ROOT",
@@ -68,6 +68,6 @@
   "sources": {
     "install_sh": "install.sh",
     "status_py": "tests/status.py",
-    "path_resolution": "f3_pfade.py"
+    "path_resolution": "f3_paths.py"
   }
 }

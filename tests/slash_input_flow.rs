@@ -2,12 +2,12 @@
 //! Public terminal-event integration tests. These check completion, focus, and
 //! the exact draft handed to the event loop, without executing auth commands.
 
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use machine_god::agent::{events::ClientEvent, model};
 use machine_god::app::{
     App, AutocompleteKind, FocusOwner, ModeInfo, ModeState, handle_client_event,
     handle_terminal_event,
 };
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
 const NO_ARGUMENT_COMMANDS: &[&str] = &[
     "/cancel",

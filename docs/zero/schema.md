@@ -1,6 +1,6 @@
 | Component | Claim | Label | Evidence Ref |
 |---|---|---|---|
-| docs/zero/schema.md | File contains unified.db projection for new tables welt_digest, grund_antwort, mg_haltung, mg_haltung_widerspruch, retina | MEASURED | This file (revision) |
+| docs/zero/schema.md | File contains unified.db projection for new tables welt_digest, reason_answer, mg_stance, mg_stance_contradiction, retina | MEASURED | This file (revision) |
 | docs/zero/schema.md | New tables match zero/unifieddb/schema.sql DDL column-for-column | HYPOTHESIS | docs/zero/schema_check.py --emit-md (not yet run against new DDL) |
 | docs/zero/schema.md | Epistemic labels on all new columns are honest (MEASURED/HYPOTHESIS/UNKNOWN) | HYPOTHESIS | docs/zero/schema_check.py validation rules |
 
@@ -50,7 +50,7 @@ Tables/columns without explicit label default to `MEASURE` (stage 0).
 | value | TEXT | NOT NULL | MEASURED | VERIFIED_OUTCOME | Metadata value |
 | updated_at | INTEGER | NOT NULL | MEASURED | VERIFIED_OUTCOME | Unix epoch ms |
 
-### ziele
+### goals
 
 | column | type | constraints | epistemic_label | promotion_stage | description |
 |--------|------|-------------|-----------------|-----------------|-------------|
@@ -143,15 +143,15 @@ Tables/columns without explicit label default to `MEASURE` (stage 0).
 
 | column | type | constraints | epistemic_label | promotion_stage | description |
 |--------|------|-------------|-----------------|-----------------|-------------|
-| id | TEXT | PRIMARY KEY | MEASURED | FALSIFY | Provider ID from anbieter.json |
+| id | TEXT | PRIMARY KEY | MEASURED | FALSIFY | Provider ID from provider.json |
 | name | TEXT | NOT NULL | MEASURED | FALSIFY | Provider name |
 | url | TEXT | NOT NULL | MEASURED | FALSIFY | Provider URL |
-| kategorie | TEXT | NOT NULL | MEASURED | FALSIFY | Category |
+| category | TEXT | NOT NULL | MEASURED | FALSIFY | Category |
 | gratis | INTEGER | NOT NULL CHECK (gratis IN (0,1)) | MEASURED | FALSIFY | Free tier available |
-| quelle | TEXT | NOT NULL | MEASURED | FALSIFY | Source reference |
+| source | TEXT | NOT NULL | MEASURED | FALSIFY | Source reference |
 | status | TEXT | NOT NULL | MEASURED | FALSIFY | Status string |
-| eingerichtet | INTEGER | NOT NULL CHECK (eingerichtet IN (0,1)) | MEASURED | FALSIFY | User has set up |
-| seit | INTEGER | DEFAULT 0 | MEASURED | FALSIFY | Unix epoch ms when set up |
+| configured | INTEGER | NOT NULL CHECK (configured IN (0,1)) | MEASURED | FALSIFY | User has set up |
+| since | INTEGER | DEFAULT 0 | MEASURED | FALSIFY | Unix epoch ms when set up |
 | last_tip_at | INTEGER | DEFAULT 0 | MEASURED | FALSIFY | Last tip shown timestamp |
 | promotion_stage | TEXT | NOT NULL DEFAULT 'FALSIFY' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | MEASURED | FALSIFY | CVIR promotion stage |
 
@@ -178,42 +178,42 @@ Tables/columns without explicit label default to `MEASURE` (stage 0).
 | created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
 | promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
 
-### grund_antwort
+### reason_answer
 
 | column | type | constraints | epistemic_label | promotion_stage | description |
 |--------|------|-------------|-----------------|-----------------|-------------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Ground-mode answer row ID |
-| kind | TEXT | NOT NULL CHECK (kind='grund_antwort') | HYPOTHESIS | MEASURE | Fixed kind value |
+| kind | TEXT | NOT NULL CHECK (kind='reason_answer') | HYPOTHESIS | MEASURE | Fixed kind value |
 | value_json | TEXT | NOT NULL | HYPOTHESIS | MEASURE | JSON {"q":..., "a":...} |
 | session_id | TEXT | DEFAULT '' | HYPOTHESIS | MEASURE | Session correlation ID |
 | created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
 | promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
 
-### mg_haltung
+### mg_stance
 
 | column | type | constraints | epistemic_label | promotion_stage | description |
 |--------|------|-------------|-----------------|-----------------|-------------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Stance row ID |
-| thema | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance topic |
+| topic | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance topic |
 | version | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance version |
-| konfidenz | REAL | NOT NULL CHECK (konfidenz >= 0.0 AND konfidenz <= 1.0) | HYPOTHESIS | MEASURE | Stance confidence 0.0..1.0 |
+| confidence | REAL | NOT NULL CHECK (confidence >= 0.0 AND confidence <= 1.0) | HYPOTHESIS | MEASURE | Stance confidence 0.0..1.0 |
 | datum | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance date (ISO 8601) |
 | claim | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Stance claim text |
-| gruende | TEXT | NOT NULL DEFAULT '[]' | HYPOTHESIS | MEASURE | JSON list of reasons |
-| quellen | TEXT | NOT NULL DEFAULT '[]' | HYPOTHESIS | MEASURE | JSON list of {link,quelle,land,richtung} |
-| status | TEXT | NOT NULL CHECK (status IN ('aktiv','archiviert','veto')) | HYPOTHESIS | MEASURE | Stance lifecycle status |
+| reasons | TEXT | NOT NULL DEFAULT '[]' | HYPOTHESIS | MEASURE | JSON list of reasons |
+| sources | TEXT | NOT NULL DEFAULT '[]' | HYPOTHESIS | MEASURE | JSON list of {link,source,land,direction} |
+| status | TEXT | NOT NULL CHECK (status IN ('active','archived','veto')) | HYPOTHESIS | MEASURE | Stance lifecycle status |
 | created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
 | promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
 
-### mg_haltung_widerspruch
+### mg_stance_contradiction
 
 | column | type | constraints | epistemic_label | promotion_stage | description |
 |--------|------|-------------|-----------------|-----------------|-------------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Contradiction row ID |
-| haltung_id | INTEGER | NOT NULL REFERENCES mg_haltung(id) | HYPOTHESIS | MEASURE | Parent stance ID |
-| thema | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Contradiction topic |
-| offen | INTEGER | NOT NULL CHECK (offen IN (0,1)) DEFAULT 1 | HYPOTHESIS | MEASURE | Open flag (1 = open) |
-| beschreibung | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Contradiction description |
+| stance_id | INTEGER | NOT NULL REFERENCES mg_stance(id) | HYPOTHESIS | MEASURE | Parent stance ID |
+| topic | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Contradiction topic |
+| open | INTEGER | NOT NULL CHECK (open IN (0,1)) DEFAULT 1 | HYPOTHESIS | MEASURE | Open flag (1 = open) |
+| description | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Contradiction description |
 | created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
 | promotion_stage | TEXT | NOT NULL DEFAULT 'MEASURE' CHECK (promotion_stage IN ('MEASURE','FALSIFY','MATCHED_ABLATION','VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')) | HYPOTHESIS | MEASURE | CVIR promotion stage |
 
@@ -223,7 +223,7 @@ Tables/columns without explicit label default to `MEASURE` (stage 0).
 |--------|------|-------------|-----------------|-----------------|-------------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT | HYPOTHESIS | MEASURE | Retina perception event ID |
 | kind | TEXT | NOT NULL CHECK (kind='retina') | HYPOTHESIS | MEASURE | Fixed kind value |
-| zeile | TEXT | NOT NULL | HYPOTHESIS | MEASURE | One-line Retina state |
+| line | TEXT | NOT NULL | HYPOTHESIS | MEASURE | One-line Retina state |
 | source_component | TEXT | NOT NULL | HYPOTHESIS | MEASURE | Originating component ('retina') |
 | grid_frame_id | TEXT | DEFAULT '' | HYPOTHESIS | MEASURE | GRID frame correlation ID |
 | created_at | INTEGER | NOT NULL | HYPOTHESIS | MEASURE | Unix epoch ms |
@@ -235,10 +235,10 @@ Tables/columns without explicit label default to `MEASURE` (stage 0).
 -- plugin_manifest
 CREATE INDEX idx_plugin_manifest_bundled ON plugin_manifest(bundled);
 
--- ziele
-CREATE INDEX idx_ziele_capability ON ziele(capability);
-CREATE INDEX idx_ziele_status ON ziele(status);
-CREATE INDEX idx_ziele_promotion_stage ON ziele(promotion_stage);
+-- goals
+CREATE INDEX idx_goals_capability ON goals(capability);
+CREATE INDEX idx_goals_status ON goals(status);
+CREATE INDEX idx_goals_promotion_stage ON goals(promotion_stage);
 
 -- health_samples
 CREATE INDEX idx_health_samples_component ON health_samples(component);
@@ -265,7 +265,7 @@ CREATE INDEX idx_token_usage_timestamp ON token_usage(timestamp);
 CREATE INDEX idx_scrape_cache_expires ON scrape_cache(expires_at);
 
 -- freewiki_providers
-CREATE INDEX idx_freewiki_eingerichtet ON freewiki_providers(eingerichtet);
+CREATE INDEX idx_freewiki_configured ON freewiki_providers(configured);
 CREATE INDEX idx_freewiki_last_tip ON freewiki_providers(last_tip_at);
 
 -- omega_sessions
@@ -275,16 +275,16 @@ CREATE INDEX idx_omega_sessions_activity ON omega_sessions(last_activity_at);
 -- welt_digest
 CREATE INDEX idx_welt_digest_created_at ON welt_digest(created_at);
 
--- grund_antwort
-CREATE INDEX idx_grund_antwort_created_at ON grund_antwort(created_at);
+-- reason_answer
+CREATE INDEX idx_reason_answer_created_at ON reason_answer(created_at);
 
--- mg_haltung
-CREATE INDEX idx_mg_haltung_status ON mg_haltung(status);
-CREATE INDEX idx_mg_haltung_thema ON mg_haltung(thema);
+-- mg_stance
+CREATE INDEX idx_mg_stance_status ON mg_stance(status);
+CREATE INDEX idx_mg_stance_topic ON mg_stance(topic);
 
--- mg_haltung_widerspruch
-CREATE INDEX idx_mg_haltung_widerspruch_offen ON mg_haltung_widerspruch(offen);
-CREATE INDEX idx_mg_haltung_widerspruch_haltung_id ON mg_haltung_widerspruch(haltung_id);
+-- mg_stance_contradiction
+CREATE INDEX idx_mg_stance_contradiction_open ON mg_stance_contradiction(open);
+CREATE INDEX idx_mg_stance_contradiction_stance_id ON mg_stance_contradiction(stance_id);
 
 -- retina
 CREATE INDEX idx_retina_created_at ON retina(created_at);
@@ -294,8 +294,8 @@ CREATE INDEX idx_retina_created_at ON retina(created_at);
 
 ```sql
 -- Immutable receipts pattern for CVIR promotion
-CREATE TRIGGER ziele_immutable_after_verified
-BEFORE UPDATE ON ziele
+CREATE TRIGGER goals_immutable_after_verified
+BEFORE UPDATE ON goals
 WHEN OLD.promotion_stage IN ('VERIFIED_OUTCOME','CAUSAL_CREDIT','BOUNDED_ADMISSION','REENTRY_TEST','CONTROL_INFLUENCE')
   AND NEW.promotion_stage != OLD.promotion_stage
 BEGIN
@@ -311,41 +311,41 @@ BEGIN
 END;
 
 -- Enforce MEASURED entries have evidence_ref
-CREATE TRIGGER ziele_measured_requires_evidence
-BEFORE INSERT ON ziele
+CREATE TRIGGER goals_measured_requires_evidence
+BEFORE INSERT ON goals
 WHEN NEW.status = 'MEASURED' AND (NEW.evidence_ref IS NULL OR NEW.evidence_ref = '')
 BEGIN
   SELECT RAISE(ABORT, 'CVIR: MEASURED requires non-empty evidence_ref');
 END;
 
-CREATE TRIGGER ziele_measured_requires_evidence_update
-BEFORE UPDATE ON ziele
+CREATE TRIGGER goals_measured_requires_evidence_update
+BEFORE UPDATE ON goals
 WHEN NEW.status = 'MEASURED' AND (NEW.evidence_ref IS NULL OR NEW.evidence_ref = '')
 BEGIN
   SELECT RAISE(ABORT, 'CVIR: MEASURED requires non-empty evidence_ref');
 END;
 
--- Enforce HYPOTHESIS entries have tracking_issue (stored in gate field for ziele)
-CREATE TRIGGER ziele_hypothesis_requires_gate
-BEFORE INSERT ON ziele
+-- Enforce HYPOTHESIS entries have tracking_issue (stored in gate field for goals)
+CREATE TRIGGER goals_hypothesis_requires_gate
+BEFORE INSERT ON goals
 WHEN NEW.status = 'HYPOTHESIS' AND (NEW.gate IS NULL OR NEW.gate = '')
 BEGIN
   SELECT RAISE(ABORT, 'CVIR: HYPOTHESIS requires non-empty gate (design doc reference)');
 END;
 
 -- Enforce UNKNOWN entries have empty evidence_ref
-CREATE TRIGGER ziele_unknown_no_evidence
-BEFORE INSERT ON ziele
+CREATE TRIGGER goals_unknown_no_evidence
+BEFORE INSERT ON goals
 WHEN NEW.status = 'UNKNOWN' AND NEW.evidence_ref != ''
 BEGIN
   SELECT RAISE(ABORT, 'CVIR: UNKNOWN must have empty evidence_ref');
 END;
 
 -- Auto-update updated_at
-CREATE TRIGGER ziele_updated_at
-AFTER UPDATE ON ziele
+CREATE TRIGGER goals_updated_at
+AFTER UPDATE ON goals
 BEGIN
-  UPDATE ziele SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER) WHERE id = NEW.id;
+  UPDATE goals SET updated_at = CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER) WHERE id = NEW.id;
 END;
 ```
 
@@ -361,7 +361,7 @@ END;
 8. **Forbidden claims**: No "AGI", "consciousness", "sentience", "approaches AGI", "shows signs of" in any text column.
 9. **Gate counts from CI**: Status tables read pass/fail counts from CI output, never hardcoded.
 10. **Column type/constraint/label parity**: SQL and markdown projections identical.
-11. **New tables carry epistemic columns**: `welt_digest`, `grund_antwort`, `mg_haltung`, `mg_haltung_widerspruch`, `retina` each define `epistemic_label` and `promotion_stage` columns.
+11. **New tables carry epistemic columns**: `welt_digest`, `reason_answer`, `mg_stance`, `mg_stance_contradiction`, `retina` each define `epistemic_label` and `promotion_stage` columns.
 
 ## Mutation Test Fixtures (docs/zero/schema_check_test.py)
 

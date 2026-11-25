@@ -498,8 +498,12 @@ fn selected_log_modes_preserve_existing_runs_and_apply_only_requested_file_polic
     let temp = tempfile::tempdir().unwrap();
     let paths = crate::diagnostics_test_support::paths(temp.path());
     fs::create_dir_all(&paths.runtime_dir).unwrap();
-    let prior =
-        put(&paths.runtime_dir, "machine-god-20200101T000000Z-p1-rprevious.log", b"previous run", 1);
+    let prior = put(
+        &paths.runtime_dir,
+        "machine-god-20200101T000000Z-p1-rprevious.log",
+        b"previous run",
+        1,
+    );
     let cli = Cli::try_parse_from(["machine-god"]).unwrap();
     let selected = resolve_log_path_with(&cli, || Ok(paths.clone())).unwrap().unwrap();
     assert_eq!(selected.path.parent(), Some(paths.runtime_dir.as_path()));

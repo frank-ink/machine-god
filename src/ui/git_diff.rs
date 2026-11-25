@@ -160,10 +160,7 @@ fn render_tree(frame: &mut Frame, area: Rect, state: &mut DiffView) {
         .map(|row| {
             let selected = row.file_index == Some(state.selected);
             let style = if selected {
-                Style::default()
-                    .bg(theme::ACCENT)
-                    .fg(Color::Black)
-                    .add_modifier(Modifier::BOLD)
+                Style::default().bg(theme::ACCENT).fg(Color::Black).add_modifier(Modifier::BOLD)
             } else if row.file_index.is_none() {
                 Style::default().fg(theme::DIM)
             } else {

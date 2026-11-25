@@ -1,11 +1,11 @@
-"""frank_profile.py -- single reader of the user profile (daten/user_profile.json). stdlib only, never raises.
+"""frank_profile.py -- single reader of the user profile (data/user_profile.json). stdlib only, never raises.
 Absent file: first_run.pending present -> generic (fresh install, name unknown yet); else legacy values (generic)."""
 import json, os
 from pathlib import Path
 
 _STAR = Path(__file__).resolve().parent
-_PROF = _STAR / "daten" / "user_profile.json"
-_PEND = _STAR / "daten" / "first_run.pending"
+_PROF = _STAR / "data" / "user_profile.json"
+_PEND = _STAR / "data" / "first_run.pending"
 _LEGACY = {"name": "friend", "user_id": os.environ.get("USER", "user"), "lang": "en", "mode": "fresh"}
 
 
@@ -34,7 +34,7 @@ def first_run_text():
     try:
         if not _PEND.exists() or _PROF.exists():
             return ""
-        done = _STAR / "daten" / "first_run.asked"
+        done = _STAR / "data" / "first_run.asked"
         if done.exists():
             return ""
         done.write_text("1")

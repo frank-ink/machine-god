@@ -53,7 +53,7 @@ EXPECTED_CAPABILITY_ROWS: Final[frozenset[str]] = frozenset({
 # ──────────────────────────────────────────────────────────────────────
 
 # North-star allow-list: exact sentences (normalized) that are explicitly permitted
-# Source: ZIELE.md north star — "Goal (fictional, stated as such): AGI."
+# Source: GOALS.md north star — "Goal (fictional, stated as such): AGI."
 ALLOWLIST_SENTENCES: Final[frozenset[str]] = frozenset({
     "goal (fictional, stated as such): agi.",
     "it is a direction, never a claim.",

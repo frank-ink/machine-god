@@ -60,7 +60,7 @@ The options below apply to the script installer. For npm, use npm to select and 
 Use `MACHINE_GOD_RELEASE` to install a specific release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | CLAUDE_RS_RELEASE=v0.14.0 sh
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | MACHINE_GOD_RELEASE=v0.14.0 sh
 ```
 
 ```powershell
@@ -97,7 +97,7 @@ Choosing a custom install directory creates or updates the installation at that 
 On macOS/Linux, pass installer flags after `sh -s --`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --install-dir "$HOME/.local/share/claude-rs" --bin-dir "$HOME/.local/bin"
+curl -fsSL https://raw.githubusercontent.com/gschaidergabriel/machine-god/main/scripts/install/install.sh | sh -s -- --install-dir "$HOME/.local/share/machine-god-core" --bin-dir "$HOME/.local/bin"
 ```
 
 For non-interactive Unix installs:

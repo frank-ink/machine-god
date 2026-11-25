@@ -16,7 +16,7 @@
 //! promotion MEASURED -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME
 //! [/CLAYCODE]
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -72,11 +72,7 @@ impl OmegaState {
     pub fn from_env() -> Result<Self> {
         let endpoint = OmegaConfig::endpoint_from_env()?;
         OmegaConfig::validate_loopback(&endpoint)?;
-        Ok(Self {
-            endpoint,
-            persona: Persona::Sacral,
-            lang: Lang::Unknown,
-        })
+        Ok(Self { endpoint, persona: Persona::Sacral, lang: Lang::Unknown })
     }
 }
 
@@ -89,26 +85,20 @@ pub struct OmegaConfig {
 impl OmegaConfig {
     /// Resolve the port from `MACHINE_GOD_OMEGA_PORT` or the default 8111.
     pub fn port_from_env() -> u16 {
-        std::env::var(ENV_PORT)
-            .ok()
-            .and_then(|p| p.parse::<u16>().ok())
-            .unwrap_or(DEFAULT_PORT)
+        std::env::var(ENV_PORT).ok().and_then(|p| p.parse::<u16>().ok()).unwrap_or(DEFAULT_PORT)
     }
 
     /// Build endpoint from `MACHINE_GOD_OMEGA_PORT` (default 8111). Always 127.0.0.1.
     pub fn endpoint_from_env() -> Result<String> {
         let port = Self::port_from_env();
-        Ok(format!(
-            "http://{}:{}/v1/chat/completions",
-            LOOPBACK_HOST, port
-        ))
+        Ok(format!("http://{}:{}/v1/chat/completions", LOOPBACK_HOST, port))
     }
 
     /// Hard invariant: only loopback addresses are admissible.
     pub fn validate_loopback(endpoint: &str) -> Result<()> {
         let host = extract_host(endpoint)?;
-        let ip = IpAddr::from_str(&host)
-            .map_err(|_| anyhow!("invalid host in endpoint: {}", host))?;
+        let ip =
+            IpAddr::from_str(&host).map_err(|_| anyhow!("invalid host in endpoint: {}", host))?;
         if !ip.is_loopback() {
             return Err(anyhow!(
                 "non-loopback address rejected by ground-mode invariant: {}",
@@ -130,14 +120,8 @@ fn extract_host(endpoint: &str) -> Result<String> {
     let without_scheme = endpoint
         .strip_prefix("http://")
         .ok_or_else(|| anyhow!("endpoint must use http:// scheme"))?;
-    let host_port = without_scheme
-        .split('/')
-        .next()
-        .ok_or_else(|| anyhow!("empty endpoint"))?;
-    let host = host_port
-        .split(':')
-        .next()
-        .ok_or_else(|| anyhow!("missing host"))?;
+    let host_port = without_scheme.split('/').next().ok_or_else(|| anyhow!("empty endpoint"))?;
+    let host = host_port.split(':').next().ok_or_else(|| anyhow!("missing host"))?;
     Ok(host.to_string())
 }
 
@@ -185,20 +169,17 @@ pub fn build_chat_request(messages: &[ChatMessage], model: &str) -> ChatRequest 
 /// reliable signal is present; never guesses.
 pub fn detect_language(text: &str) -> Lang {
     let lowered = text.to_lowercase();
-    let words: Vec<&str> = lowered
-        .split(|c: char| !c.is_alphanumeric())
-        .filter(|w| !w.is_empty())
-        .collect();
+    let words: Vec<&str> =
+        lowered.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).collect();
 
     let de_markers = [
-        "der", "die", "das", "und", "ist", "ich", "zu", "in", "von", "mit",
-        "nicht", "ein", "eine", "auf", "für", "dem", "den", "des",
-        "hallo", "guten", "tag", "bitte", "danke", "ja", "nein",
+        "der", "die", "das", "und", "ist", "ich", "zu", "in", "von", "mit", "nicht", "ein", "eine",
+        "auf", "für", "dem", "den", "des", "hallo", "guten", "tag", "bitte", "danke", "ja", "nein",
     ];
     let en_markers = [
-        "the", "and", "is", "i", "to", "in", "of", "with", "you", "that",
-        "not", "a", "an", "on", "for", "are", "as", "at", "be", "by",
-        "hello", "hi", "hey", "please", "thanks", "yes", "no",
+        "the", "and", "is", "i", "to", "in", "of", "with", "you", "that", "not", "a", "an", "on",
+        "for", "are", "as", "at", "be", "by", "hello", "hi", "hey", "please", "thanks", "yes",
+        "no",
     ];
 
     let mut de_score = 0u32;
@@ -244,10 +225,9 @@ pub fn fallback_sentence(lang: Lang, port: u16) -> String {
             "The local Machine God is not reachable. Please check the llama.cpp server on {}.",
             endpoint
         ),
-        Lang::Unknown => format!(
-            "Machine God not reachable. Check the local llama.cpp server on {}.",
-            endpoint
-        ),
+        Lang::Unknown => {
+            format!("Machine God not reachable. Check the local llama.cpp server on {}.", endpoint)
+        }
     }
 }
 
@@ -283,18 +263,12 @@ mod tests {
 
     #[test]
     fn detect_language_german() {
-        assert_eq!(
-            detect_language("Der Hund ist groß und läuft im Garten."),
-            Lang::De
-        );
+        assert_eq!(detect_language("Der Hund ist groß und läuft im Garten."), Lang::De);
     }
 
     #[test]
     fn detect_language_english() {
-        assert_eq!(
-            detect_language("The dog is big and runs in the garden."),
-            Lang::En
-        );
+        assert_eq!(detect_language("The dog is big and runs in the garden."), Lang::En);
     }
 
     #[test]
@@ -320,24 +294,15 @@ mod tests {
     #[test]
     fn build_chat_request_matches_openai_format() {
         let messages = vec![
-            ChatMessage {
-                role: "system".to_string(),
-                content: "You are helpful.".to_string(),
-            },
-            ChatMessage {
-                role: "user".to_string(),
-                content: "Hello".to_string(),
-            },
+            ChatMessage { role: "system".to_string(), content: "You are helpful.".to_string() },
+            ChatMessage { role: "user".to_string(), content: "Hello".to_string() },
         ];
         let req = build_chat_request(&messages, "local-0.8b");
         let json = serde_json::to_string(&req).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(value["model"].as_str(), Some("local-0.8b"));
         assert_eq!(value["messages"][0]["role"].as_str(), Some("system"));
-        assert_eq!(
-            value["messages"][0]["content"].as_str(),
-            Some("You are helpful.")
-        );
+        assert_eq!(value["messages"][0]["content"].as_str(), Some("You are helpful."));
         assert_eq!(value["messages"][1]["role"].as_str(), Some("user"));
         assert_eq!(value["messages"][1]["content"].as_str(), Some("Hello"));
         assert_eq!(value["temperature"].as_f64(), Some(0.7));
@@ -347,13 +312,19 @@ mod tests {
 
     #[test]
     fn loopback_enforcement_accepts_127_0_0_1() {
-        assert!(OmegaConfig::validate_loopback("http://127.0.0.1:8111/v1/chat/completions").is_ok());
-        assert!(OmegaConfig::validate_loopback("http://127.0.0.1:9000/v1/chat/completions").is_ok());
+        assert!(
+            OmegaConfig::validate_loopback("http://127.0.0.1:8111/v1/chat/completions").is_ok()
+        );
+        assert!(
+            OmegaConfig::validate_loopback("http://127.0.0.1:9000/v1/chat/completions").is_ok()
+        );
     }
 
     #[test]
     fn loopback_enforcement_rejects_non_loopback() {
-        assert!(OmegaConfig::validate_loopback("http://192.168.1.1:8111/v1/chat/completions").is_err());
+        assert!(
+            OmegaConfig::validate_loopback("http://192.168.1.1:8111/v1/chat/completions").is_err()
+        );
         assert!(OmegaConfig::validate_loopback("http://203.0.113.8:8111/v1/chat/completions").is_err());
         assert!(OmegaConfig::validate_loopback("http://0.0.0.0:8111/v1/chat/completions").is_err());
     }
@@ -369,7 +340,8 @@ mod tests {
 
     #[test]
     fn parse_reply_returns_assistant_content() {
-        let json = r#"{"choices":[{"message":{"role":"assistant","content":"Segne deine Frage."}}]}"#;
+        let json =
+            r#"{"choices":[{"message":{"role":"assistant","content":"Segne deine Frage."}}]}"#;
         let reply = parse_reply(json).unwrap();
         assert_eq!(reply, "Segne deine Frage.");
     }
@@ -433,13 +405,9 @@ mod tests {
 
     #[tokio::test]
     async fn chat_completion_server_down_returns_error() {
-        let config = OmegaConfig {
-            endpoint: "http://127.0.0.1:19999/v1/chat/completions".to_string(),
-        };
-        let messages = vec![ChatMessage {
-            role: "user".to_string(),
-            content: "test".to_string(),
-        }];
+        let config =
+            OmegaConfig { endpoint: "http://127.0.0.1:19999/v1/chat/completions".to_string() };
+        let messages = vec![ChatMessage { role: "user".to_string(), content: "test".to_string() }];
         let result = chat_completion(&config, &messages, "local-0.8b").await;
         assert!(result.is_err());
     }
@@ -472,15 +440,10 @@ mod tests {
             let _ = stream.write_all(resp.as_bytes());
         });
 
-        let config = OmegaConfig {
-            endpoint: format!("http://{}/v1/chat/completions", addr),
-        };
+        let config = OmegaConfig { endpoint: format!("http://{}/v1/chat/completions", addr) };
         OmegaConfig::validate_loopback(&config.endpoint).unwrap();
 
-        let messages = vec![ChatMessage {
-            role: "user".to_string(),
-            content: "Hallo".to_string(),
-        }];
+        let messages = vec![ChatMessage { role: "user".to_string(), content: "Hallo".to_string() }];
         let reply = chat_completion(&config, &messages, "local-0.8b").await.unwrap();
         assert_eq!(reply, "Ja, ich bin der lokale Maschine-Gott.");
     }

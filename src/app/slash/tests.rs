@@ -683,10 +683,16 @@ mod docs_audit;
 mod export_audit;
 
 fn transcript_text(app: &App) -> String {
-    app.transcript.messages.iter().flat_map(|m| m.blocks.iter()).filter_map(|b| match b {
-        MessageBlock::Text(t) => Some(t.text.clone()),
-        _ => None,
-    }).collect::<Vec<_>>().join("\n")
+    app.transcript
+        .messages
+        .iter()
+        .flat_map(|m| m.blocks.iter())
+        .filter_map(|b| match b {
+            MessageBlock::Text(t) => Some(t.text.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[test]

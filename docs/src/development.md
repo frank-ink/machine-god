@@ -1,6 +1,6 @@
 # Build and run locally
 
-Use this page to run a checkout without installing a global `claude-rs`. For contribution scope and review requirements, read [CONTRIBUTING.md](https://github.com/gschaidergabriel/machine-god/blob/main/CONTRIBUTING.md). For an ordinary installation, use [Installation](installation.md).
+Use this page to run a checkout without installing a global `machine-god`. For contribution scope and review requirements, read [CONTRIBUTING.md](https://github.com/gschaidergabriel/machine-god/blob/main/CONTRIBUTING.md). For an ordinary installation, use [Installation](installation.md).
 
 ## Prerequisites
 

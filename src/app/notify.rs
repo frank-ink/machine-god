@@ -221,8 +221,10 @@ fn deliver_notification(delivery: NotificationDelivery) {
         let span = tracing::Span::current();
         std::thread::spawn(move || {
             let _entered = span.enter();
-            if let Err(error) =
-                notify_rust::Notification::new().summary(crate::ui::theme::APP_NAME).body(&delivery.body).show()
+            if let Err(error) = notify_rust::Notification::new()
+                .summary(crate::ui::theme::APP_NAME)
+                .body(&delivery.body)
+                .show()
             {
                 tracing::debug!(target: APP_NOTIFY, event_name = "notification_transport_result",
                     transport = "desktop", outcome = "failure", error_kind = "desktop_backend", %error);

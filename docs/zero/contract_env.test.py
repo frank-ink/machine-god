@@ -95,8 +95,8 @@ def test_contract_validates_against_schema():
         assert src in sources, f"sources missing {src}"
 
 
-def test_precedence_matches_f3_pfade():
-    """Precedence array must match f3_pfade.py PRECEDENCE exactly (4 items, no F3_DB_PATH)."""
+def test_precedence_matches_f3_paths():
+    """Precedence array must match f3_paths.py PRECEDENCE exactly (4 items, no F3_DB_PATH)."""
     contract_path = Path(__file__).parent / "contract_env.json"
     contract = load_json(contract_path)
 
@@ -150,7 +150,7 @@ def test_field_names_match_readme():
     assert "hook_env_writes" in contract, "hook_env_writes field missing"
     assert "ambient_passthrough" in contract, "ambient_passthrough field missing"
 
-    # Values must match f3_pfade.py
+    # Values must match f3_paths.py
     expected_hook_writes = ["FRANK3_DATA", "CLAUDE_PLUGIN_DATA", "F3_DB_PATH"]
     expected_ambient = ["F3_DRY_RUN", "XDG_DATA_HOME", "HOME"]
 
@@ -204,7 +204,7 @@ def test_admissibility_space_typed_structure():
 
 if __name__ == "__main__":
     test_contract_validates_against_schema()
-    test_precedence_matches_f3_pfade()
+    test_precedence_matches_f3_paths()
     test_f3_dry_run_not_in_precedence()
     test_f3_db_path_not_in_precedence()
     test_field_names_match_readme()

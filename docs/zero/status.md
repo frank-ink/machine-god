@@ -110,10 +110,10 @@ All labels below are doc-level assertions maintained by hand in this file (this 
 | src/zero/omega.rs | parse_reply | HYPOTHESIS | omega::tests::parse_reply_returns_assistant_content, parse_reply_rejects_empty_choices | test referenced; no gate receipt |
 | src/zero/omega.rs | fallback_sentence | HYPOTHESIS | omega::tests::fallback_sentence_german, fallback_sentence_english, fallback_sentence_unknown, fallback_sentence_is_const | test referenced; no gate receipt |
 | src/zero/omega.rs | chat_completion | HYPOTHESIS | omega::tests::chat_completion_server_down_returns_error, chat_completion_mock_server_returns_german_reply | test referenced; no gate receipt |
-| src/zero/freewiki.rs | parse_wiki_file | HYPOTHESIS | freewiki::tests::test_parse_anbieter_json, test_parse_neu_json | test referenced; no gate receipt |
-| src/zero/freewiki.rs | parse_providers | HYPOTHESIS | freewiki::tests::test_parse_anbieter_json, test_filter_unsetup_providers | test referenced; no gate receipt |
+| src/zero/freewiki.rs | parse_wiki_file | HYPOTHESIS | freewiki::tests::test_parse_provider_json, test_parse_neu_json | test referenced; no gate receipt |
+| src/zero/freewiki.rs | parse_providers | HYPOTHESIS | freewiki::tests::test_parse_provider_json, test_filter_unsetup_providers | test referenced; no gate receipt |
 | src/zero/freewiki.rs | filter_unsetup_providers | HYPOTHESIS | freewiki::tests::test_filter_unsetup_providers | test referenced; no gate receipt |
-| src/zero/freewiki.rs | sort_by_seit_desc | HYPOTHESIS | freewiki::tests::test_sort_by_seit_desc | test referenced; no gate receipt |
+| src/zero/freewiki.rs | sort_by_since_desc | HYPOTHESIS | freewiki::tests::test_sort_by_since_desc | test referenced; no gate receipt |
 | src/zero/freewiki.rs | pick_one_per_session | HYPOTHESIS | freewiki::tests::test_pick_one_per_session | test referenced; no gate receipt |
 | src/zero/freewiki.rs | detect_language | HYPOTHESIS | freewiki::tests::test_language_detection_de, test_language_detection_en | test referenced; no gate receipt |
 | src/zero/freewiki.rs | render_de_tip | HYPOTHESIS | freewiki::tests::test_render_de_message | test referenced; no gate receipt |
@@ -131,12 +131,12 @@ All labels below are doc-level assertions maintained by hand in this file (this 
 | src/zero/entity.rs | handle_entity_command | HYPOTHESIS | entity::tests::test_handle_entity_command | test referenced; no gate receipt |
 | src/zero/welt.rs | WeltDigest::load_from_db | HYPOTHESIS | welt::tests::test_load_from_db, test_load_from_file_fallback, test_missing_digest_honest | test referenced; no gate receipt |
 | src/zero/welt.rs | handle_welt_command | HYPOTHESIS | welt::tests::test_handle_welt_command | test referenced; no gate receipt |
-| src/zero/haltung.rs | HaltungStance::load_active | HYPOTHESIS | haltung::tests::test_load_active_stances, test_load_open_widersprueche | test referenced; no gate receipt |
-| src/zero/haltung.rs | handle_haltung_command | HYPOTHESIS | haltung::tests::test_handle_haltung_command | test referenced; no gate receipt |
-| src/zero/bild.rs | BildWrapper::spawn_url | HYPOTHESIS | bild::tests::test_spawn_url_mock, test_spawn_generate_mock, test_spawn_edit_mock | test referenced; no gate receipt |
-| src/zero/bild.rs | BildWrapper::spawn_generate | HYPOTHESIS | bild::tests::test_spawn_generate_mock | test referenced; no gate receipt |
-| src/zero/bild.rs | BildWrapper::spawn_edit | HYPOTHESIS | bild::tests::test_spawn_edit_mock | test referenced; no gate receipt |
-| src/zero/bild.rs | handle_bild_command | HYPOTHESIS | bild::tests::test_handle_bild_command | test referenced; no gate receipt |
+| src/zero/stance.rs | StanceStance::load_active | HYPOTHESIS | stance::tests::test_load_active_stances, test_load_open_contradictions | test referenced; no gate receipt |
+| src/zero/stance.rs | handle_stance_command | HYPOTHESIS | stance::tests::test_handle_stance_command | test referenced; no gate receipt |
+| src/zero/image_studio.rs | ImageStudioWrapper::spawn_url | HYPOTHESIS | image_studio::tests::test_spawn_url_mock, test_spawn_generate_mock, test_spawn_edit_mock | test referenced; no gate receipt |
+| src/zero/image_studio.rs | ImageStudioWrapper::spawn_generate | HYPOTHESIS | image_studio::tests::test_spawn_generate_mock | test referenced; no gate receipt |
+| src/zero/image_studio.rs | ImageStudioWrapper::spawn_edit | HYPOTHESIS | image_studio::tests::test_spawn_edit_mock | test referenced; no gate receipt |
+| src/zero/image_studio.rs | handle_image_command | HYPOTHESIS | image_studio::tests::test_handle_image_command | test referenced; no gate receipt |
 | src/zero/scrape.rs | fetch_page | HYPOTHESIS | scrape::tests::test_fetch_page_fixture, test_fetch_respects_robots, test_fetch_size_cap | test referenced; no gate receipt |
 | src/zero/scrape.rs | extract_links | HYPOTHESIS | scrape::tests::test_extract_links_fixture | test referenced; no gate receipt |
 | src/zero/scrape.rs | extract_tables | HYPOTHESIS | scrape::tests::test_extract_tables_fixture | test referenced; no gate receipt |
@@ -182,10 +182,10 @@ All labels below are doc-level assertions maintained by hand in this file (this 
 | C-001 | capability_gate.py writes status.md | capability_gate.py --json prints receipt to stdout; it does NOT write status.md. Status.md is a human-maintained document. The former "Generated by …" header was removed; header, table intro and Provenance Note now all state human-maintained. | capability_gate.py source inspection |
 | C-002 | MEASURED label without gate receipt | Behavioural capability labels require a gate receipt; no behavioural capability is MEASURED without one. Artifact-presence rows (documentation / registry source) are MEASURED by direct tree inspection and cite the inspected path; they make no behavioural claim. | Gate receipt section above; Label semantics |
 | C-003 | Loopback enforcement only in tests | Loopback enforcement is in OmegaConfig::validate_loopback (production code) AND tested. | src/zero/omega.rs |
-| C-004 | Retina reads remote machine | Retina reads ONLY local machine via retina-frage CLI subprocess; loopback enforced in code and test. | src/zero/retina.rs |
+| C-004 | Retina reads remote machine | Retina reads ONLY local machine via retina-question CLI subprocess; loopback enforced in code and test. | src/zero/retina.rs |
 | C-005 | TUI owns UI tasks (items 11,15,16,17) | Confirmed: src/ui/ belongs to Machine God DESIGN TEAM (branch gridv1/design). zero40 builds data/logic only. | Track 3 item 20 |
-| C-006 | Bild studio is separate service | /bild shells out to `bild` CLI (studio/bild.py, service omega-bildstudio:18796). No image logic in Rust. | Track 5 item 24 |
-| C-007 | Drift guard runs in service, not app | Drift guard (drift_guard.py) runs service-side; app only logs replies and shows sperre line. | Track 4 item 23 |
+| C-006 | ImageStudio studio is separate service | /image_studio shells out to `image_studio` CLI (studio/bild.py, service omega-bildstudio:18796). No image logic in Rust. | Track 5 item 24 |
+| C-007 | Drift guard runs in service, not app | Drift guard (drift_guard.py) runs service-side; app only logs replies and shows lock line. | Track 4 item 23 |
 | C-008 | Free pool vs Claude Code modes | Two modes: "Free pool (Omnipool)" default, "Claude Code (your own login)" runs real bundled Claude Code. | Track 3 item 13 |
 | C-009 | README.md / capabilities.md labelled UNKNOWN although the files exist | Both files exist in tree; rows are now MEASURED with artifact-presence evidence at the stated paths. The false "no source file in tree" reasons were removed. | tree inspection: plugins/frankenstein3/README.md, docs/zero/capabilities.md |
 | C-010 | UNKNOWN read as "file absent" | UNKNOWN now means "no verifying measurement recorded"; it no longer asserts absence. Rows whose presence was not verified keep UNKNOWN with an explicit "presence not verified at last inspection" reason and must be re-checked at the next gate. | Label semantics |

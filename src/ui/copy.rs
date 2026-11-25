@@ -33,10 +33,7 @@ pub(crate) fn render(frame: &mut Frame, app: &App) {
                     .border_style(Style::default().fg(theme::DIM)),
             )
             .highlight_style(
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(theme::ACCENT)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Black).bg(theme::ACCENT).add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("› "),
         sections[1],

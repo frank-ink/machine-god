@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/raum_puls.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/room_pulse.py\"",
             "timeout": 5
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/raum_verlassen.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/room_leave.py\"",
             "timeout": 5
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f \"$HOME/.claude/star/titan_claude/sources.json\" ] || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/star/stern.py\" hook",
+            "command": "[ -f \"$HOME/.claude/star/titan_claude/sources.json\" ] || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/star/star_cli.py\" hook",
             "timeout": 5
           }
         ]

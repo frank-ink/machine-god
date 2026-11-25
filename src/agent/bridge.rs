@@ -75,7 +75,10 @@ impl BridgeLauncher {
     pub fn command(&self, bridge_diagnostics_enabled: bool) -> Command {
         let mut cmd = Command::new(&self.runtime_path);
         cmd.arg(&self.script_path);
-        cmd.env("MACHINE_GOD_BRIDGE_DIAGNOSTICS", if bridge_diagnostics_enabled { "1" } else { "0" });
+        cmd.env(
+            "MACHINE_GOD_BRIDGE_DIAGNOSTICS",
+            if bridge_diagnostics_enabled { "1" } else { "0" },
+        );
         // Omnipool built in: the SDK and the claude CLI below it talk to the local free pool.
         // The derived key lives only in this child's environment (never in config, logs or UI).
         if let Some(link) = crate::omnipool::link() {
@@ -86,7 +89,8 @@ impl BridgeLauncher {
             cmd.env("MACHINE_GOD_OMNIPOOL_ACTIVE", "1");
         }
         // Built-in FranKenstein 3.0 plugin (with Agent Zero): <root>/plugins/frankenstein3 next to agent-sdk/.
-        if let Some(root) = self.script_path.parent().and_then(Path::parent).and_then(Path::parent) {
+        if let Some(root) = self.script_path.parent().and_then(Path::parent).and_then(Path::parent)
+        {
             let fs3 = root.join("plugins").join("frankenstein3");
             if fs3.is_dir() {
                 cmd.env("MACHINE_GOD_BUILTIN_PLUGINS", fs3);

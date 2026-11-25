@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-use machine_god::app::{App, FullscreenView, SurfaceMode, handle_terminal_event};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use machine_god::app::{App, FullscreenView, SurfaceMode, handle_terminal_event};
 
 #[test]
 fn ctrl_q_still_quits_from_config() {

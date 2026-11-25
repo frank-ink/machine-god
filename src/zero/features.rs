@@ -27,14 +27,8 @@ pub const FEATURES_COMMAND: &str = "/features";
 
 /// Exact, documented column order for the `/features` table.
 /// Must match docs/zero/capabilities.md one-to-one.
-pub const TABLE_COLUMNS: [&str; 6] = [
-    "capability",
-    "status",
-    "promotion_stage",
-    "evidence_ref",
-    "gate",
-    "tracking_issue",
-];
+pub const TABLE_COLUMNS: [&str; 6] =
+    ["capability", "status", "promotion_stage", "evidence_ref", "gate", "tracking_issue"];
 
 /// The registry compiled into the binary: the same file the pipeline writes.
 pub const EMBEDDED_REGISTRY_JSON: &str = include_str!("../../zero/capabilities.json");
@@ -176,9 +170,8 @@ impl EvidenceRef {
         let rest = trimmed
             .strip_prefix("test:")
             .ok_or_else(|| format!("missing 'test:' prefix in {:?}", trimmed))?;
-        let (name, commit) = rest
-            .rsplit_once('@')
-            .ok_or_else(|| format!("missing '@<commit>' in {:?}", trimmed))?;
+        let (name, commit) =
+            rest.rsplit_once('@').ok_or_else(|| format!("missing '@<commit>' in {:?}", trimmed))?;
         let name = name.trim();
         let commit = commit.trim();
         if name.is_empty() {
@@ -187,10 +180,7 @@ impl EvidenceRef {
         if commit.is_empty() {
             return Err(format!("empty commit in {:?}", trimmed));
         }
-        Ok(Self {
-            test_name: name.to_string(),
-            commit: commit.to_string(),
-        })
+        Ok(Self { test_name: name.to_string(), commit: commit.to_string() })
     }
 }
 
@@ -309,18 +299,11 @@ impl CapabilityRegistry {
                         return Err(RegistryError::MeasuredWithoutGate(name.to_string()));
                     }
                     EvidenceRef::parse(&cap.evidence_ref).map_err(|reason| {
-                        RegistryError::MalformedEvidence {
-                            capability: name.to_string(),
-                            reason,
-                        }
+                        RegistryError::MalformedEvidence { capability: name.to_string(), reason }
                     })?;
                 }
                 CapabilityStatus::Planned => {
-                    let issue = cap
-                        .tracking_issue
-                        .as_deref()
-                        .map(str::trim)
-                        .unwrap_or("");
+                    let issue = cap.tracking_issue.as_deref().map(str::trim).unwrap_or("");
                     if issue.is_empty() {
                         return Err(RegistryError::PlannedWithoutTrackingIssue(name.to_string()));
                     }
@@ -366,17 +349,13 @@ impl CapabilityRegistry {
 
     pub fn find(&self, name: &str) -> Option<&Capability> {
         let needle = name.trim().to_lowercase();
-        self.capabilities
-            .iter()
-            .find(|c| c.capability.trim().to_lowercase() == needle)
+        self.capabilities.iter().find(|c| c.capability.trim().to_lowercase() == needle)
     }
 
     /// Find a capability whose name is mentioned in free text.
     pub fn find_mentioned(&self, text: &str) -> Option<&Capability> {
         let haystack = text.to_lowercase();
-        self.capabilities
-            .iter()
-            .find(|c| haystack.contains(&c.capability.trim().to_lowercase()))
+        self.capabilities.iter().find(|c| haystack.contains(&c.capability.trim().to_lowercase()))
     }
 
     pub fn status_counts(&self) -> BTreeMap<CapabilityStatus, usize> {
@@ -401,11 +380,7 @@ pub enum GateFailure {
     MeasuredWithoutGate(String),
     MalformedEvidence { capability: String, reason: String },
     TestNotPassing { capability: String, test_name: String },
-    CommitMismatch {
-        capability: String,
-        expected: String,
-        actual: String,
-    },
+    CommitMismatch { capability: String, expected: String, actual: String },
 }
 
 impl fmt::Display for GateFailure {
@@ -421,19 +396,12 @@ impl fmt::Display for GateFailure {
             GateFailure::MalformedEvidence { capability, reason } => {
                 write!(f, "malformed evidence for '{}': {}", capability, reason)
             }
-            GateFailure::TestNotPassing {
-                capability,
-                test_name,
-            } => write!(
+            GateFailure::TestNotPassing { capability, test_name } => write!(
                 f,
                 "MEASURED '{}' references test '{}' which is not in the passing test report",
                 capability, test_name
             ),
-            GateFailure::CommitMismatch {
-                capability,
-                expected,
-                actual,
-            } => write!(
+            GateFailure::CommitMismatch { capability, expected, actual } => write!(
                 f,
                 "MEASURED '{}' evidence commit '{}' differs from report commit '{}'",
                 capability, actual, expected
@@ -540,11 +508,7 @@ pub fn ci_gate_from_paths(
 // ---------------------------------------------------------------------------
 
 fn dash_if_empty(value: &str) -> String {
-    if value.trim().is_empty() {
-        "-".to_string()
-    } else {
-        value.to_string()
-    }
+    if value.trim().is_empty() { "-".to_string() } else { value.to_string() }
 }
 
 fn push_row(out: &mut String, cells: &[String; 6], widths: &[usize; 6]) {
@@ -678,9 +642,29 @@ const DE_MARKERS: &[&str] = &[
 ];
 
 const EN_MARKERS: &[&str] = &[
-    " the ", " is ", " are ", " not ", " and ", " how ", " what ", " please ", " explain", " show ",
-    " can ", " which ", " why ", "hello", "thanks", "measured", "planned", "unknown", "capabilit",
-    " with ", " for ", " will ", " have ",
+    " the ",
+    " is ",
+    " are ",
+    " not ",
+    " and ",
+    " how ",
+    " what ",
+    " please ",
+    " explain",
+    " show ",
+    " can ",
+    " which ",
+    " why ",
+    "hello",
+    "thanks",
+    "measured",
+    "planned",
+    "unknown",
+    "capabilit",
+    " with ",
+    " for ",
+    " will ",
+    " have ",
 ];
 
 /// Deterministic DE/EN detection. Unknown stays English default; never guesses
@@ -695,11 +679,7 @@ pub fn detect_language(text: &str) -> Language {
     for marker in EN_MARKERS {
         en += padded.matches(*marker).count();
     }
-    if de > en {
-        Language::German
-    } else {
-        Language::English
-    }
+    if de > en { Language::German } else { Language::English }
 }
 
 // ---------------------------------------------------------------------------
@@ -845,25 +825,16 @@ mod tests {
 
         let expected: [&str; 6] = TABLE_COLUMNS;
 
-        let cells: Vec<String> = header
-            .split(" | ")
-            .map(|c| c.trim().to_string())
-            .collect();
+        let cells: Vec<String> = header.split(" | ").map(|c| c.trim().to_string()).collect();
         assert_eq!(
             cells.len(),
             expected.len(),
             "header must have exactly {} columns",
             expected.len()
         );
-        assert_eq!(
-            cells, expected,
-            "header columns must match documented order exactly"
-        );
+        assert_eq!(cells, expected, "header columns must match documented order exactly");
 
-        let sep_cells: Vec<String> = separator
-            .split(" | ")
-            .map(|c| c.trim().to_string())
-            .collect();
+        let sep_cells: Vec<String> = separator.split(" | ").map(|c| c.trim().to_string()).collect();
         assert_eq!(
             sep_cells.len(),
             expected.len(),
@@ -874,11 +845,7 @@ mod tests {
         // No duplicate columns.
         let mut seen = BTreeSet::new();
         for cell in &cells {
-            assert!(
-                seen.insert(cell.as_str()),
-                "duplicate column: {}",
-                cell
-            );
+            assert!(seen.insert(cell.as_str()), "duplicate column: {}", cell);
         }
 
         for cap in &registry.capabilities {
@@ -897,10 +864,7 @@ mod tests {
         };
         let gate = ci_gate(&registry, Some(&report));
         assert!(!gate.passed());
-        assert!(gate
-            .failures
-            .iter()
-            .any(|f| matches!(f, GateFailure::TestNotPassing { .. })));
+        assert!(gate.failures.iter().any(|f| matches!(f, GateFailure::TestNotPassing { .. })));
     }
 
     #[test]
@@ -916,10 +880,7 @@ mod tests {
         let registry = CapabilityRegistry::embedded().unwrap();
         let gate = ci_gate(&registry, None);
         assert!(!gate.passed());
-        assert!(gate
-            .failures
-            .iter()
-            .any(|f| matches!(f, GateFailure::MissingReport)));
+        assert!(gate.failures.iter().any(|f| matches!(f, GateFailure::MissingReport)));
     }
 
     #[test]

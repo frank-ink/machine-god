@@ -76,7 +76,10 @@ pub(crate) fn banner_lines(width: usize) -> Vec<Line<'static>> {
     for motto in MOTTO {
         if display_width(motto) <= width {
             let style = Style::default().fg(theme::ACCENT).add_modifier(Modifier::ITALIC);
-            lines.push(Line::from(vec![Span::raw(left_pad(motto, width)), Span::styled(motto, style)]));
+            lines.push(Line::from(vec![
+                Span::raw(left_pad(motto, width)),
+                Span::styled(motto, style),
+            ]));
         }
     }
     lines.push(Line::default());
@@ -96,7 +99,11 @@ mod tests {
         let w = display_width(ART[0]);
         assert!(ART.iter().all(|row| display_width(row) == w), "uneven art rows");
         assert_eq!(w % 2, 1, "odd width keeps a single centre column for the eye");
-        assert_eq!(ART[3].chars().position(|c| c == EYE), Some(w / 2), "eye sits on the centre column");
+        assert_eq!(
+            ART[3].chars().position(|c| c == EYE),
+            Some(w / 2),
+            "eye sits on the centre column"
+        );
     }
 
     #[test]

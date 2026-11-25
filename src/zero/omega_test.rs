@@ -71,10 +71,7 @@ fn test_fallback_on_down() {
 
 #[test]
 fn test_build_chat_request_shape() {
-    let messages = vec![ChatMessage {
-        role: "user".to_string(),
-        content: "Hallo".to_string(),
-    }];
+    let messages = vec![ChatMessage { role: "user".to_string(), content: "Hallo".to_string() }];
     let req = build_chat_request(&messages, "local-0.8b");
     let json = serde_json::to_string(&req).unwrap();
     let value: serde_json::Value = serde_json::from_str(&json).unwrap();

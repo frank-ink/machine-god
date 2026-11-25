@@ -9,7 +9,7 @@ errors, never skips):
    directions are checked, so a future implementation must also declare
    itself and a future claim must be backed by code.
 2. ``zero-manifest.json``'s static ``resolver`` must point at the
-   authoritative resolver ``f3_pfade.py`` located directly in the plugin
+   authoritative resolver ``f3_paths.py`` located directly in the plugin
    root (never at a stale copy below ``scripts/star``).
 
 Stdlib only.  No network.  No host-specific paths.
@@ -28,7 +28,7 @@ MANIFEST_PATH = PLUGIN_ROOT / "zero-manifest.json"
 CONTRACT_PATH = PLUGIN_ROOT / "docs" / "zero" / "contract_env.json"
 HOOKS_PATH = PLUGIN_ROOT / "hooks" / "hooks.json"
 
-RESOLVER_FILENAME = "f3_pfade.py"
+RESOLVER_FILENAME = "f3_paths.py"
 STALE_RESOLVER_FRAGMENT = "scripts/star"
 
 # Persistent environment writes performed by a hook command.
@@ -88,12 +88,12 @@ def scan_hook_env_writes(hooks: Any) -> Set[str]:
 
 
 class ZeroManifestResolverTest(unittest.TestCase):
-    """The static manifest resolver must be the plugin-root f3_pfade.py."""
+    """The static manifest resolver must be the plugin-root f3_paths.py."""
 
     def setUp(self) -> None:
         self.manifest = _load_json(MANIFEST_PATH)
 
-    def test_static_resolver_is_plugin_root_f3_pfade(self) -> None:
+    def test_static_resolver_is_plugin_root_f3_paths(self) -> None:
         resolver = self.manifest["paths"]["resolver"]
         self.assertIsInstance(resolver, str)
         self.assertTrue(
@@ -179,7 +179,7 @@ class ContractEnvHonestyTest(unittest.TestCase):
             "hooks write env vars that the contract does not declare: %r" % sorted(implemented - declared),
         )
 
-    def test_contract_resolver_is_plugin_root_f3_pfade(self) -> None:
+    def test_contract_resolver_is_plugin_root_f3_paths(self) -> None:
         contract = _load_json(CONTRACT_PATH)
         resolver = contract["resolver"]
         self.assertIsInstance(resolver, str)

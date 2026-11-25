@@ -1,5 +1,5 @@
 {
-  "name": "@srothgan/claude-rs-agent-bridge",
+  "name": "machine-god-agent-bridge",
   "version": "0.0.1",
   "private": true,
   "type": "module",

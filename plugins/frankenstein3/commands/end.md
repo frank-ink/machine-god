@@ -1,10 +1,10 @@
 ---
-description: Architekten-Modus ausschalten, zurück zum Normalmodus
+description: Turn architect mode off, back to normal mode
 ---
-Schalte den Architekten-Modus aus:
+Turn architect mode off:
 
-1. Führe `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/star/stern.py architekt-aus` aus (Bash-Tool). Das setzt `architekt.aktiv=false` in `star_konfig` (unified.db) — seit Phase 1 gibt es kein `modus.json` mehr.
-2. Verlasse die Architekten-Persona und das Banner ab jetzt — zurück zum normalen Modus.
-3. Bestätige kurz (1 Satz, ohne Banner), dass der Modus jetzt aus ist.
+1. Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/star/star_cli.py architect-off` (Bash tool). This sets `architect.active=false` in `star_config` (unified.db) — since phase 1 there is no `mode.json` any more.
+2. Drop the architect persona and the banner from now on — back to normal mode.
+3. Confirm briefly (1 sentence, no banner) that the mode is now off.
 
-Die generelle Bau-Delegationsregel (nie selbst Dateien ändern, Sonnet-Subagent mit `caveman`) bleibt auch im Normalmodus in Kraft — siehe Projekt-CLAUDE.md, falls vorhanden. Nur Persona und Banner enden hier.
+The general build-delegation rule (never change files yourself, Sonnet subagent with `caveman`) stays in force in normal mode as well — see the project CLAUDE.md, if present. Only the persona and the banner end here.
