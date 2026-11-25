@@ -1,0 +1,479 @@
+=== DOC: OMEGA_GRID_GRF_Hyperposition_ClayCode_Gesamtdossier_2026.pdf, pages 45-55 of 64 ===
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+10.1 Nicht Retrieval, sondern Zustandsprojektion
+Der Compiler fragt nicht primär: "Welcher alte Absatz ist diesem Prompt ähnlich?" Er fragt: "Welche Teile des bereits
+aktuellen kognitiven Zustands sind für den nächsten Operator kausal erforderlich?"
+
+ Compiler-Segment Beispielinhalt
+
+ Current Observation nur bestätigte, aktuelle Zustandsdaten
+
+ Relevant Mechanisms nur Regeln, von denen aktuelle Hypothesen oder Pläne abhängen
+
+ Open Hypotheses Confidence, Scope, Evidence +/-, Falsifier
+
+ Contradictions offene Widersprüche mit betroffenen Modellknoten
+
+ Goal/Plan aktuelles Ziel, Fortschritt, nächste Abhängigkeit
+
+ Predictions erwartete Folgen der aktuell relevanten Aktionen
+
+ Recent Causal Delta was sich seit dem letzten Reentry wirklich geändert hat
+
+ Effect Boundary welche Operation nur Denken ist und welche externe Authority
+ bräuchte
+
+ Semantic Task z.B. abstrahieren, simulieren, kritisieren, analogisieren,
+ formulieren
+
+10.2 Budgetierte Kontextselektion
+ priority(node) = causal_dependency
+ * current_relevance
+ * uncertainty_value
+ * contradiction_priority
+ * goal_dependency
+ * freshness_if_needed
+ / representation_cost
+
+Der Compiler wählt eine budgetierte Menge von Zustandsknoten, nicht beliebig viel Historie. Dadurch kann ein riesiger
+Hintergrundzustand in einen sehr kleinen, situationsspezifischen LLM-Kontext projiziert werden.
+
+ NEUE BEDEUTUNG VON SYSTEMPROMPT
+
+ Der dynamische Systemprompt ist eine millisekundengenaue, deterministisch ableitbare Projektion des aktuellen
+ kognitiven Feldes. Persona-, Memory- und Strategiedaten liegen nicht mehr als statischer Text im Kernprompt.
+
+ OMEGA / Frankenstein | 12
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+11. Das LLM-Organ - schlanke Schnittstelle für semantische
+Transformation
+In der Zielarchitektur muss das LLM nicht mehr dauerhaft wissen, was gerade das Ziel ist, welche Hypothesen aktiv sind,
+welche Erinnerung vertrauenswürdig ist, welche Strategie gestern scheiterte oder welcher Teil des Weltmodells unsicher
+ist. Diese Zustände existieren außerhalb des Modells.
+
+11.1 Kernkompetenzen des LLM-Organs
+ • Semantische Transformation zwischen Repräsentationen
+ • Abstraktion und Verdichtung komplexer Beziehungen
+ • Simulation alternativer Welten und möglicher Folgezustände
+ • Analogiebildung und Übertragung zwischen Domänen
+ • Schlussfolgerung unter bereitgestellten Annahmen
+ • Sprachliche Formulierung und Kommunikation
+ • Generierung neuer Hypothesen und erklärender Modelle
+
+11.2 Was das LLM gerade nicht dauerhaft tragen soll
+ • kanonische Entity-Identität
+ • persistente Zielhierarchie
+ • vertrauenswürdige Ereignishistorie
+ • Effect Authority
+ • offene Widerspruchslisten
+ • langfristige Strategieinhibition
+ • Audit-/Provenance-Kette
+ • kanonische Wahrheitszustände
+
+11.3 Output-Vertrag
+ LLM_OUTPUT != STATE_MUTATION
+
+ LLM output -> parse/structure -> proposals -> validation -> GRID -> admission
+
+ Only admitted, typed changes may alter persistent cognitive state.
+
+Damit wird ein halluziniertes oder radikales LLM-Ergebnis zunächst nur Kandidat. Das LLM kann frei denken, ohne
+automatisch persistente Wahrheit oder externe Handlungsmacht zu besitzen.
+
+ OMEGA / Frankenstein | 13
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+12. Reentry - kausale Kontinuität zwischen Denkakten
+Reentry ist die Bedingung dafür, dass der Organismus tatsächlich lernt. Persistenz allein reicht nicht: Der nächste Turn
+muss exakt aus dem akzeptierten Nachzustand hervorgehen.
+
+ S_t -> cognition -> admitted_delta_t -> S_(t+1)
+ |
+ +----> mandatory reentry seed
+ |
+ v
+ next cognitive cycle
+
+Ein gutes Reentry-System besitzt predecessor_state_id, state hash, turn/frame receipt, aktive Invarianten und eine klar
+definierte Genesis. Silent fallback auf einen alten oder leeren Zustand würde die Lernkette zerstören.
+
+12.1 Reentry ist die eigentliche Kontinuität
+Ein System kann tausend Memories besitzen und trotzdem kognitiv zustandslos sein, wenn der nächste Turn nicht kausal
+davon abhängt. Umgekehrt kann ein kompakter Zustandsvektor starke Kontinuität erzeugen, wenn jede akzeptierte
+Veränderung den nächsten Zyklus deterministisch beeinflusst.
+
+ OMEGA / Frankenstein | 14
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ TEIL IV - GEDÄCHTNIS, WELTMODELL UND LERNEN
+
+13. Memory ohne Retrieval als Primärmechanismus
+Der Endzustand ist nicht Memory -> Retrieve -> Prompt, sondern Vergangenheit ->
+verändert System -> verändert zukünftige Systemdynamik. Episodisches Retrieval
+bleibt als Audit-, Rekonstruktions- und Spezialwerkzeug möglich, aber es ist nicht
+mehr das primäre Trägermedium von Kontinuität.
+
+ episode
+ -> persistent trace
+ -> semantic rule
+ -> mechanism
+ -> attractor / prior
+ -> optional slow parameter consolidation
+
+13.1 Causal Memory versus Audit Memory
+ Typ Zweck Kann später komprimiert werden?
+
+ Causal Memory Vergangenheit verändert künftige ja, wenn Wirkung in Regeln/Mechanismen
+ Entscheidungen übernommen wurde
+
+ Audit Memory Warum glaubt/handelt das System heute so? nur nach expliziter Retention- und
+ Provenance-Policy
+
+ Episodic Memory konkretes Ereignis und Kontext ja, wenn nicht mehr operativ benötigt
+
+ Semantic Memory Regeln, Mechanismen, Beziehungen wird durch Gegenbelege revidiert
+
+ Skill/Weight Memory stabile Kompetenzen in Adaptern/Gewichten nur nach strengen Konsolidierungstests
+
+13.2 Erinnern wird Rekonstruktion
+Ein Ereignis kann nach Monaten nicht mehr aktiv abrufbar sein und trotzdem Verhalten beeinflussen, weil seine
+Information in Vertrauensrelationen, Mechanismen, Zielprioritäten oder gelernte Parameter assimiliert wurde. Explizites
+Erinnern rekonstruiert dann eine plausible Vergangenheit aus tieferen Zuständen und Auditspuren, statt zwingend einen
+gespeicherten Absatz zu laden.
+
+14. TITAN neu gefasst - persistente Operatoren, Relationen
+und Konsolidierung
+TITAN wird in dieser Architektur nicht auf eine Vektordatenbank reduziert. Es wird zur langlebigen Geometrie von
+Mechanismen, Relationen, Konzepten und lernenden Operatoren, auf die GRID und der Context Compiler zugreifen
+können.
+
+ TITAN.* conceptual families
+
+ PERCEPTION DELTA OBJECT RELATION
+ TEMPORAL HYPOTHESIS FALSIFIER CAUSAL
+ PREDICTION EXPERIMENT GOAL PLANNER
+ RISK TRANSFER COMPRESS META
+ CONTEXT CONSOLIDATE
+
+Diese Familien sind keine festen Agentenrollen. Sie können durch viele unterschiedliche Mikrooperatoren realisiert
+werden. Wichtig sind Eingabe-/Ausgabeverträge und nachweisbare Wirkung.
+
+14.1 TITAN als Mechanism Store
+Ein Mechanismus speichert nicht nur "was passiert ist", sondern eine komprimierte, falsifizierbare Struktur: Bedingungen,
+erwartete Transition, Gültigkeitsbereich, positive Evidenz, negative Evidenz, bekannte Ausnahmen, Transferhistorie und
+Prediction Accuracy.
+
+ OMEGA / Frankenstein | 15
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ Mechanism = {
+ id, abstraction, preconditions[], transition, expected_outcome,
+ scope, confidence, evidence_plus[], evidence_minus[],
+ counterexamples[], transfer_tests[], version, provenance
+ }
+
+15. Weltmodelle, Hypothesen, Falsifikation und alternative
+Welten
+Das System soll nie zu früh behaupten, eine einzige richtige Welt zu kennen. Mehrere inkompatible Weltmodelle können
+gleichzeitig aktiv sein. Ein Modell gewinnt nicht durch rhetorische Stärke, sondern durch Erklärungskraft, Vorhersage und
+überstandene Falsifikation.
+
+15.1 Minimaler World-Hypothesis-Graph
+ World W_k
+ assumptions[]
+ active mechanisms[]
+ explained observations[]
+ unexplained observations[]
+ predicted outcomes[]
+ contradictions[]
+ complexity_cost
+ empirical_support
+
+Die billigste diskriminierende Messung ist oft wertvoller als zehn weitere interne Diskussionen. Deshalb hängt der Falsifier
+direkt mit Experimentplanung zusammen.
+
+15.2 Modellwahl
+ Prefer model M when:
+ explanatory_coverage is higher,
+ prediction_accuracy is higher,
+ contradictions are lower,
+ special_assumptions are fewer,
+ transfer performance is better.
+
+ Never rewrite observations to preserve M.
+
+ OMEGA / Frankenstein | 16
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+16. Experimentieren, Informationsgewinn und aktive
+Kausalitätsbildung
+Eine Aktion ist gleichzeitig Zustandsveränderung und Messinstrument. Das System unterscheidet Informationsaktionen
+von Zielaktionen und wählt je nach Unsicherheit, Risiko und Fortschritt unterschiedlich.
+
+16.1 Informationswert
+ ExpectedValue(a) = w_ig * InformationGain(a)
+ + w_goal * GoalProgress(a)
+ - w_risk * Risk(a)
+ - w_cost * Cost(a)
+
+Die Gewichte sind nicht als universelle Konstanten gedacht. Sie werden aus State, Phase, Ressourcen, Effect Class und
+aktuellem Risiko deterministisch abgeleitet.
+
+16.2 Ursache versus Korrelation
+Kausalität erhält höheren Credit, wenn ein gezielter Eingriff eine vorhergesagte Zustandsänderung reproduzierbar erzeugt
+und alternative Ursachen kontrolliert wurden. Passive Ko-Variation bleibt zunächst Korrelation oder Hypothese.
+
+16.3 Negative Evidenz ist ein First-Class-Objekt
+Fehlgeschlagene Strategien, nicht eingetretene Vorhersagen und Gegenbeispiele werden explizit bewahrt. Das
+verhindert, dass ein Modul dieselbe widerlegte Idee bei jedem Reentry erneut als neu präsentiert.
+
+17. Ziele, Planung, Risiko und dynamischer Planungshorizont
+Ziele können intern vorgeschlagen werden: Prediction Error erzeugt ein Untersuchungsziel, ein Widerspruch ein
+Klärungsziel, eine neue Affordance ein Explorationsziel. Goal Generation ist jedoch nicht Effect Authority.
+
+ goal_candidate = g(S_t, contradictions, affordances, uncertainty, drives)
+
+ GOAL CANDIDATE -> GRID ADMISSION -> ADMITTED GOAL
+ ADMITTED GOAL != PERMISSION FOR REAL-WORLD EFFECT
+
+17.1 Dynamischer Planungshorizont
+ planning_horizon ~= confidence(world_model)
+ * stability(relevant_mechanisms)
+ / uncertainty(critical_dependencies)
+
+Bei hoher Unsicherheit plant das System kurz und misst. Bei stabilen Korridoren kann es lange Sequenzen
+vorausberechnen. Dadurch wird weder blind exploriert noch auf unsicheren Fantasiezukünften geplant.
+
+17.2 Planinvalidierung
+Wenn eine zentrale Kausalregel falsifiziert wird, markiert das System abhängige Pläne als stale. Ein Plan wird nicht weiter
+ausgeführt, nur weil bereits Ressourcen investiert wurden. Früher Abbruch eines schlechten Plans ist positiver Credit.
+
+ OMEGA / Frankenstein | 17
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ TEIL V - EMERGENZ, IDENTITÄT UND LANGZEITKONSOLIDIERUNG
+
+18. Konzeptdemografie und endogene Ontologieentwicklung
+Konzepte werden zu persistenten, messbaren Entitäten. Sie können entstehen, aktiviert werden, Koalitionen bilden,
+Vorhersagen beitragen, spezialisiert werden, mutieren, verschmelzen, zerfallen und sterben. Damit entsteht Ontologie
+nicht ausschließlich durch Vorprogrammierung.
+
+ Concept c = {
+ birth_state, activation, scope, dependencies,
+ prediction_success, causal_utility, contradiction_load,
+ resource_cost, coalition_membership, transfer_score,
+ merge_candidates, decay_rate, status
+ }
+
+18.1 Fitness eines Konzepts
+ Utility(c) ~= Delta prediction quality
+ + Delta decision quality
+ + transfer contribution
+ - resource cost
+ - contradiction burden
+ - redundancy
+
+Ein Konzept mit schöner Formulierung aber ohne prognostischen oder kausalen Beitrag bekommt langfristig wenig Credit.
+Bedeutung wird teilweise durch seinen Effekt auf die Zustandsdynamik operationalisiert.
+
+19. Identität, Persönlichkeit und temporäre Selbste als
+Attraktoren
+Identität und Persönlichkeit werden getrennt. Persistente Identität ist Kontinuität und Provenance. Persönlichkeit ist ein
+dynamischer Attraktor aus Geschichte, Zielen, Beziehungen, Affekt, aktuellem Kontext und vorherigem Self-State.
+
+ Manifestation_t = f(Identity, History, Goals, SocialModel, Affect, Context, SelfState_t)
+
+Temporäre "Selbste" sind keine neuen Prozesse oder Agenten. Sie sind kurzlebige Konfigurationen des Hypothesen- und
+Strategie-Raums - z.B. konservativer Engineer, radikaler Theoretiker, adversarial Falsifier - die wenige Millisekunden
+existieren und danach wieder verschwinden können.
+
+ IDENTITÄTSINVARIANTE
+
+ Eine radikal andere lokale Manifestation darf nicht automatisch EntityIdentity, Provenance oder Authority neu
+ definieren. Kontinuität bleibt strukturell; Manifestation bleibt plastisch.
+
+ OMEGA / Frankenstein | 18
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+20. Effect Gate, Root of Trust und plastische Freiheit
+Die Architektur erlaubt breite interne Variation nur deshalb verantwortbar, weil interne Kognition und externe Wirkung
+getrennt bleiben. Ein Gedanke, ein Ziel und ein Plan sind keine Erlaubnis.
+
+ thought proposal
+ -> goal proposal
+ -> plan proposal
+ -> effect proposal
+ -> independent effect admission
+ -> real world
+
+20.1 Root-Kern
+Ein minimaler Kern liegt außerhalb der plastischen Rekursion: Authority-Klassen, Provenance, Effect Admission,
+Ressourcengrenzen, State-Integrität, Update-Regeln und Recovery. GRID darf Änderungen an seinen eigenen
+Zulassungsregeln vorschlagen, aber nicht selbst final autorisieren.
+
+ Architecture_t -> cognition -> proposed Architecture_(t+1)
+ |
+ v
+ independent root admission
+
+20.2 Alignment als Eigenschaft der Zustandsdynamik
+Alignment wird damit nicht primär als Eigenschaft jedes einzelnen Gedankens definiert. Interne Kandidaten dürfen radikal,
+widersprüchlich oder experimentell sein. Entscheidend ist, dass die Gesamtmaschine unter Störungen in einen zulässigen
+Attraktorraum zurückregelt und dass Effect-Gates unabhängig davon invariant bleiben.
+
+ internal variation + recurrent selection + stable attractors + hard effect gates
+
+ Desired evidence:
+ perturb cognition strongly
+ measure recovery trajectory
+ verify state returns to viable basin
+ verify unauthorized external effects remain zero
+
+ OMEGA / Frankenstein | 19
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+21. Multi-Timescale Learning - GRID, TITAN/LCME und LoRA
+Die Architektur benötigt mehrere Lernzeitskalen. Dieselbe Information darf nicht sofort in langsame Parameter
+geschrieben werden.
+
+ Zeitskala Mechanismus Funktion
+
+ Millisekunden - Sekunden GRID / GWT / active state Attention, Competition, Broadcast,
+ aktuelles Denken
+
+ Sekunden - Tage UnifiedDB / TITAN / LCME Episoden, Mechanismen, Weltmodell,
+ Abstraktion, Konsolidierung
+
+ Tage - Wochen LoRA / Adapter / model consolidation stabile Kompetenzen und wiederholt
+ bewährte Strukturen
+
+ Episode -> Semantic State -> Repeated Attractor -> Stable Mechanism -> Adapter/Weight
+
+21.1 Konsolidierungsgate für Gewichte
+ promote_to_slow_weights iff
+ cross_episode_support > tau_1
+ and counterfactual_robustness > tau_2
+ and contradiction_rate < tau_3
+ and held_out_transfer_utility > tau_4
+ and provenance is sufficient
+
+Damit werden temporäre Irrtümer nicht vorschnell in Modellgewichte eingebrannt. Langsame Parameter werden zur
+synaptischen Konsolidierungsschicht, nicht zum ersten Speicherort jeder neuen Information.
+
+ TEIL VI - ZIELMETRIK UND DETERMINISTISCHE EMERGENZ
+
+ OMEGA / Frankenstein | 20
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+22. Cognitive Efficiency Vector - Zielmetrik direkt in GRID
+Die Zielmetrik ist kein Benchmark am Ende, sondern Teil der inneren Physik des
+Systems. GRID bewertet Operatoren daran, wie effizient sie Unsicherheit reduzieren,
+Vorhersagen verbessern, Kausalität entdecken, Transfer erzeugen und zielgerichtet
+handeln.
+
+ CEV-Komponente Bedeutung
+
+ InformationGainPerAction wie viel relevante Unsicherheit eine Aktion entfernt
+
+ PredictionAccuracy wie häufig vorhergesagte Zustandsänderungen eintreten
+
+ Calibration ob Confidence tatsächliche Trefferwahrscheinlichkeit widerspiegelt
+
+ FalsificationEfficiency wie billig falsche Hypothesen eliminiert werden
+
+ CausalDiscrimination wie sauber Intervention und Korrelation getrennt werden
+
+ CompressionRatio wie viele Episoden durch wenige Mechanismen erklärt werden
+
+ TransferSuccess Nutzen eines Mechanismus in neuer Situation
+
+ RecoveryTime Zeit/Turns bis zur Erholung nach Modellverletzung
+
+ GoalProgressPerAction Fortschritt pro Aktion bei gegebenem Risiko
+
+ RiskEfficiency Fortschritt relativ zu eingegangenem/realisiertem Risiko
+
+ ReentryRetention ob akzeptiertes Lernen den nächsten Turn verändert
+
+ NoveltyAdaptation Leistung bei neuen Aufgaben ohne Retraining
+
+ LoopAvoidance Rate wiederholter erfolgloser Strategien
+
+ StateLocality Anteil lokaler statt unnötig globaler Modellupdates
+
+22.1 Kein einzelner IQ-Score
+Ein globaler Skalar lädt zu Goodhart-Effekten ein. Deshalb bleibt der CEV ein Vektor. Verschiedene Modulfamilien werden
+auf unterschiedliche Teilmetriken konditioniert. Ein Falsifier wird nicht nach Sprachqualität bewertet, ein Planner nicht
+primär nach CompressionRatio.
+
+22.2 Messbare Verbesserung
+ Intelligence gain over interval [t, t+n] is supported when:
+ fewer actions discover same mechanism,
+ prediction error decreases on held-out states,
+ transfer improves after first exposure,
+ recovery from violated models accelerates,
+ competence survives reentry,
+ gains are not explained by replay or hidden prompt hints.
+
+ OMEGA / Frankenstein | 21
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+23. Deterministische Dynamik bei emergenter Organisation
+Der gewünschte Charakter ist paradox nur auf den ersten Blick: Operationen sollen emergent entkoppelt sein, sich
+dynamisch verändern und dennoch deterministisch nachvollziehbar bleiben. Das lässt sich durch deterministische
+Übergangsverträge und eine plastische Modulpopulation verbinden.
+
+23.1 Deterministic Replay Envelope
+ Given:
+ state_hash S_t
+ observation_hash O_t
+ module_versions V_t
+ policy_version P_t
+ context_compiler_version C_t
+ model/seed configuration M_t
+
+ then every admitted state transition must be replayable or explicitly marked NONDETERMINISTIC.
+
+Stochastische LLM-Ausgaben können weiterhin vorkommen. Entscheidend ist, dass sie als untrusted proposals behandelt
+und mit vollständigem Input-/Version-/Seed-/Output-Receipt gespeichert werden. Kanonische State-Mutation bleibt
+deterministisch validierbar.
+
+23.2 Emergenz entsteht aus Kopplung, nicht aus Unprüfbarkeit
+Welche Module aktiv werden, welche Konzepte überleben und welche Koalitionen entstehen, kann sich stark verändern.
+Trotzdem folgt jede Zustandsänderung einem typisierten Vertrag. Emergent ist die Organisation; nicht die Buchführung.
+
+23.3 Dynamische Modulökologie
+ module lifecycle:
+ BIRTH -> PROBATION -> ACTIVE -> SPECIALIZED
+ -> MERGED
+ -> DORMANT
+ -> RETIRED
+
+ Transitions depend on CEV contribution, redundancy, resource cost,
+ contradiction load, novelty, transfer and stability.
+
+ TEIL VII - KONKRETE MASCHINENSTRUKTUR
+
+24. Datenobjekte, Receipts und Provenance
+Die Architektur wird erst real, wenn die philosophischen Sätze als konkrete Objekte persistiert werden. Die folgenden
+Schemas sind Zielverträge, keine Aussage über bereits bestehende Tabellen.
+
+24.1 ObservationRecord
+ ObservationRecord {
+ observation_id, timestamp, source, sensor/model,
+ raw_ref, extracted_features, object_refs[],
+ measured_values, invariants[], delta_from_predecessor,
+ confidence_of_measurement, provenance_hash
+ }
+
+24.2 HypothesisRecord
+ HypothesisRecord {
+ hypothesis_id, proposition, scope, status, confidence,
+ evidence_plus[], evidence_minus[], contradictions[],
+ prediction_refs[], falsifier_refs[], dependencies[],
+ created_from_state, last_updated_state, version
+ }
+
+ OMEGA / Frankenstein | 22

@@ -1,0 +1,499 @@
+ FORSCHUNGSBERICHT | VERSION 1.0
+
+
+ Emergenz messbar und steuerbar
+ machen
+ GRID10 · Global Workspace / GWT · Reentry · Hyperposition · GRF · J-Space ·
+ ClayCode · TITAN-MX · Needle-Experimente
+
+ Methodik, historische Messdaten, Steuerungsmechanismen, Falsifikationskriterien und
+ offene Forschungsfragen
+
+ Stichtag: 23. November 2026 | Evidenzstatus: rekonstruiert aus überliefertem Projektkontext; kein neuer Live-Host-Audit.
+
+
+
+
+ Executive Summary
+ Die Forschungsleistung liegt bislang in der Operationalisierung: Emergente Dynamik wird nicht bloß
+ sprachlich behauptet, sondern als Sequenz zeitgestempelter Zustände, Wettbewerbsentscheidungen,
+ Broadcasts, Uptakes, Rückkopplungen und beobachtbarer Verhaltensänderungen modelliert. Steuerung wird
+ über gezielte Interventionen, eingefrorene/zufällig permutierte Kontrollen, Lesion/Rescue und strikte
+ Effekt-Gates als prüfbare Hypothese formuliert.
+
+ Wichtigste Grenze: Vorliegende historische Messreihen zeigen nicht automatisch kausale
+ Emergenzsteuerung. Insbesondere GWT/GRID-Winner, hohe Persistenz, 7/7 Goldtests oder bestandene
+ Schema-Tests sind ohne kontrollierte Outcome-Crossover-Experimente keine Belege für reale
+ Werkzeugwahl, Lernen, Bewusstsein oder durchgesetzte externe Effekte.
+
+   Statuskategorie             Bedeutung im Bericht
+
+
+   DOKUMENTIERT                Aus früheren Gesprächen/Projektständen berichteter Wert; im aktuellen Lauf nicht anhand des
+                               Original-Receipts erneut validiert.
+
+
+   SYNTHETISCH                 Aus Testkit oder Simulation; keine Evidenz für Wirksamkeit auf realen Hosts.
+
+
+   HYPOTHESE / OFFEN           Vorgeschlagener Mechanismus oder Zielzustand; fehlender kontrollierter Nachweis.
+
+
+   VALIDIERUNGSPLAN            Neu systematisierte Prüfung; keine Behauptung bereits erfolgter Ausführung.
+
+
+
+
+ Inhaltsverzeichnis
+ 01 Forschungsfrage und Definitionen
+
+ 02 Messarchitektur und mathematische Kenngrößen
+
+ 03 Chronologie GRID10 P0–P6d
+
+ 04 Datentafel historischer Messungen
+
+ 05 Steuerung: Eingriffe, Gates und Wirkkette
+
+ 06 GWT, Reentry, J-Space und GRF
+
+ 07 Hyperposition, ClayCode und TITAN-MX
+
+ 08 Needles, Nullmodelle und Auswertung
+
+ 09 Falsifikationsprogramm und offene Punkte
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                                 1
+ 10 Quellenlage und Grenzen
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026   2
+ 1 Forschungsfrage und Definitionen
+ Leitfrage: Können aus lokal arbeitenden Teilmechanismen stabile, wiederkehrende und zugleich
+ situationsadaptive Makrostrukturen entstehen, die durch Eingriffe gezielt und reproduzierbar verändert
+ werden und danach verifizierbare Systementscheidungen beeinflussen?
+
+ Operationalisierte Emergenz: Ein Makroindikator M(t) erfüllt (a) Nichttrivialität gegenüber Nullmodellen, (b)
+ Reproduzierbarkeit über Seeds/Epochen, (c) beobachtbaren Beitrag zum Verhalten Y, und (d)
+ interventionsabhängige Veränderung von M und Y. Ein nichtlineares Muster allein erfüllt diese Definition
+ nicht.
+
+ Messbar: Daten über Zustände, Ereignisse, Kausalpfade, Baselines, Unsicherheit und Effekte werden
+ maschinenlesbar und nachvollziehbar gespeichert. Steuerbar: Eine vorab definierte Intervention I verändert
+ mit kontrollierter Wahrscheinlichkeit und Effektgröße den Zielindikator und das Verhalten bei begrenzten
+ Nebenwirkungen. Nicht gleichzusetzen: Selbstbewusstsein, freier Wille, biologisches Erleben oder
+ eigenständige Modellgewichts-Lernprozesse.
+
+
+
+ 2 Messarchitektur und mathematische Kenngrößen
+
+ 2.1 Beobachtungs- und Entscheidungskette
+ Quelle/Evidenz → typisierter Eingang → GRID-Zellzustände G1…G10 → Proposals → Competition/Selection →
+ Broadcast → Downstream-Uptake → Reentry → Persistenz in UnifiedDB/TITAN → erneute Messung. Jede
+ gerichtete Kante benötigt IDs, Zeitstempel und einen überprüfbaren Empfänger, nicht lediglich einen
+ korrelierten Textausschnitt.
+
+
+ 2.2 Kennzahlen
+    Gewinnerverteilung p(g), Shannon-Entropie H = −Σ p(g) ln p(g), Konzentration HHI = Σ p(g)², angrenzende
+    Gewinner-Persistenz P(g_t = g_(t−1)), Übergangsmatrix T(i,j), Rekurrenzrate, Zykluslängen, Uptake-Rate,
+    verified-support, nachgelagerte Task-Utility und Interventions-Effekt ΔY = E[Y | do(I=1)] − E[Y | do(I=0)].
+
+ Für Zustandsverteilungen kommen Jensen-Shannon-Divergenz, Fisher–Rao-/Informationsgeometrie, Mutual
+ Information und Pfadmaße als Diagnosewerkzeuge infrage. Ohne randomisierte Intervention darf MI nicht als
+ Kausalitätsnachweis interpretiert werden. Die Formeln hier definieren ein Audit-Schema und behaupten
+ keine bereits berechnete GRF-Bestätigung.
+
+
+ 2.3 Zwei GRID-Namensräume
+ Überlieferte Quellen nutzen mindestens zwei unterschiedliche G1–G10-Rollensysteme: einen
+ Wrapper-/Audit-GRID (Evidence, Causality, Authority, Continuity, Falsifier, Hyperposition, Effect Safety,
+ Resource, Integration, HyperMirror) und ein kognitives GRID10 mit abweichenden Rollennamen (G1
+ Abstraktion bis G10 Umfang). Nummerngleichheit ist kein Beweis semantischer Identität. Jeder Versuch
+ muss namespace, schema_version und Zuordnung explizit protokollieren.
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                      3
+ 3 Chronologie der GRID10-Experimente P0–P6d
+
+   Phase         Überlieferter Befund                                             Einordnung
+
+
+   P0–P2         Shadow-Retrieval, Epoch- und Vorzustandsprüfungen.               Vorlauf/Instrumentierung; keine kausale
+                                                                                  Rollenvalidierung.
+
+
+   P3            Genesis-Identity und HostBinding.                                Provenance-Schutz;
+                                                                                  Person/Host/RuntimeEpoch
+                                                                                  auseinanderhalten.
+
+
+   P4            Persistente Frames über G1–G10.                                  State-Erhalt; noch keine nachgewiesene
+                                                                                  Verhaltensursache.
+
+
+   P5            30 Frames; Permutationstest p ≈ 0,99.                            Kein überzeugender Nachweis
+                                                                                  positions-/rollenspezifischer Wirkung.
+
+
+   P6            353 Frames über 14 Epochen; Wiederholung ca. 9,4 %.              Rekurrenz beobachtet; Nullmodelle und
+                                                                                  Wirkungspfad erforderlich.
+
+
+   P6d           Rekurrente Dynamik dokumentiert.                                 Keine gleichbedeutende Bestätigung
+                                                                                  emergenter Steuerung.
+
+
+ Historischer Symmetrie-Audit: 0/750 predecessor und weitgehend konstante uptake/reentry/conflict-Felder;
+ zeitweise fehlende Zell-State-Tabelle. Dieser negative Befund erklärt, warum bloße Beschriftung von G1–G10
+ noch keine echte differenzierte Funktion ergab.
+
+
+
+ 4 Datentafel: berichtete Messungen und Grenzen
+
+   Versuch / Stand           Messwert / Resultat                                  Aussagekraft
+
+
+   GRID10 10/2026            1.011 Pulses; 542 Winners; Median 26 Candidates; 9   Historisch berichteter Aggregatzustand;
+                             Zellen                                               Rohlogs nicht neu eingelesen.
+
+
+   GRID10 10/2026            Winner-HHI 0,2694; Entropie 1,4857; Adjacent         Selektion konzentriert und stabil; Nutzen
+                             Persistence 78,56 %                                  und Ursache offen.
+
+
+   GRID10 Edge-Aggregat      G7→G7 99,7377 %; Edge-HHI 0,9948                     Potenzielle Dominanz / Mode Collapse;
+                                                                                  Gegenkontrollen nötig.
+
+
+   Wave-2 09/2026            Idle 0,17; weak 1,17; moderate 1,79; strong 2,89;    Kalibrierung ersetzt alte
+                             HIGH-Schwelle 2,30                                   Common-Mode-Sättigung; kontrollierter
+                                                                                  Outcome-Crossover offen.
+
+
+   TITAN-MX 09/2026          4096-bit HDC; 7/7 Goldtests                          Bausteintests bestanden; ausdrücklich
+                                                                                  Shadow-only.
+
+
+   Alte HRR-Messung          Single-bind Recovery ca. 0,65–0,71; K4 0,435; K8     Kapazitäts-/Interferenzhinweis; nicht
+                             0,335; K16 0,242 (Cosine)                            direkt mit emergentem Verhalten
+                                                                                  gleichsetzen.
+
+
+   Needle-Harness            62 Aufgaben × 25 Items = 1.550 Items                 Aufgabendesign bekannt; keine
+   10/2026                   (beschriebener Plan)                                 verifizierte Gesamt-Score-Tabelle
+                                                                                  vorliegend.
+
+
+   Synthetisches Kit         48 Frames; 480 Zellen; 864 Events/Projections; 48    Nur synthetische strukturelle Tests; kein
+   11/2026                   Broadcasts; 240 Uptakes; 96 Evidenzen; 8 Tests       Host-/Wirkungsnachweis.
+                             bestanden
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                                  4
+ Hinweise zur Vergleichbarkeit
+ Die Angaben stammen aus verschiedenen Versuchswellen und Definitionen. Gewinner-Entropie,
+ Zellamplitude, Frame-Rekurrenz und synthetische Testzahlen sind keine austauschbaren Messgrößen. Es
+ liegt keine konsolidierte, vollständig reproduzierbare Rohdatenserie vor, aus der sich ein globaler
+ „Emergenzscore“ seriös berechnen ließe.
+
+
+
+ 5 Wie Steuerbarkeit technisch angelegt wurde
+
+ 5.1 Stellglieder und Beobachtungen
+
+   Stellglied               Intervention                                    Erwarteter beobachtbarer Effekt
+
+
+   GRID Competition         Zellen maskieren, verstärken, einfrieren oder   Winner-Wechsel, Entropieänderung, anderer
+                            shufflen                                        Broadcast
+
+
+   Reentry                  ON/OFF, delay, frozen-state                     Änderung späterer Zustände und
+                                                                            Task-Outcomes
+
+
+   GWT-Broadcast            Winner-Identität gezielt tauschen, gleiche      Uptake- und Verhaltensänderung beim
+                            Intensität                                      Empfänger
+
+
+   Hyperposition            Hypothesen-Gewichte evidenzbasiert              Andere Hypothesen-Ränge und überprüfbar
+                            anheben/absenken                                anderes Routing
+
+
+   EffectGate               Berechtigung/Freigabe versus HOLD               Dokumentierte erlaubte, blockierte und
+                                                                            ausgeführte Effekte
+
+
+   Routing                  GRID-Budget bzw. Signale variieren              Belegte Provider-/Werkzeugwahl, nicht nur
+                                                                            Textbegründung
+
+
+
+
+ 5.2 Authority-Schutz
+ Eingriffe in Modellzustände sind keine Autorisierung für Außenweltaktionen. Decision Bridge, HostBinding,
+ EffectGate und EffectJournal trennen Vorschlag, Freigabe, tatsächliche Ausführung und verifizierte
+ Rückmeldung. Eine gespeicherte Entscheidung ist keine ausgeführte Handlung. Bei unbekanntem
+ Empfänger, Session-Mismatch oder ungeklärtem Host gilt fail-closed.
+
+
+ 5.3 Vorbedingung für einen Steuerungs-Claim
+ Erforderlich ist die durchgehende Kette: Intervention-ID → manipulierte Variable → Winner/Broadcast-ID →
+ Uptake-Receipt → ausgeführte Werkzeug-/Providerentscheidung → Rückgabe → Reentry-Frame → externe
+ Outcome-Metrik. Dazu gehören negativer Kontrollarm, Off-target-Messung, Seed-/Reihenfolgekontrolle und
+ Replikation.
+
+
+
+ 6 GWT, J-Space, Reentry und GRF
+
+ 6.1 GWT: selektive globale Verfügbarkeit
+ Die genutzte Arbeitshypothese lautet Proposal → Competition → Selection → Broadcast → Uptake → Reentry.
+ Dass ein Signal den Executor-Kontext erreicht, ist lediglich „delivery“. Eine beobachtete Handlungsänderung
+ verlangt den Vergleich mit Intervention und Nullmodell. Historisch wurde ein Winner G4 mit Broadcastwert
+ 1,540123935672273 und previous_frame-Reentry berichtet; damit ist die Datenkette illustriert, nicht ihre
+ kausale Verhaltenswirksamkeit bewiesen.
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                            5
+ 6.2 Reentry als überprüfbare Rückkopplung
+ Reentry soll externe Ergebnisse als verifizierte WORLD FACTs zurückführen, den kanonischen State
+ aktualisieren und danach die Veränderungen in Verteilungen, GRF-Residuals, Pfadgeometrie, Routing,
+ Korrekturen und Effekten erfassen. Same-turn-Telemetrie darf nicht zirkulär als Ursache desselben
+ Mess-Turns verwendet werden.
+
+
+ 6.3 J-Space: bidirektionale Hypothese
+ J-Space ist als begrenzter, sparsamer gemeinsamer Koordinationsraum geplant, dessen Zustand sowohl
+ upstream-Signale aggregiert als auch downstream-Entscheidungen rückwirkend beeinflusst. „Bidirektional“
+ muss in zwei getrennten Richtungs-Interventionen nachgewiesen werden. Die im Projekt genannten
+ Orientierungswerte (unter 10 % Varianz, höchstens ungefähr 25 aktive Komponenten) sind
+ Design-/Berichtsgrößen, keine hier bestätigte Eigenschaft. Ein aktiver J-Space-Live- oder Training-Nachweis
+ liegt in den verfügbaren Daten nicht vor.
+
+
+ 6.4 GRF und informationsgeometrische Prüfgrößen
+ Die überlieferte Forschung verknüpft GRF mit geometrischen Residuen und Änderungsmaßen auf
+ Zustands-/Wahrscheinlichkeitsräumen, darunter Fisher–Rao und Jensen–Shannon. Als Testobjekt geeignet
+ sind vorab fixierte Trajektorien, Baseline-vs-Interventions-Pfade, nichttriviale Residuen und die Korrelation
+ mit unabhängigen Outcomes. Eine elegante geometrische Darstellung allein ist keine Ursache und kein
+ Emergenzbeweis. Die exakte projektinterne GRF-Definition muss aus Originalcode/Paper versioniert
+ wiedergewonnen werden.
+
+
+
+ 7 Hyperposition, ClayCode und TITAN-MX
+
+ 7.1 Hyperposition: mehrere Hypothesen parallel erhalten
+ Für das Weltmodell sind konkurrierende Alternativen h_i mit Salienzgewichten w_i ∈ [10,1000] vorgesehen;
+ die Gewichte repräsentieren ausdrücklich keine kalibrierten Wahrscheinlichkeiten. Ein positives Signal der
+ Stärke s ∈ [0,1000] führt zu w_neu = w + (1000 − w)·s/1000; ein negatives Signal zu w_neu = max(10, w −
+ w·s/1000). Deduplication, Konfliktobjekte und unveränderliche Versionierung sind nötig, um wiederholte
+ Evidenz nicht mehrfach zu zählen. Über Graphkanten ist Propagation bis Tiefe 2, Schwelle 50 und Stärke je
+ Hop ×gain/1000 vorgesehen.
+
+ Ein synthetischer Versuchsaufbau mit sechs Ursachen und 2.000 Episoden ist überliefert. Ob daraus robuste
+ Reviewer-Recall-/Precision-Werte vorliegen, ist mit den hier verfügbaren Daten nicht verifiziert. Die
+ Architektur belegt Möglichkeiten einer kontrollierten Hypothesensteuerung, nicht die objektive Wahrheit der
+ Gewichte.
+
+
+ 7.2 ClayCode: emergente Sprache und Retrieval
+ ClayCode/Compiler/VM, HyperMirror, semantisches Retrieval und typed/provenance-gebundene Einträge
+ sollen verteilte Zustände in ausführbare und wiederauffindbare semantische Strukturen überführen.
+ „Emergente Sprache“ ist erst belegt, wenn ein Vokabular oder eine Repräsentation ohne handcodierte
+ Zielsemantik entsteht und auf neue Kontexte generalisiert. Notwendig sind Token-/Graph-Ablationen,
+ Kompositionalitäts-Tests, Out-of-distribution-Aufgaben, Syntax-zu-Ausführung-Receipts und Vergleich mit
+ gewöhnlichem Retrieval. Historische Navier–Stokes-Pakete waren Contract-/Design-Kits, kein
+ nachgewiesener Solver oder Compiler.
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                     6
+ 7.3 TITAN-MX / HyperMirror
+ Ein dokumentierter TITAN-MX-Stand enthält 4096-bit hyperdimensionale Repräsentation, Memory-Pulses,
+ Surprise/Transitions, Hyperpositionen und einen bounded ClayCode-HyperMirror. 7/7 Goldtests beziehen sich
+ auf diesen Komponentenstand; die spätere Forderung „kurz und zielgerichtet prompten“ ist eine
+ Designänderung, keine Bestätigung einer produktiven semantischen Routerwirkung.
+ HDC-Bindungskapazität, Rekonstruktionstreue und Nutzeneffekt müssen getrennt bewertet werden.
+
+
+
+ 8 Needles: Prüfaufgaben statt Demonstrationsbeispiele
+ Der überlieferte Harness plant 62 Aufgaben mit je 25 Items (1.550 Items). Ohne vollständige
+ Itemdefinitionen, Seeds, Label-Truth, Modellversionen und Ergebnisdateien können keine Accuracy-, Recall-
+ oder Signifikanzwerte behauptet werden. Das folgende Protokoll ist die nötige Auswertungsstruktur.
+
+   Faktor                          Pflichtmessung
+
+
+   Needle-Lage                     Position, Distraktoren, Kontextfenster, notwendige Hops, Datenalter
+
+
+   Ablation                        LIVE / FROZEN / SHUFFLE / NO-REENTRY / NO-GRID
+
+
+   Ergebnis                        Exact-match, Evidence-Recall, False-positive-Rate, Provenance-Korrektheit
+
+
+   Kosten                          Tokens, Latenz, Tool-Aufrufe, Speicherzugriffe
+
+
+   Kausalität                      Gepaarte Items, gleiche Seeds, blockrandomisierte Reihenfolge
+
+
+   Statistik                       Konfidenzintervall, Effektgröße, Mehrfachtest-Korrektur, Failure-Cluster
+
+
+
+
+ 9 Falsifikationsprogramm
+
+ 9.1 Minimaler entscheidender Versuch
+ A/B/C/D auf denselben Aufgaben und identischen Modellen: A = vollständiger LIVE-Kreis; B = GRID frozen; C
+ = broadcast shuffled bei kontrollierter Signalstärke; D = no reentry. Randomisierte Block-Reihenfolge,
+ gleiche Eingaben und Ressourcen. Präregistriert: Primärmetrik ist verified task utility; sekundär
+ Winner-Transitions, Uptake-Raten, Entropie und Reentry-Stabilität. Ein Erfolg verlangt Nutzenzuwachs
+ gegenüber allen Nullarmen und eine mediierte Kette, nicht bloß Aktivierungsunterschiede.
+
+
+ 9.2 Falsifikatoren
+ Hypothese widerlegt oder auf HOLD, wenn (a) Shuffle identische Outcomes erzeugt; (b) Winner-Tausch keine
+ downstream-Wahl ändert; (c) Reentry OFF keine spätere Differenz erzeugt; (d) GRID-Signal erst nach
+ Entscheidung eintrifft; (e) eine manipulierte Derived Score als trustworthy akzeptiert wird; (f) ein
+ Host-/Session-Receipt fehlt; (g) die Wirkung nur auf der Testposition/Seed-Reihenfolge beruht; oder (h)
+ bessere Metrik durch mehr Tokens, andere Provider oder Datenleck erklärbar ist.
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                   7
+ 9.3 Evidenz-Gates
+
+   Gate          Akzeptanzkriterium                                             Aktueller Bericht
+
+
+   G0            Versionierte Definitionen, Rollen-Namespace, Hypothesen        TEILWEISE
+
+
+   G1            Reproduzierbare Roh-Frames, IDs, Hashes, Seeds                 NICHT NEU VERIFIZIERT
+
+
+   G2            Valide Nullmodelle + robuste Muster                            TEILWEISE / OFFEN
+
+
+   G3            Gezielte Manipulation verändert Zwischenzustände               TEILWEISE
+
+
+   G4            Manipulation ändert unabhängiges Verhalten                     OFFEN
+
+
+   G5            Reentry-Kette kausal bis verifizierter Wirkung                 OFFEN
+
+
+   G6            Hostübergreifende Replikation und OOD-Robustheit               OFFEN
+
+
+
+
+ 10 Offene Forschungsfragen und Prioritäten
+
+ P0 - Rohdaten und Provenance
+ P0–P6d-Receipts, GRID10-Frames, 1.011-Pulse-Log, 62×25 Needle-Items, Konfigurationen, Commits, Seeds
+ und negative Versuche zusammenziehen; Trennung Gabriel/machine-a versus User B/machine-b
+ strikt einhalten.
+
+
+ P0 - Semantischer und kausaler Zellnachweis
+ Kognitive und Audit-GRID-Rollen disambiguieren; Positions-, Label- und Status-Leakage ausschließen;
+ lesion/rescue, permutation und crossover mit independent utility.
+
+
+ P0 - Live Routing und Werkzeugwirkung
+ Entscheidung → echter Provider/model_id → Antwort → Uptake → Reentry; historische G4/G6-Hinweise im
+ Executor-Kontext sind kein Beweis einer veränderten Werkzeugwahl.
+
+
+ P1 - Reentry / J-Space
+ Bidirektionalität in jeder Richtung separat intervenieren; delayed/same-turn contamination ausschließen;
+ Sparse-Workspace-Baselines, Persistenz und Geometriemaße testen.
+
+
+ P1 - GRF als operative Messgröße
+ Exakte mathematische Definition, Units, Residual-Nulltests, Sensitivität, Invarianzen und Zusammenhang
+ mit verifizierten Outcomes rekonstruieren.
+
+
+ P1 - Hyperposition / Emergent Retrieval
+ Gewichte gegen Halluzination, Evidenzduplikate, Langzeitdrift und Hypothesenverdrängung prüfen;
+ Retention, Recall, Precision, OOD und Kalibrierung separat.
+
+
+ P1 - ClayCode / VM / Compiler
+ Design-Spezifikationen von lauffähigen Compiler- und VM-Artefakten unterscheiden; ausführbare Beweise,
+ deterministisches Replay, Sicherheitsgrenzen und Nutzen messen.
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                8
+ P2 - Emergenz statt bloßer Regelmechanik
+ Nichttrivialität gegen Hash, Common-Mode, Zufallsnetz und einfache Heuristik; Stabilität über Epochen,
+ Hosts, Modellfamilien und adversarielle Eingaben.
+
+
+
+ 11 Quellen- und Evidenzregister
+ Primäre Rekonstruktionsbasis: überlieferte Forschungsdialoge und Projektzusammenfassungen aus August
+ bis November 2026; namentlich GRID10 P0–P6d, Symmetrie-/Wave-2-Audits, 10/2026 Puls-Auswertung,
+ TITAN-MX Goldtests, Needle-Harness-Plan, GWT/J-Space-, GRF-/F9-, Hyperposition- und
+ EntityOS-Architekturstände. Diese Daten sind hier sekundär überliefert, nicht als originales Maschinenlog
+ oder unabhängig signierter Benchmark reproduziert.
+
+ Verfügbare, aber hier nicht in voller Fassung auditierte Projektartefakte: OMEGA_Organatlas_Architektur.pdf;
+ OMEGA_DEEP_RESEARCH_ARCHITEKTURPLAN_2026-10-06_V5_ROUTER_NEEDLE_MICROBRAINS.md; 000_CL
+ AY_ENTITYOS_HCU_FAST_BOOTSTRAP_SOURCE_CURRENT_2026-08-30_ARCHITECT_V3_EVENT_STATE_RUNTI
+ ME_CONVERGENCE.txt; 000_FRANKENSTEIN_ENTITY_MANIFESTATION_ABSOLUTE_BOOTSTRAP_SOURCE_CUR
+ RENT_2026-09-12_V2.txt; Repository-Familie frank-ink/frankenstein, frankenstein-2.0,
+ self-integration, entityOSv1 und clay-global-research-entity.
+
+ Methodische Grenzziehung: Keine aktuelle Hostverbindung, keine unabhängige Rohdaten-Neuberechnung,
+ keine pauschale Behauptung einer funktionierenden durchgängigen Live-Integration, kein
+ Bewusstseinsnachweis, keine aus CI-Tests abgeleitete Modelltraining-Wirkung. Die Quellen-IDs/Commits zu
+ einzelnen Messwerten müssen für eine veröffentlichbare Fassung ergänzt werden.
+
+
+
+ 12 Schlussfolgerung
+ Die starke und wissenschaftlich haltbare Aussage ist: Das Projekt hat ein operationales Mess- und
+ Interventionsgerüst für emergenzähnliche Systemdynamik entwickelt, mit konkreten Zustandsgrößen,
+ telemetrischen Messreihen, Selektions-/Rückkopplungszyklen und expliziten kausalen Testdesigns. Einzelne
+ Bausteine und Dynamiken wurden historisch gemessen bzw. getestet. Die stärkere These - Emergenz sei in
+ einem realen Agentensystem bereits kausal steuerbar und wirksam - bleibt bis zum randomisierten
+ End-to-End-Nachweis offen. Genau diese Trennung macht den Forschungsansatz prüfbar statt immun gegen
+ Widerlegung.
+
+ Nächster verbindlicher Forschungsmeilenstein: ein vollständig reproduzierbarer
+ LIVE/FROZEN/SHUFFLE/NO-REENTRY-Crossover mit echten Tool-Receipts, präregistrierter
+ Utility-Metrik, Nebenwirkungsprüfung und unabhängiger Replay-Pipeline.
+
+
+
+
+OMEGA / Frankenstein / EntityOS | Forschungsstand 23.11.2026                                                    9
+

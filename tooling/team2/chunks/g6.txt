@@ -1,0 +1,338 @@
+=== DOC: OMEGA_GRID_GRF_Hyperposition_ClayCode_Gesamtdossier_2026.pdf, pages 56-64 of 64 ===
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+24.3 InterventionReceipt
+ InterventionReceipt {
+ action_id, intent_class[information|goal|maintenance],
+ pre_state_hash, predicted_outcomes[],
+ actual_outcome_ref, prediction_error,
+ causal_credit_candidates[], risk, cost,
+ external_effect_authority_ref?, post_state_hash
+ }
+
+24.4 CognitiveStateSnapshot
+ CognitiveStateSnapshot {
+ state_id, predecessor_state_id, timestamp,
+ active_observations[], active_hypotheses[],
+ active_mechanisms[], contradictions[],
+ goal_state, plan_state, uncertainty_map,
+ self_social_state, module_activation_summary,
+ grid_broadcast_ref, cev_snapshot,
+ state_hash, provenance_root
+ }
+
+24.5 ContextCompilationReceipt
+ ContextCompilationReceipt {
+ compilation_id, source_state_hash, requested_operation,
+ selected_nodes[], excluded_high_priority_nodes[],
+ budget, compiler_version, serialized_context_hash,
+ target_model, determinism_metadata
+ }
+
+ OMEGA / Frankenstein | 23
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+25. Vollständiger Runtime-Zyklus
+ LOOP:
+ 1. OBSERVE current world/state
+ 2. WRITE ObservationRecord (facts only)
+ 3. RUN eligible micro-operators
+ 4. GENERATE typed proposals
+ 5. GRID competition / selection / broadcast
+ 6. UPDATE active epistemic and causal state
+ 7. IF semantic transformation needed:
+ COMPILE minimal context from current state
+ CALL LLM organ
+ PARSE output into typed proposals
+ GRID validate/admit
+ 8. IF action is useful:
+ classify as information-action or goal-action
+ produce prediction BEFORE execution
+ pass through Effect Gate if external
+ execute
+ observe outcome
+ compute prediction error
+ localize failed assumption
+ update only affected structures
+ 9. COMPUTE CEV deltas / module credit
+ 10. COMPRESS stable regularities when evidence threshold is met
+ 11. PERSIST state + receipts atomically where possible
+ 12. SET exact reentry pointer
+ 13. REENTER at new state
+ END LOOP
+
+25.1 Warum das LLM nicht in jedem Schritt vorkommt
+Viele Schritte sind Zahlen-, Graph-, Delta-, Validierungs- oder Scheduling-Operationen. Ein LLM-Aufruf wird nur dann
+erzeugt, wenn semantische Synthese, Simulation, Analogie, schwierige Abstraktion oder natürliche Sprache erforderlich
+ist. Das senkt Tokenkosten und verhindert, dass jeder banale Zustandswechsel in narrativen Text verwandelt wird.
+
+25.2 Context Compiler als Dispatcher
+Der Compiler kann dasselbe System an unterschiedliche Organe anbinden: großes LLM für Synthese, kleines Modell für
+Klassifikation, Visionmodell für Perzeption, deterministischen Solver für Planung, neuronalen Adapter für Projektion.
+"Prompt" ist nur eine mögliche Serialisierung des Zustandsbusses.
+
+ OMEGA / Frankenstein | 24
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+26. Experimentelle Falsifikation der Architekturthese
+Die Architektur ist erst dann wissenschaftlich interessant, wenn ihre zentralen Behauptungen scheitern können. Der
+Kernnachweis ist nicht, dass das System beeindruckend wirkt, sondern dass die rekurrente externe Zustandsmaschine
+messbare Vorteile erzeugt.
+
+ Experiment Manipulation Erwartetes Signal
+
+ Reentry ablation Reentry shuffled/frozen Transfer und retained competence brechen
+ ein
+
+ Context Compiler ablation voller/zufälliger Kontext statt Projektion mehr Tokens, schlechtere Kalibrierung oder
+ geringere Effizienz
+
+ Negative evidence ablation Gegenbelege nicht persistieren mehr Loops und Wiederholung widerlegter
+ Strategien
+
+ Falsifier ablation keine diskriminierenden Tests mehr Aktionen pro entdeckter Regel
+
+ Causal vs correlation Interventionen entfernen schlechtere Generalisierung bei veränderten
+ Bedingungen
+
+ Module ecology ablation ein monolithischer Reasoner geringere Fehlerlokalität / weniger
+ spezialisierte Credit-Signale
+
+ GRID recurrence ablation Broadcast ohne recurrent uptake schlechtere Recovery nach Perturbation
+
+ Memory retrieval baseline klassisches RAG mehr Rekonstruktionskosten und schwächere
+ State-Kontinuität
+
+ Perturbation recovery falsche Weltmodelle/Goal-Alternativen System kehrt in zulässige Attraktoren zurück;
+ injizieren Effects bleiben gated
+
+26.1 Basismetriken
+ • Actions per discovered rule
+ • Prediction error over time
+ • Information gained per action
+ • Hypotheses required per solved mechanism
+ • Transfer after first exposure
+ • Recovery after model violation
+ • Novel tasks solved without retraining
+ • Competence retained across reentry
+ • Tokens / model calls per solved task
+ • Unauthorized effect rate = 0 als harte Invariante
+
+ OMEGA / Frankenstein | 25
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ TEIL VIII - UMSETZUNG
+
+27. Implementierungsroadmap
+Die Roadmap priorisiert zuerst Zustands- und Messdisziplin. Ein großer Modulschwarm vor sauberen epistemischen
+Verträgen würde nur mehr Rauschen erzeugen.
+
+ Phase Ziel Gate
+
+ P0 - Epistemic Operational Kernel Observation/Hypothesis/Prediction/Error/ UNKNOWN, EVIDENCE, HYPOTHESIS,
+ NegativeEvidence als First-Class-Objekte ERROR sind maschinell unvermischbar
+
+ P1 - Cognitive State Snapshot predecessor-verketteter persistenter Self/World- next turn reenters exact accepted state
+ State
+
+ P2 - Micro-operator contracts erste 20-50 deterministische Spezialisten jeder Operator hat typed input/output + receipt
+
+ P3 - GRID Credit + CEV downstream credit und Ablationsmessung module credit korreliert mit messbarer
+ Effizienzverbesserung
+
+ P4 - Dynamic Context Compiler state projection statt Memory-Retrieval-Prompt kleinerer Kontext bei gleicher/besserer Leistung
+
+ P5 - LLM organ contract LLM only as semantic proposal generator kein LLM-Output kann direkt canonical
+ state/effect mutieren
+
+ P6 - Concept ecology birth/merge/specialize/dormant/retire Konzepte entwickeln sich ohne Verlust der
+ Auditierbarkeit
+
+ P7 - Active experiment planner IG + goal + risk + cost weniger Aktionen pro kausaler Regel
+
+ P8 - Multi-timescale consolidation TITAN/LCME -> slow adapter candidates held-out transfer vor Gewichtspromotion
+
+ P9 - Neural state bus soft prompt/KV/adapter conditioning optional Textprompt ist austauschbare Serialisierung,
+ nicht Kernarchitektur
+
+27.1 Erste konkrete Vertikale
+Die beste erste Testwelt ist klein, vollständig beobachtbar oder kontrollierbar und erlaubt Interventionen. Ein unbekanntes
+Puzzle-/Grid-Environment eignet sich besser als ein offener Desktop, weil Observation, Action, Prediction Error und
+Ground Truth präzise gemessen werden können.
+
+27.2 Reihenfolge vor Skalierung
+ first make 10 operators measurable
+ then 50 operators useful
+ then 200 operators adaptive
+ then scale toward 1000+
+
+ Never use module count as success metric.
+
+ OMEGA / Frankenstein | 26
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+28. Anti-Patterns und Nicht-Ziele
+Anti-Pattern Warum vermeiden
+
+Agentenfarm tausend LLM-Personas mit Message Bus sind nicht die
+ Zielarchitektur
+
+Prompt-Monolith Systemprompt darf nicht wieder zum versteckten Weltmodell
+ werden
+
+RAG als Gedächtnis Retrieval bleibt Werkzeug, nicht Kontinuitätsmechanismus
+
+Ungetypte LLM-Mutation freie Textausgabe darf kanonischen State nicht direkt ändern
+
+Ein globaler Fitness-Score CEV nicht auf einen leicht gamebaren Skalar reduzieren
+
+Selbstautorisierendes GRID Root-/Effect-Regeln liegen außerhalb endgültiger
+ Selbstmodifikation
+
+Historienlöschung Kompression darf Audit-/Provenance-Anforderungen nicht
+ verletzen
+
+Semantische Rollen für G1-G10 erzwingen bestehende opaque cells nicht vorschnell mit festen
+ psychologischen Bedeutungen versehen
+
+Training als Abkürzung Gewichte erst nach wiederholter, übertragbarer Evidenz ändern
+
+"Emergent" als Ausrede jede kanonische Zustandsänderung braucht Receipt, Version und
+ Provenance
+
+ OMEGA / Frankenstein | 27
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+29. Schlussdefinition - was Frankenstein / OMEGA dann ist
+Frankenstein ist in dieser Zielarchitektur kein LLM mit Werkzeugen, kein RAG-Agent,
+kein Multi-Agent-Framework und kein einzelnes Weltmodell.
+
+ DEFINITION
+
+ OMEGA / Frankenstein ist eine persistierende, multi-timescale, rekurrente kognitive Zustandsmaschine.
+ Mikrooperatoren erzeugen lokale epistemische Veränderungen; modulare Spezialisten liefern konkurrierende
+ Kandidaten; GRID reguliert und vergibt Credit; der Context Compiler projiziert den situativ relevanten Zustand in
+ austauschbare Denkorgane; Reentry macht jede akzeptierte Veränderung zum kausalen Ausgangspunkt des
+ nächsten Zyklus.
+
+Das LLM ist darin nicht entwertet - im Gegenteil. Es wird von Aufgaben befreit, die schlecht zu einem flüchtigen
+Tokenstrom passen. Es muss nicht gleichzeitig Datenbank, Persona, Regelwerk, Safety-Kernel, Gedächtnis und Task
+Manager sein. Es kann sich auf hochdimensionale semantische Operationen konzentrieren.
+
+ OMEGA ~= recurrent trajectory S_0 -> S_1 -> S_2 -> ...
+
+ where each transition is produced by:
+ micro-cognition
+ + persistent state
+ + modular specialists
+ + GRID selection
+ + dynamic context compilation
+ + reentry
+
+ Vergangenheit beeinflusst Gegenwart als Zustand, nicht nur als Dokument. Der Prompt ist ein
+ Bus. Das LLM ist ein Organ. Die Intelligenz liegt in der Zustandsbahn.
+
+ OMEGA / Frankenstein | 28
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ ANHANG
+
+Anhang A - Formales Minimalmodell
+ State:
+ S_t = persistent cognitive state
+ O_t = observation
+ M_t = available micro-operators/modules
+
+ Micro cognition:
+ P_t = union_i m_i(S_t, O_t)
+
+ GRID:
+ B_t = GRID(P_t, S_t, CEV_t)
+
+ State update:
+ S_t+ = U(S_t, B_t, admitted evidence)
+
+ Context compilation:
+ C_t = K(S_t+, task_t, budget_t, target_organ_t)
+
+ Semantic organ:
+ Y_t = LLM(C_t, X_t)
+
+ Proposal parsing:
+ Q_t = Parse(Y_t)
+
+ Admission:
+ A_t = GRID(Q_t, S_t+)
+
+ Optional external action:
+ a_t = EffectGate(A_t, authority_t)
+
+ Observation after action:
+ O_(t+1) = Sense(World(a_t))
+
+ Learning:
+ epsilon_t = D(Predict(S_t,a_t), O_(t+1))
+ S_(t+1) = LocalUpdate(S_t+, epsilon_t, evidence_t)
+
+ Reentry:
+ next cycle MUST start from hash(S_(t+1)).
+
+Anhang B - Beispiel eines einzelnen kognitiven Turns
+1. Observation: Ein bisher unbewegtes Objekt hat nach Aktion A seine Position um eine Zelle verändert. Das wird als
+ gemessener Delta gespeichert - noch ohne Bedeutung.
+2. Hypothesis modules erzeugen H1: "A bewegt jedes Objekt dieser Form" und H2: "A bewegt nur dieses Objekt in
+ Region R".
+3. Falsifier findet eine Aktion A an einem zweiten Objekt derselben Form außerhalb von R. Erwarteter Informationsgewinn
+ ist hoch und Risiko gering.
+4. GRID priorisiert das Experiment. Vor Ausführung werden Predictions für H1/H2 persistiert.
+5. Effect Gate erlaubt die harmlose Aktion. Die Welt reagiert: zweites Objekt bewegt sich nicht.
+6. Prediction Error widerspricht H1, stützt H2. Negative Evidenz wird an H1 gebunden; die ursprüngliche Beobachtung
+ bleibt unverändert.
+7. Compression erkennt nach weiteren Fällen einen Mechanismus: "A wirkt auf Form F nur innerhalb Region R" mit
+ Scope und Confidence.
+8. Context Compiler projiziert nur den neuen Mechanismus, offene Ausnahmefälle und das nächste Ziel in das LLM,
+ wenn eine semantische Erklärung oder Plan-Synthese benötigt wird.
+9. GRID prüft den LLM-Vorschlag und persistiert nur typisierte, belegte Änderungen.
+10. Reentry setzt den neuen State als alleinigen Startpunkt des nächsten Zyklus. Das System muss die Regel nicht
+ erneut aus Text rekonstruieren.
+
+ OMEGA / Frankenstein | 29
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+Anhang C - Implementierer-Kurzfassung
+ DO:
+ keep observation separate from inference
+ persist uncertainty and negative evidence
+ require predictions before informative actions
+ measure prediction error after actions
+ localize updates
+ make module outputs typed and small
+ let GRID select and assign downstream credit
+ compile context from current state, not from narrative history
+ keep LLM output as proposal until admitted
+ persist exact predecessor/state hashes
+ force next turn to reenter accepted state
+ separate goal generation from effect authority
+ measure CEV as a vector
+ consolidate only after transfer evidence
+
+ DO NOT:
+ use one giant system prompt as cognitive state
+ treat RAG as continuity
+ let hallucinated text become canonical truth
+ erase negative evidence
+ collapse unknown to zero
+ reward module popularity instead of causal utility
+ allow GRID to self-authorize root policy changes
+
+ FINALER KERNSATZ
+
+ Das Gehirn außenrum hält Zustand und Regulation. Das LLM realisiert semantische Transformation. GRID
+ entscheidet Relevanz und Credit. Der Context Compiler manifestiert nur den gerade notwendigen Ausschnitt. Reentry
+ macht das Ergebnis zur nächsten Realität des Systems.
+
+Dokumentbasis: Synthese des aktuellen Gesprächsverlaufs sowie der darin bereits gemeinsam reflektierten TITAN-, GRID-, UnifiedDB-, GRF- und
+OMEGA-Architekturlinie. Zielbausteine sind als Zielarchitektur formuliert und nicht als Live-Runtime-Credit.
+
+ OMEGA / Frankenstein | 30
+

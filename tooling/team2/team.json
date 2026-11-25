@@ -1,0 +1,12 @@
+[
+ {"name":"chef-kimi-k3.1-pro","model":"moonshotai/kimi-k3.1-pro","chunk":"g1","chief":true},
+ {"name":"nemotron-ultra","model":"nvidia/nemotron-3-ultra-550b-a55b","chunk":"d3"},
+ {"name":"mistral-large-4","model":"mistralai/mistral-large-4-1t-a52b","chunk":"d1"},
+ {"name":"step-5","model":"stepfun-ai/step-5-preview","chunk":"d2"},
+ {"name":"minimax-m3.1","model":"minimaxai/minimax-m3.1-flash","chunk":"d4"},
+ {"name":"nemotron-super-vl","model":"nvidia/nemotron-3.5-super-vl-120b-a12b","chunk":"g2"},
+ {"name":"gemma-4-31b","model":"google/gemma-4-31b-it","chunk":"g3"},
+ {"name":"muse-glimmer","model":"meta/muse-glimmer-30b","chunk":"g4"},
+ {"name":"nemotron-lightning","model":"nvidia/nemotron-3.5-lightning-30b-a3b","chunk":"g5"},
+ {"name":"nemotron-nano-omni","model":"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning","chunk":"g6"}
+]

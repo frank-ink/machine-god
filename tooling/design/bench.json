@@ -1,0 +1,209 @@
+[
+ {
+  "provider": "nvidia",
+  "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+  "score": 95.0,
+  "compiles": true,
+  "judges": 1,
+  "sec": 690.7,
+  "err": ""
+ },
+ {
+  "provider": "openrouter",
+  "model": "particle-ai/particle-1:free",
+  "score": 94.5,
+  "compiles": true,
+  "judges": 2,
+  "sec": 541.5,
+  "err": ""
+ },
+ {
+  "provider": "nvidia",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "score": 92.0,
+  "compiles": true,
+  "judges": 1,
+  "sec": 751.0,
+  "err": ""
+ },
+ {
+  "provider": "openrouter",
+  "model": "baidu/ernie-5.5-flash-preview:free",
+  "score": 91.0,
+  "compiles": true,
+  "judges": 2,
+  "sec": 3946.2,
+  "err": ""
+ },
+ {
+  "provider": "nvidia",
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "score": 89.0,
+  "compiles": true,
+  "judges": 2,
+  "sec": 335.8,
+  "err": ""
+ },
+ {
+  "provider": "nvidia",
+  "model": "google/gemma-4-31b-it",
+  "score": 83.0,
+  "compiles": true,
+  "judges": 1,
+  "sec": 1465.0,
+  "err": ""
+ },
+ {
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "score": 82.0,
+  "compiles": true,
+  "judges": 1,
+  "sec": 2115.7,
+  "err": ""
+ },
+ {
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "score": 46.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 777.6,
+  "err": "implements `Add`\n           and 62 others\n\nFor more information about this error, try `rustc --explain E0277`.\nerror: could not compile `designbench` (lib) due to 3 previous errors; 1 warning emitted\n"
+ },
+ {
+  "provider": "groq",
+  "model": "qwen/qwen3.8-27b",
+  "score": 44.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 3966.3,
+  "err": "rs have detailed explanations: E0422, E0599.\nFor more information about an error, try `rustc --explain E0422`.\nerror: could not compile `designbench` (lib) due to 3 previous errors; 1 warning emitted\n"
+ },
+ {
+  "provider": "openrouter",
+  "model": "dots-studio/dots-3-note-preview:free",
+  "score": 43.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 2088.6,
+  "err": "er importing this enum instead:\n          std::fmt::Alignment\n\nFor more information about this error, try `rustc --explain E0432`.\nerror: could not compile `designbench` (lib) due to 1 previous error\n"
+ },
+ {
+  "provider": "nvidia",
+  "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+  "score": 42.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 2481.8,
+  "err": " detailed explanations: E0061, E0432, E0599.\nFor more information about an error, try `rustc --explain E0061`.\nerror: could not compile `designbench` (lib) due to 7 previous errors; 1 warning emitted\n"
+ },
+ {
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "score": 38.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 5554.1,
+  "err": "    ++++\n\nSome errors have detailed explanations: E0432, E0599.\nFor more information about an error, try `rustc --explain E0432`.\nerror: could not compile `designbench` (lib) due to 4 previous errors\n"
+ },
+ {
+  "provider": "openrouter",
+  "model": "recursive/flint-v1.0:free",
+  "score": 35.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 1157.8,
+  "err": "`\n\nSome errors have detailed explanations: E0308, E0432, E0599.\nFor more information about an error, try `rustc --explain E0308`.\nerror: could not compile `designbench` (lib) due to 6 previous errors\n"
+ },
+ {
+  "provider": "openrouter",
+  "model": "google/gemma-4-26b-a4b-it:free",
+  "score": 26.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 4027.8,
+  "err": "rs have detailed explanations: E0559, E0599.\nFor more information about an error, try `rustc --explain E0559`.\nerror: could not compile `designbench` (lib) due to 4 previous errors; 1 warning emitted\n"
+ },
+ {
+  "provider": "nvidia",
+  "model": "poolside/laguna-xs-2.1",
+  "score": 23.0,
+  "compiles": false,
+  "judges": 1,
+  "sec": 641.8,
+  "err": "detailed explanations: E0432, E0559, E0599.\nFor more information about an error, try `rustc --explain E0432`.\nerror: could not compile `designbench` (lib) due to 14 previous errors; 1 warning emitted\n"
+ },
+ {
+  "provider": "nvidia",
+  "model": "minimaxai/minimax-m3.1-flash",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 900.9,
+  "err": "no answer"
+ },
+ {
+  "provider": "nvidia",
+  "model": "z-ai/glm-5.3-flash",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 900.9,
+  "err": "no answer"
+ },
+ {
+  "provider": "nvidia",
+  "model": "mistralai/mistral-large-4-1t-a52b",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 900.9,
+  "err": "no answer"
+ },
+ {
+  "provider": "nvidia",
+  "model": "moonshotai/kimi-k3.1-pro",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 900.8,
+  "err": "no answer"
+ },
+ {
+  "provider": "nvidia",
+  "model": "stepfun-ai/step-5-preview",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 900.9,
+  "err": "no answer"
+ },
+ {
+  "provider": "nvidia",
+  "model": "meta/muse-glimmer-30b",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 900.9,
+  "err": "no answer"
+ },
+ {
+  "provider": "openrouter",
+  "model": "inclusionai/ling-3.2-flash:free",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 16.5,
+  "err": "no answer"
+ },
+ {
+  "provider": "openrouter",
+  "model": "google/gemma-4-31b-it:free",
+  "score": 0.0,
+  "compiles": false,
+  "judges": 0,
+  "sec": 16.4,
+  "err": "no answer"
+ }
+]

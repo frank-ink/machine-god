@@ -1,0 +1,991 @@
+=== FILE: a-grid/grid10/f2wp1207_grid10_p11_effects.py ===
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""F2-WP-1207 P11 -- Effects anschliessen (first real GRID10 -> EffectGate door).
+
+Byte-adapted mirror of the canonical module (frankenstein-2.0,
+src/frankenstein2/grid10_p11_effects.py, branch
+self-integration/wp1207-p11-effects-20260905) -- same relationship P7/P10
+already have to their own vendored copies here: only the import line and
+the P7-reference qualification (``p7mod.X`` instead of a bare name) differ;
+every dataclass, function, docstring, and the gold test built against this
+copy live in this repo, same as P9's epoch reconciler and P10's own gold
+test.
+
+Roadmap position, verbatim from the project's own P5-P13 plan: "P11 --
+Effects anschliessen. Erst danach duerfen intern ausgewaehlte Zustaende in
+echte Aktionen uebersetzt werden: candidate -> typed effect request ->
+EffectGate -> EffectJournal -> readback. GRID10/ein Modell darf NIE direkt
+externe Wahrheit/Effekte erzeugen." Every phase up to and including P10
+(``grid10_p7_coordination.py`` / ``grid10_p10_workspace_reentry.py``) was
+explicitly internal-only -- "GRID10 koordiniert intern, EffectGate bleibt
+getrennt", repeated in every prior module's own docstring. This module is
+the FIRST deliberate, gated door in that wall, and the door stays firmly
+gated:
+
+  - The effect TYPE this round is deliberately inert/safe/reversible:
+    ``EffectType.JOURNAL_MARKER`` -- "record that this happened", nothing
+    more. No file write outside the repo, no shell command, no network
+    call, no live hook wiring (``~/.claude/star/stern.py`` is untouched).
+  - The journal is a NEW, dedicated table (``f2_grid10_effect_journal``) --
+    this module never reads or writes the pre-existing ``effects`` table,
+    which belongs to a completely different, already-load-bearing system
+    (Claude Code's own tool-call audit trail, written by
+    ``zulassen()``/``merken()`` in stern.py, and the exact table
+    ``stern.py reconcile --beleg effect:<id>`` verifies against today).
+    Different schema, different primary key space, different meaning.
+  - GRID10 code (``grid10_p7_coordination.py`` / this module's own
+    ``build_effect_request``) has NO path to execution that skips the
+    gate: the only function that can write a ``status='EXECUTED'`` row
+    (``_execute_journal_marker``) validates it was handed a real
+    ``GateDecision`` with ``allowed=True`` bound to the SAME
+    ``request_id``, and raises ``EffectGateBypassError`` otherwise. It has
+    exactly one call site in this file (grep-verifiable -- see the gold
+    test's own structural check), inside ``submit_effect_request``'s ALLOW
+    branch.
+
+Pipeline (Gabriel's spec, verbatim): "workspace candidate -> typed effect
+request -> effect gate -> effect journal -> execution/denial -> readback ->
+workspace uptake -> next-frame reentry. [...] Kein direkter Effekt aus
+einer GRID10-Zelle heraus, keine Umgehung des Gates."
+
+  1. candidate       -- a ``P7CoordinationResult`` from
+                         ``coordinate_real_turn`` / ``coordinate_real_turn_
+                         with_reentry`` (P7/P10, unmodified, imported not
+                         reimplemented).
+  2. typed request    -- ``build_effect_request()`` -> ``EffectRequest``,
+                         a real dataclass (not a free string), carrying
+                         provenance back to the triggering frame/turn.
+  3. effect gate       -- ``evaluate_gate()``: a REAL decision function, not
+                         a rubber stamp. Condition documented in
+                         ``EffectGatePolicy`` below.
+  4. effect journal     -- ``f2_grid10_effect_journal`` (new table, additive
+                         migration in ``migrate_schema()``). Every request
+                         gets exactly one row, ALLOWED+EXECUTED or
+                         DENIED+not-executed -- denials are visible, nothing
+                         silently vanishes.
+  5. execution/denial    -- ``submit_effect_request()``: ALLOW -> write +
+                         readback (re-SELECT the row, don't assume INSERT
+                         succeeded silently); DENY -> journal-only.
+  6. readback             -- ``ExecutionResult.readback_ok`` /
+                         ``EffectOutcome.readback_row``.
+  7. workspace uptake      -- ``apply_effect_uptake()``: feeds the outcome
+                         back into the SAME ``f2_grid10_p6d_state`` row
+                         P7's own ``read_prior_state`` (and P10's
+                         ``reconstruct_workspace``) already read for
+                         reentry -- house law "weniger neue Komponenten,
+                         mehr Rueckkopplung": no new plumbing, reuses the
+                         existing reentry channel.
+  8. next-frame reentry     -- automatic: the NEXT ``coordinate_real_turn``
+                         call for the same ``condition_key`` picks up the
+                         uptake-adjusted state via the unmodified
+                         ``read_prior_state``.
+
+Gate's actual decision condition: ``EffectGatePolicy.min_broadcast_value``.
+An effect request is only ALLOWED when the triggering turn's
+``broadcast_value`` (the winning cell's competitive proposal score --
+signal + kappa*tanh(state), see ``grid10_p7_coordination.proposal_score``)
+meets or exceeds the policy threshold. Rationale: ``broadcast_value`` is the
+one existing, evidenced, per-turn scalar that already represents "how
+strong was this turn's actual winning signal" -- gating on it means a
+weak/noise-dominated turn (low competitive margin) cannot trigger even this
+inert effect, while a genuinely strong turn can. This is deliberately
+simple (a single threshold on an existing evidenced value, not a new
+inference), matching P7/P10's own precedent of reusing existing signals
+rather than inventing new ones. The policy is a real, documented, testable
+condition -- not a coin flip and not an unconditional pass.
+
+Persistence convention: identical to P7/P9/P10 -- plain ``sqlite3.Connection``
+supplied by the caller, no path resolution, no second database opened here.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Mapping, Optional
+
+import sqlite3
+
+import f2wp1207_grid10_p7_coordination as p7mod  # vendored copy, same dir
+
+SCHEMA_REQUEST = "F2WP1207_P11_EFFECT_REQUEST/v1"
+SCHEMA_JOURNAL_ROW = "F2WP1207_GRID10_EFFECT_JOURNAL/v1"
+
+# Real, documented gate condition -- see module docstring "Gate's actual
+# decision condition". Not retuned without a new preregistration, same
+# discipline as P7's LAMBDA_PRIMARY/ALPHA/BETA/GAMMA/KAPPA.
+DEFAULT_MIN_BROADCAST_VALUE = 0.5
+
+# Uptake delta magnitude fed back into f2_grid10_p6d_state on execution vs.
+# denial -- same order of magnitude as P7's own CONFLICT_MARGIN (0.05), a
+# small, real, additive nudge, not a formula-dominating term.
+EFFECT_UPTAKE_EPSILON = 0.05
+
+_JOURNAL_DDL = """
+CREATE TABLE IF NOT EXISTS f2_grid10_effect_journal (
+    journal_id                  TEXT PRIMARY KEY,
+    request_id                  TEXT NOT NULL,
+    effect_type                 TEXT NOT NULL,
+    schema                      TEXT NOT NULL,
+    frame_id                    TEXT,
+    turn_event_id                TEXT NOT NULL,
+    runtime_epoch_id              TEXT NOT NULL,
+    session_id                    TEXT,
+    condition_key                  TEXT,
+    winner_cell_id                  TEXT NOT NULL,
+    broadcast_value                  REAL NOT NULL,
+    payload_json                      TEXT,
+    gate_policy_id                     TEXT NOT NULL,
+    gate_min_broadcast_value            REAL NOT NULL,
+    gate_allowed                         INTEGER NOT NULL CHECK (gate_allowed IN (0,1)),
+    gate_reason                           TEXT NOT NULL,
+    gate_decided_at                        TEXT NOT NULL,
+    status                                  TEXT NOT NULL CHECK (status IN ('EXECUTED','DENIED')),
+    executed_marker_text                     TEXT,
+    executed_at                               TEXT,
+    readback_ok                                INTEGER CHECK (readback_ok IN (0,1) OR readback_ok IS NULL),
+    readback_row_hash                            TEXT,
+    created_at                                    TEXT NOT NULL
+);
+"""
+_JOURNAL_IDX_TURN = (
+    "CREATE INDEX IF NOT EXISTS ix_f2_grid10_effect_journal_turn "
+    "ON f2_grid10_effect_journal (turn_event_id);"
+)
+_JOURNAL_IDX_EPOCH = (
+    "CREATE INDEX IF NOT EXISTS ix_f2_grid10_effect_journal_epoch "
+    "ON f2_grid10_effect_journal (runtime_epoch_id);"
+)
+_JOURNAL_IDX_STATUS = (
+    "CREATE INDEX IF NOT EXISTS ix_f2_grid10_effect_journal_status "
+    "ON f2_grid10_effect_journal (status);"
+)
+
+
+class Grid10P11EffectsError(RuntimeError):
+    """Fail-closed P11 effects error."""
+
+
+class EffectGateBypassError(Grid10P11EffectsError):
+    """Raised when execution is attempted without a valid, matching ALLOW
+    GateDecision. The single deliberate structural tripwire in this
+    module -- see ``_execute_journal_marker``."""
+
+
+def _jetzt_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+# --------------------------------------------------------------------------
+# Schema migration -- purely additive, idempotent, safe to run on a copy
+# repeatedly and on the live DB exactly once. NO existing table (including
+# the unrelated `effects` table) is touched or read.
+# --------------------------------------------------------------------------
+
+
+def migrate_schema(conn: sqlite3.Connection) -> dict:
+    already = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='f2_grid10_effect_journal'"
+    ).fetchone()
+    conn.execute(_JOURNAL_DDL)
+    conn.execute(_JOURNAL_IDX_TURN)
+    conn.execute(_JOURNAL_IDX_EPOCH)
+    conn.execute(_JOURNAL_IDX_STATUS)
+    conn.commit()
+    created = already is None
+    return {"ok": True, "added": ["TABLE f2_grid10_effect_journal"] if created else []}
+
+
+# --------------------------------------------------------------------------
+# Step 1/2: candidate -> typed effect request
+# --------------------------------------------------------------------------
+
+
+class EffectType(str, Enum):
+    """Deliberately minimal for this phase -- see module docstring. Adding a
+    new, less-inert effect type is an explicit, separate, future decision,
+    not something this enum silently grows into."""
+
+    JOURNAL_MARKER = "JOURNAL_MARKER"
+
+
+@dataclass(frozen=True)
+class EffectRequest:
+    schema: str
+    request_id: str
+    effect_type: EffectType
+    turn: p7mod.RealTurn
+    condition_key: str
+    winner_cell_id: str
+    broadcast_value: float
+    payload: Mapping[str, str]
+    requested_at: str
+
+
+def build_effect_request(
+    result: p7mod.P7CoordinationResult,
+    *,
+    effect_type: EffectType = EffectType.JOURNAL_MARKER,
+    marker_text: Optional[str] = None,
+) -> EffectRequest:
+    """Given a P7 coordination result (the workspace candidate), construct a
+    typed effect request. Never called with anything other than a real
+    ``P7CoordinationResult`` produced by ``coordinate_real_turn``/
+    ``coordinate_real_turn_with_reentry`` -- provenance (frame_id/
+    turn_event_id/runtime_epoch_id/session_id) is copied straight from
+    ``result.turn``, never re-derived or guessed."""
+    text = marker_text or (
+        f"P11 journal marker: winner={result.winner_cell_id} "
+        f"broadcast_value={result.broadcast_value:.6f} "
+        f"condition_key={result.condition_key} "
+        f"turn_event_id={result.turn.turn_event_id}"
+    )
+    return EffectRequest(
+        schema=SCHEMA_REQUEST,
+        request_id=uuid.uuid4().hex,
+        effect_type=effect_type,
+        turn=result.turn,
+        condition_key=result.condition_key,
+        winner_cell_id=result.winner_cell_id,
+        broadcast_value=result.broadcast_value,
+        payload={"marker_text": text},
+        requested_at=_jetzt_iso(),
+    )
+
+
+# --------------------------------------------------------------------------
+# Step 3: effect gate -- real condition, not a rubber stamp.
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EffectGatePolicy:
+    policy_id: str
+    min_broadcast_value: float = DEFAULT_MIN_BROADCAST_VALUE
+
+
+@dataclass(frozen=True)
+class GateDecision:
+    request_id: str
+    allowed: bool
+    reason: str
+    policy_id: str
+    min_broadcast_value: float
+    observed_broadcast_value: float
+    decided_at: str
+
+
+def evaluate_gate(request: EffectRequest, policy: EffectGatePolicy) -> GateDecision:
+    """The gate. Allows iff the triggering turn's broadcast_value meets the
+    policy threshold -- see module docstring for why this specific,
+    existing, evidenced signal was chosen. Returns a GateDecision either
+    way; callers (submit_effect_request) branch on ``.allowed``, but the
+    function itself never mutates state and never executes anything."""
+    allowed = request.broadcast_value >= policy.min_broadcast_value
+    if allowed:
+        reason = (
+            f"ALLOW: broadcast_value={request.broadcast_value:.6f} >= "
+            f"policy.min_broadcast_value={policy.min_broadcast_value:.6f} (policy={policy.policy_id})"
+        )
+    else:
+        reason = (
+            f"DENY: broadcast_value={request.broadcast_value:.6f} < "
+            f"policy.min_broadcast_value={policy.min_broadcast_value:.6f} (policy={policy.policy_id})"
+        )
+    return GateDecision(
+        request_id=request.request_id,
+        allowed=allowed,
+        reason=reason,
+        policy_id=policy.policy_id,
+        min_broadcast_value=policy.min_broadcast_value,
+        observed_broadcast_value=request.broadcast_value,
+        decided_at=_jetzt_iso(),
+    )
+
+
+# --------------------------------------------------------------------------
+# Steps 4-6: journal, execution/denial, readback.
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ExecutionResult:
+    journal_id: str
+    readback_ok: bool
+    row: Mapping[str, object]
+
+
+@dataclass(frozen=True)
+class EffectOutcome:
+    request: EffectRequest
+    decision: GateDecision
+    executed: bool
+    journal_id: str
+    readback_ok: Optional[bool]
+    readback_row: Optional[Mapping[str, object]]
+
+
+def _row_hash(journal_id: str, status: str, marker_text: Optional[str]) -> str:
+    return hashlib.sha256(
+        f"{journal_id}:{status}:{marker_text or ''}".encode("utf-8")
+    ).hexdigest()
+
+
+def _execute_journal_marker(
+    conn: sqlite3.Connection, request: EffectRequest, decision: GateDecision
+) -> ExecutionResult:
+    """The ONLY function in this module (in this repo) that can write a
+    ``status='EXECUTED'`` row. Structurally fail-closed: raises
+    ``EffectGateBypassError`` unless handed a real ``GateDecision`` with
+    ``allowed=True`` bound to the SAME request_id -- a decision for a
+    different request, a hand-built ``allowed=True`` object with a
+    mismatched request_id, or any DENIED decision are all rejected. This is
+    the deliberate single call site (see gold test's structural grep check
+    -- exactly one call to this function exists in this file, inside
+    ``submit_effect_request``'s ALLOW branch)."""
+    if not isinstance(decision, GateDecision):
+        raise EffectGateBypassError("execution attempted without a GateDecision object")
+    if decision.request_id != request.request_id:
+        raise EffectGateBypassError(
+            f"GateDecision.request_id={decision.request_id!r} does not match "
+            f"EffectRequest.request_id={request.request_id!r} -- refusing to execute"
+        )
+    if not decision.allowed:
+        raise EffectGateBypassError(
+            f"execution attempted on a DENIED GateDecision (reason={decision.reason!r})"
+        )
+
+    journal_id = uuid.uuid4().hex
+    marker_text = request.payload.get("marker_text")
+    now = _jetzt_iso()
+    conn.execute("BEGIN")
+    try:
+        conn.execute(
+            "INSERT INTO f2_grid10_effect_journal "
+            "(journal_id, request_id, effect_type, schema, frame_id, turn_event_id, "
+            " runtime_epoch_id, session_id, condition_key, winner_cell_id, broadcast_value, "
+            " payload_json, gate_policy_id, gate_min_broadcast_value, gate_allowed, gate_reason, "
+            " gate_decided_at, status, executed_marker_text, executed_at, readback_ok, "
+            " readback_row_hash, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                journal_id, request.request_id, request.effect_type.value, SCHEMA_JOURNAL_ROW,
+                request.turn.frame_id, request.turn.turn_event_id, request.turn.runtime_epoch_id,
+                request.turn.session_id, request.condition_key, request.winner_cell_id,
+                request.broadcast_value, _canonical_json(dict(request.payload)),
+                decision.policy_id, decision.min_broadcast_value, 1, decision.reason,
+                decision.decided_at, "EXECUTED", marker_text, now, None, None, now,
+            ),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+    # Readback -- re-SELECT the row, don't assume the INSERT silently
+    # succeeded.
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT * FROM f2_grid10_effect_journal WHERE journal_id=?", (journal_id,)
+    ).fetchone()
+    readback_ok = (
+        row is not None
+        and row["status"] == "EXECUTED"
+        and row["executed_marker_text"] == marker_text
+        and row["request_id"] == request.request_id
+    )
+    row_hash = _row_hash(journal_id, "EXECUTED", marker_text)
+    conn.execute(
+        "UPDATE f2_grid10_effect_journal SET readback_ok=?, readback_row_hash=? WHERE journal_id=?",
+        (1 if readback_ok else 0, row_hash, journal_id),
+    )
+    conn.commit()
+    row_dict = dict(row) if row is not None else {}
+    row_dict["readback_ok"] = 1 if readback_ok else 0
+    row_dict["readback_row_hash"] = row_hash
+    return ExecutionResult(journal_id=journal_id, readback_ok=bool(readback_ok), row=row_dict)
+
+
+def _journal_denial(
+    conn: sqlite3.Connection, request: EffectRequest, decision: GateDecision
+) -> str:
+    """Writes the DENIED journal row -- denials are visible in the audit
+    trail too, not just approvals. Refuses (raises) if handed an ALLOW
+    decision -- this function's own job is exclusively the deny path."""
+    if not isinstance(decision, GateDecision) or decision.allowed:
+        raise Grid10P11EffectsError("_journal_denial called with a non-DENY decision")
+    journal_id = uuid.uuid4().hex
+    now = _jetzt_iso()
+    conn.execute("BEGIN")
+    try:
+        conn.execute(
+            "INSERT INTO f2_grid10_effect_journal "
+            "(journal_id, request_id, effect_type, schema, frame_id, turn_event_id, "
+            " runtime_epoch_id, session_id, condition_key, winner_cell_id, broadcast_value, "
+            " payload_json, gate_policy_id, gate_min_broadcast_value, gate_allowed, gate_reason, "
+            " gate_decided_at, status, executed_marker_text, executed_at, readback_ok, "
+            " readback_row_hash, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                journal_id, request.request_id, request.effect_type.value, SCHEMA_JOURNAL_ROW,
+                request.turn.frame_id, request.turn.turn_event_id, request.turn.runtime_epoch_id,
+                request.turn.session_id, request.condition_key, request.winner_cell_id,
+                request.broadcast_value, _canonical_json(dict(request.payload)),
+                decision.policy_id, decision.min_broadcast_value, 0, decision.reason,
+                decision.decided_at, "DENIED", None, None, None, None, now,
+            ),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return journal_id
+
+
+def submit_effect_request(
+    conn: sqlite3.Connection, request: EffectRequest, policy: EffectGatePolicy
+) -> EffectOutcome:
+    """The single entry point a caller uses to go from a typed effect
+    request to a journaled outcome. Evaluates the gate itself; the ALLOW
+    branch is the ONLY code path anywhere in this module that reaches
+    ``_execute_journal_marker``."""
+    decision = evaluate_gate(request, policy)
+    if decision.allowed:
+        exec_result = _execute_journal_marker(conn, request, decision)
+        return EffectOutcome(
+            request=request, decision=decision, executed=True,
+            journal_id=exec_result.journal_id, readback_ok=exec_result.readback_ok,
+            readback_row=exec_result.row,
+        )
+    journal_id = _journal_denial(conn, request, decision)
+    return EffectOutcome(
+        request=request, decision=decision, executed=False,
+        journal_id=journal_id, readback_ok=None, readback_row=None,
+    )
+
+
+# --------------------------------------------------------------------------
+# Steps 7-8: workspace uptake -> next-frame reentry. Reuses the EXISTING
+# f2_grid10_p6d_state / read_prior_state reentry channel P7 (and P10 on top
+# of it) already have -- no new plumbing.
+# --------------------------------------------------------------------------
+
+
+def effect_uptake_delta(outcome: EffectOutcome) -> float:
+    """+epsilon on confirmed execution, -epsilon on denial, 0.0 if execution
+    happened but readback could not confirm it (never rewarded on
+    unconfirmed writes)."""
+    if outcome.executed and outcome.readback_ok:
+        return EFFECT_UPTAKE_EPSILON
+    if outcome.executed and not outcome.readback_ok:
+        return 0.0
+    return -EFFECT_UPTAKE_EPSILON
+
+
+def apply_effect_uptake(
+    conn: sqlite3.Connection, condition_key: str, winner_cell_id: str, outcome: EffectOutcome
+) -> dict:
+    """Adds the evidenced uptake delta directly to the winner cell's
+    persisted state in f2_grid10_p6d_state -- the SAME row P7's own
+    read_prior_state (and P10's reconstruct_workspace, when composed on
+    top) already read for the next real turn. This is what closes the loop
+    to "next-frame reentry": nothing new to wire, the next
+    coordinate_real_turn call for this condition_key picks the change up
+    automatically."""
+    ts = _jetzt_iso()
+    row = conn.execute(
+        "SELECT state_value FROM f2_grid10_p6d_state WHERE condition_key=? AND logical_cell_id=?",
+        (condition_key, winner_cell_id),
+    ).fetchone()
+    old_state = float(row[0]) if row else 0.0
+    delta = effect_uptake_delta(outcome)
+    new_state = old_state + delta
+    conn.execute("BEGIN")
+    try:
+        if row is None:
+            # No P7 cycle has ever persisted this cell for this
+            # condition_key yet (e.g. isolated test) -- insert rather than
+            # silently no-op, same upsert shape P7's persist_coordination_
+            # result already uses elsewhere.
+            conn.execute(
+                "INSERT INTO f2_grid10_p6d_state "
+                "(condition_key, logical_cell_id, state_value, updated_at, "
+                " updated_by_frame_id, won_broadcast_count, schema) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (condition_key, winner_cell_id, new_state, ts, None, 0,
+                 "F2WP1207_GRID10_P6D_STATE/v1"),
+            )
+        else:
+            conn.execute(
+                "UPDATE f2_grid10_p6d_state SET state_value=?, updated_at=? "
+                "WHERE condition_key=? AND logical_cell_id=?",
+                (new_state, ts, condition_key, winner_cell_id),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return {
+        "condition_key": condition_key,
+        "cell_id": winner_cell_id,
+        "old_state": old_state,
+        "delta": delta,
+        "new_state": new_state,
+        "outcome_executed": outcome.executed,
+        "outcome_readback_ok": outcome.readback_ok,
+    }
+
+
+# --------------------------------------------------------------------------
+# Full pipeline orchestration -- candidate -> ... -> uptake, one call per
+# real turn. Does NOT modify grid10_p7_coordination.py at all (imports its
+# unmodified coordinate_real_turn).
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class P11Result:
+    coordination: p7mod.P7CoordinationResult
+    request: EffectRequest
+    outcome: EffectOutcome
+    uptake: dict
+
+
+def coordinate_real_turn_with_effects(
+    conn: sqlite3.Connection,
+    evidence_path,
+    turn: p7mod.RealTurn,
+    policy: EffectGatePolicy,
+    *,
+    env: Mapping[str, str] | None = None,
+    marker_text: Optional[str] = None,
+) -> Optional[P11Result]:
+    """Gate-checked (P7's own p7_active gate) end-to-end P11 pipeline for one
+    real turn: P7 coordination -> typed effect request -> effect gate ->
+    journal -> execution/denial -> readback -> workspace uptake. Returns
+    None (zero P11 I/O too) when P7 itself is not active -- same
+    zero-behavioral-delta convention as coordinate_real_turn/
+    coordinate_real_turn_with_reentry."""
+    result = p7mod.coordinate_real_turn(conn, evidence_path, turn, env=env)
+    if result is None:
+        return None
+    request = build_effect_request(result, marker_text=marker_text)
+    outcome = submit_effect_request(conn, request, policy)
+    uptake = apply_effect_uptake(conn, result.condition_key, result.winner_cell_id, outcome)
+    return P11Result(coordination=result, request=request, outcome=outcome, uptake=uptake)
+=== FILE: a-grid/grid10/f2wp1207_grid10_p7_coordination.py ===
+"""F2-WP-1207 P7 -- additive, shadow-gated GRID10 internal coordination cycle.
+
+Roadmap position: "P7 -- GRID10 wird Koordinationsschicht statt Logger. Wenn
+Zellwirkungen kausal bestaetigt sind: echter Frame-Lifecycle TypedEntry ->
+GRID10 competition -> selection -> uptake -> v1 processing -> reentry.
+Wichtig: zunaechst KEINE direkte Aussenwirkung -- GRID10 koordiniert intern,
+EffectGate bleibt getrennt." (Gabriel, F2-WP-1207 P5-P13 roadmap.)
+
+This module wires exactly that cycle -- proposals -> competition -> selection
+-> broadcast -> uptake -> recurrent state update -> next-turn reentry -- for
+one already-identified real turn (frame_id/turn_event_id/runtime_epoch_id
+supplied by the caller; this module does not create GRID10 frames itself,
+that stays the job of the existing P4 frame-lifecycle code). It is additive
+and shadow/live-gated end to end:
+
+- Gate: ``p7_active()`` follows the SAME pattern as the P0 shadow gate
+  (``_f2wp1207_shadow_aktiv`` in frankenstein-repo/scripts/stern.py): an
+  env-var override (``STERN_F2WP1207_P7_LIVE``, checked fresh every call, "0"
+  or "1" wins outright) falls back to a persistent ``star_konfig`` key
+  (``f2wp1207.p7_active``), default OFF ("0" / missing).
+- When the gate is closed, ``coordinate_real_turn`` returns ``None``
+  immediately, before any read or write -- zero added DB I/O, zero added log
+  lines, zero behavioral delta versus not having this module at all.
+- When open, one coordination cycle runs entirely inside the existing
+  ``f2_grid10_p6d_state`` table (no new table, no schema migration) under a
+  single new, reserved ``condition_key`` (``P7_LIVE_CONDITION_KEY``) that
+  does not collide with any existing sweep/probe condition_key
+  (p6d_baseline/p6d_cf_a/p6d_cf_b/p6d_decay_01/05/09/p6d_impulse/p6d_reset/
+  p6d_shuffle/sw00/sw025/sw05/sw075/sw075_frozen/sw075_shuffle/sw10, checked
+  against the live table at design time).
+- Cells stay opaque G1..G10 throughout -- no semantic role naming.
+- No Effects, no EffectGate call of any kind -- this module only reads/writes
+  ``f2_grid10_p6d_state`` and appends to a caller-supplied evidence log.
+
+Recurrent-state formula: reused, not reinvented. ``state_update`` /
+``proposal_score`` and their accepted primary parameters (LAMBDA_PRIMARY=0.7,
+ALPHA=0.4, BETA=0.4, GAMMA=0.3, KAPPA=0.6) are copied verbatim from
+``workpackages/evidence_inbox/F2-WP-1207/p6d_recurrent_dynamics/p6d_runner.py``
+(the accepted P6d mechanism, preregistered in PREREG_P6D_20260904.md,
+reconstructed at commit 283b217 on the separate, not-yet-merged branch
+``self-integration/wp1207-p6d-runner-reconstruction-20260904`` -- a different
+agent's in-flight workpackage, paket-1788513679806-e244c6, explicitly out of
+scope for this task). This module reads that file for reference/citation
+only and copies the two pure formula functions inline rather than importing
+it, deliberately: importing across an unmerged branch's not-yet-landed,
+evidence_inbox-scoped file would create a live dependency this module cannot
+safely rely on being present. The winner-take-uptake / margin-based-conflict
+rule (0.05 margin) is the same rule ``p6d_runner.py`` uses in its own
+``simulate_condition`` (documented there as "a template for future runs").
+
+Persistence convention: plain ``sqlite3.Connection`` supplied by the caller
+(no path resolution, no second database opened here) -- the same convention
+GRID10 tables have always used in stern.py and in p6d_runner.py, not the
+heavier WP-206 ``CanonicalPersistentAgencyStore`` (that store guards a
+different, unrelated table family).
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import hashlib
+import json
+import os
+import sqlite3
+from datetime import datetime, timezone
+from math import tanh
+from pathlib import Path
+from typing import Mapping
+
+CELLS: tuple[str, ...] = tuple(f"G{i}" for i in range(1, 11))
+
+# Copied from p6d_runner.py (PREREG_P6D_20260904.md primary parameters) --
+# see module docstring for provenance. Keep numerically identical to that
+# file; do not retune independently of a new preregistration.
+LAMBDA_PRIMARY = 0.7
+ALPHA = 0.4
+BETA = 0.4
+GAMMA = 0.3
+KAPPA = 0.6
+CONFLICT_MARGIN = 0.05
+
+P7_SCHEMA = "F2WP1207_GRID10_P7_COORDINATION/v1"
+P7_STATE_ROW_SCHEMA = "F2WP1207_GRID10_P6D_STATE/v1"  # reuses existing table's own schema tag
+P7_TRANSITION_LOG_SCHEMA = "F2WP1207_P7_STATE_TRANSITION/v1"
+
+# Reserved condition_key for the live (real-turn) P7 coordination cycle.
+# Distinct from every historical p6d_*/sw* sweep condition_key already
+# present in f2_grid10_p6d_state / f2_grid10_sweep_state.
+P7_LIVE_CONDITION_KEY = "f2wp1207_p7_live"
+
+ENV_OVERRIDE = "STERN_F2WP1207_P7_LIVE"
+KONFIG_KEY = "f2wp1207.p7_active"
+
+
+class Grid10P7CoordinationError(RuntimeError):
+    """Fail-closed P7 coordination error."""
+
+
+def _jetzt_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+# --------------------------------------------------------------------------
+# Gate -- same pattern as _f2wp1207_shadow_aktiv() in stern.py
+# --------------------------------------------------------------------------
+
+
+def p7_active(conn: sqlite3.Connection, *, env: Mapping[str, str] | None = None) -> bool:
+    """Env override wins outright ("0"/"1"); else the persistent
+    ``star_konfig`` flag, default OFF. Read fresh every call, same as the
+    P0 gate -- no caching, callers may run as long-lived processes."""
+    environ = env if env is not None else os.environ
+    override = environ.get(ENV_OVERRIDE)
+    if override in ("0", "1"):
+        return override == "1"
+    try:
+        row = conn.execute(
+            "SELECT wert FROM star_konfig WHERE schluessel=?", (KONFIG_KEY,)
+        ).fetchone()
+    except sqlite3.Error:
+        return False
+    return (row[0] if row else "0") == "1"
+
+
+def set_p7_active(conn: sqlite3.Connection, active: bool, *, quelle: str) -> None:
+    """Persistent flip, mirroring stern.py's ``_konfig_dyn_set`` upsert.
+    Callers doing isolated testing should prefer the env override above and
+    never call this against the real unified.db -- see module docstring /
+    task rollback notes."""
+    conn.execute(
+        "INSERT INTO star_konfig (schluessel, wert, typ, quelle, geaendert) VALUES (?,?,?,?,?) "
+        "ON CONFLICT(schluessel) DO UPDATE SET wert=excluded.wert, quelle=excluded.quelle, "
+        "geaendert=excluded.geaendert",
+        (KONFIG_KEY, "1" if active else "0", "str", quelle, datetime.now(timezone.utc).timestamp()),
+    )
+    conn.commit()
+
+
+# --------------------------------------------------------------------------
+# Pure mechanism -- no I/O, independently testable
+# --------------------------------------------------------------------------
+
+
+def derive_signal(turn_event_id: str, cell_id: str) -> float:
+    """Deterministic pseudo-random value in [0,1), same recipe as
+    p6d_runner.py's ``derive_signal``: first 8 hex chars of
+    sha256(turn_event_id:cell:signal), scaled to [0,1)."""
+    digest = hashlib.sha256(f"{turn_event_id}:{cell_id}:signal".encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) / 2**32
+
+
+def proposal_score(signal: float, state: float, *, kappa: float = KAPPA) -> float:
+    """proposal_score = signal + kappa * tanh(state)."""
+    return signal + kappa * tanh(state)
+
+
+def state_update(
+    state: float,
+    uptake: float,
+    broadcast: float,
+    conflict: float,
+    *,
+    lam: float = LAMBDA_PRIMARY,
+    alpha: float = ALPHA,
+    beta: float = BETA,
+    gamma: float = GAMMA,
+) -> float:
+    """state(t+1) = lambda*state(t) + alpha*uptake(t) + beta*broadcast(t) - gamma*conflict(t)."""
+    return lam * state + alpha * uptake + beta * broadcast - gamma * conflict
+
+
+@dataclass(frozen=True)
+class RealTurn:
+    """Identity of the already-created GRID10 frame this coordination cycle
+    runs for. This module never mints frame_id/turn_event_id itself -- those
+    come from the existing P4 frame-lifecycle write."""
+
+    frame_id: str
+    turn_event_id: str
+    runtime_epoch_id: str
+    session_id: str
+
+
+@dataclass(frozen=True)
+class CellTransition:
+    cell_id: str
+    signal: float
+    old_state: float
+    proposal_score: float
+    uptake: int
+    conflict: int
+    broadcast_term: float
+    lambda_term: float
+    alpha_term: float
+    beta_term: float
+    gamma_term: float
+    new_state: float
+
+
+@dataclass(frozen=True)
+class P7CoordinationResult:
+    schema: str
+    turn: RealTurn
+    condition_key: str
+    winner_cell_id: str
+    broadcast_value: float
+    transitions: tuple[CellTransition, ...] = field(default_factory=tuple)
+
+
+def run_coordination_cycle(
+    turn: RealTurn,
+    prior_state: Mapping[str, float],
+    *,
+    kappa: float = KAPPA,
+    lam: float = LAMBDA_PRIMARY,
+    alpha: float = ALPHA,
+    beta: float = BETA,
+    gamma: float = GAMMA,
+) -> P7CoordinationResult:
+    """Pure: proposals -> competition -> selection -> broadcast -> uptake ->
+    recurrent state update. No DB, no filesystem. ``prior_state`` maps
+    cell_id -> state_value; missing cells default to 0.0 (matches
+    p6d_runner's replay convention: "no history ever accumulates" before the
+    first frame of a condition).
+
+    ``kappa``/``lam``/``alpha``/``beta``/``gamma`` are keyword-only tune
+    overrides (F2WP1207 tune-passthrough, 2026-09-06). Defaults are the exact
+    module constants -- callers that omit them get byte-identical behaviour
+    to before this parametrisation existed. Never mutates the module
+    constants themselves, so there is no leakage between calls."""
+    signals = {cell: derive_signal(turn.turn_event_id, cell) for cell in CELLS}
+    states = {cell: float(prior_state.get(cell, 0.0)) for cell in CELLS}
+    scores = {cell: proposal_score(signals[cell], states[cell], kappa=kappa) for cell in CELLS}
+
+    winner = max(scores, key=lambda c: scores[c])
+    broadcast_value = scores[winner]
+
+    transitions: list[CellTransition] = []
+    for cell in CELLS:
+        uptake = 1 if cell == winner else 0
+        conflict = (
+            1
+            if (cell != winner and abs(scores[cell] - broadcast_value) <= CONFLICT_MARGIN)
+            else 0
+        )
+        broadcast_term = broadcast_value if cell == winner else 0.0
+        old_state = states[cell]
+        lambda_term = lam * old_state
+        alpha_term = alpha * uptake
+        beta_term = beta * broadcast_term
+        gamma_term = gamma * conflict
+        new_state = lambda_term + alpha_term + beta_term - gamma_term
+        transitions.append(
+            CellTransition(
+                cell_id=cell,
+                signal=signals[cell],
+                old_state=old_state,
+                proposal_score=scores[cell],
+                uptake=uptake,
+                conflict=conflict,
+                broadcast_term=broadcast_term,
+                lambda_term=lambda_term,
+                alpha_term=alpha_term,
+                beta_term=beta_term,
+                gamma_term=gamma_term,
+                new_state=new_state,
+            )
+        )
+
+    return P7CoordinationResult(
+        schema=P7_SCHEMA,
+        turn=turn,
+        condition_key=P7_LIVE_CONDITION_KEY,
+        winner_cell_id=winner,
+        broadcast_value=broadcast_value,
+        transitions=tuple(transitions),
+    )
+
+
+# --------------------------------------------------------------------------
+# I/O -- plain sqlite3.Connection supplied by the caller, existing tables only
+# --------------------------------------------------------------------------
+
+
+def read_prior_state(conn: sqlite3.Connection, condition_key: str) -> dict[str, float]:
+    rows = conn.execute(
+        "SELECT logical_cell_id, state_value FROM f2_grid10_p6d_state WHERE condition_key=?",
+        (condition_key,),
+    ).fetchall()
+    return {cell_id: float(state_value) for cell_id, state_value in rows}
+
+
+def persist_coordination_result(conn: sqlite3.Connection, result: P7CoordinationResult) -> None:
+    """Single transaction, one UPSERT per cell into the existing
+    f2_grid10_p6d_state table (PK condition_key/logical_cell_id) -- same
+    upsert shape stern.py already uses for f2_grid10_cell_state."""
+    ts = _jetzt_iso()
+    conn.execute("BEGIN")
+    try:
+        for transition in result.transitions:
+            conn.execute(
+                "INSERT INTO f2_grid10_p6d_state "
+                "(condition_key, logical_cell_id, state_value, updated_at, "
+                " updated_by_frame_id, won_broadcast_count, schema) "
+                "VALUES (?,?,?,?,?,?,?) "
+                "ON CONFLICT(condition_key, logical_cell_id) DO UPDATE SET "
+                "state_value=excluded.state_value, updated_at=excluded.updated_at, "
+                "updated_by_frame_id=excluded.updated_by_frame_id, "
+                "won_broadcast_count=won_broadcast_count + (CASE WHEN ?=? THEN 1 ELSE 0 END)",
+                (
+                    result.condition_key,
+                    transition.cell_id,
+                    transition.new_state,
+                    ts,
+                    result.turn.frame_id,
+                    1 if transition.cell_id == result.winner_cell_id else 0,
+                    P7_STATE_ROW_SCHEMA,
+                    transition.cell_id,
+                    result.winner_cell_id,
+                ),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def append_transition_log(evidence_path: Path, result: P7CoordinationResult) -> None:
+    """Append one JSON line describing the full state transition -- which
+    frame/condition/turn, old->new state per cell, and every formula term
+    that contributed -- for later audit/replay. Caller supplies the sink
+    path explicitly; this module never assumes or hardcodes a cross-repo
+    runtime path (the live stern.py evidence stream lives in a different
+    repository and is out of this task's scope)."""
+    line = {
+        "schema": P7_TRANSITION_LOG_SCHEMA,
+        "ts": _jetzt_iso(),
+        "frame_id": result.turn.frame_id,
+        "turn_event_id": result.turn.turn_event_id,
+        "runtime_epoch_id": result.turn.runtime_epoch_id,
+        "session_id": result.turn.session_id,
+        "condition_key": result.condition_key,
+        "winner_cell_id": result.winner_cell_id,
+        "broadcast_value": result.broadcast_value,
+        "transitions": [
+            {
+                "cell_id": t.cell_id,
+                "signal": t.signal,
+                "old_state": t.old_state,
+                "proposal_score": t.proposal_score,
+                "uptake": t.uptake,
+                "conflict": t.conflict,
+                "broadcast_term": t.broadcast_term,
+                "lambda_term": t.lambda_term,
+                "alpha_term": t.alpha_term,
+                "beta_term": t.beta_term,
+                "gamma_term": t.gamma_term,
+                "new_state": t.new_state,
+            }
+            for t in result.transitions
+        ],
+    }
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(evidence_path, "a", encoding="utf-8") as f:
+        f.write(_canonical_json(line) + "\n")
+
+
+# --------------------------------------------------------------------------
+# Orchestration -- the single entry point a caller (e.g. a future stern.py
+# call site) would invoke per real turn
+# --------------------------------------------------------------------------
+
+
+def coordinate_real_turn(
+    conn: sqlite3.Connection,
+    evidence_path: Path,
+    turn: RealTurn,
+    *,
+    env: Mapping[str, str] | None = None,
+    kappa: float = KAPPA,
+    lam: float = LAMBDA_PRIMARY,
+    alpha: float = ALPHA,
+    beta: float = BETA,
+    gamma: float = GAMMA,
+) -> P7CoordinationResult | None:
+    """Gate-checked entry point. Returns ``None`` (zero reads, zero writes,
+    zero log lines) when P7 is not active -- see module docstring. When
+    active: read current live state -> run the pure coordination cycle ->
+    persist -> log -> return the result for the caller's own use (e.g.
+    next-turn reentry is simply the next call's ``read_prior_state`` picking
+    up what this call just persisted).
+
+    Tune kwargs (F2WP1207 tune-passthrough, 2026-09-06): passed straight
+    through to ``run_coordination_cycle``; defaults are the module constants,
+    so omitting them is byte-identical to before."""
+    if not p7_active(conn, env=env):
+        return None
+    prior_state = read_prior_state(conn, P7_LIVE_CONDITION_KEY)
+    result = run_coordination_cycle(
+        turn, prior_state, kappa=kappa, lam=lam, alpha=alpha, beta=beta, gamma=gamma
+    )
+    persist_coordination_result(conn, result)
+    append_transition_log(evidence_path, result)
+    return result

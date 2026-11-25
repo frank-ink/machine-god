@@ -1,0 +1,780 @@
+=== FILE: a-grid/grid10/register.py ===
+"""grid10 lane: ONE canonical GRID10 turn per user prompt (donor f2wp1207 turn loop).
+
+Local reconstruction of the glue that the original machine kept in its stern.py
+/ identity layer. Everything here is local sqlite3 + the 4 vendored donor
+modules in this directory (pure python, no sockets/subprocess). Fail-closed and
+fail-silent for the hook: any error -> None + one log line. Flag
+`f2wp1207.canonical_turn_loop` in star_konfig (default 0) gates everything.
+"""
+from __future__ import annotations
+
+import hashlib
+import sqlite3
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+try:  # o08b Quelle (2026-11-07, Gabriel "voll rein"): Achsensatz-Umgebung VOR dem Import des Turn-Loops festlegen (Konstanten werden beim Import gelesen);
+    # dieselbe Funktion nutzt der Puls (entitaet.py) -> beide Pfade haben denselben Fingerabdruck. Nur bei star_konfig frank3.o08b.mode='on'. Fail-silent.
+    _STAR_ROOT = str(_HERE.parents[1])
+    if _STAR_ROOT not in sys.path:
+        sys.path.insert(0, _STAR_ROOT)
+    import f2wp1207_o08b_quelle as _o08b_q
+    _o08b_q.env_anwenden()
+except Exception:
+    _o08b_q = None
+
+import f2wp1207_grid10_turn_loop as tl  # noqa: E402
+
+SCHEMA = "LOCAL_GRID10_IDENTITY/v1"
+import sys as _s, pathlib as _p
+_s.path.insert(0, str(_p.Path(__file__).resolve().parents[2]))
+try:
+    import frank_profile as _fp
+    _ON, _OID = _fp.name(), _fp.user_id()
+except Exception:
+    _ON, _OID = "user-c", "user-c"
+OWNER = _OID
+ENTITY_LABEL = "FranKenstein (%s's local entity)" % _ON
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def ensure_f2_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript((_HERE / "schema_f2.sql").read_text(encoding="utf-8"))
+    conn.commit()
+
+
+def _ids(db_path: str, star_dir: str) -> dict:
+    # same derivation idea as the donor: installation id hangs off DB path + code dir
+    inst = hashlib.sha256(f"F2WP1207_INSTALLATION_REF/v1:{db_path}:{star_dir}".encode()).hexdigest()[:32]
+    return {
+        "entity_id": hashlib.sha256(f"F2WP1207_ENTITY/v1:{OWNER}:{db_path}".encode()).hexdigest()[:32],
+        "installation_id": inst,
+        "state_root_id": hashlib.sha256(f"F2WP1207_STATE_ROOT/v1:{inst}:{db_path}".encode()).hexdigest()[:32],
+        "binding_id": hashlib.sha256(f"F2WP1207_HOST_BINDING/v1:{inst}:local".encode()).hexdigest()[:32],
+    }
+
+
+def genesis_identity(conn: sqlite3.Connection, db_path: str, star_dir: str) -> dict:
+    """Idempotent INSERT OR IGNORE of entity/installation/state-root/host-binding.
+    ADOPT FIRST (2026-10-15): A already has the real donor identity layer (entity 2026-09-03, >800 epochs, other column layout than schema_f2.sql). If an epoch chain exists,
+    continue the ids of its LATEST epoch and write NO identity rows (the positional INSERTs below failed 'has 3 columns but 5 values' since 2026-10-07)."""
+    try:
+        r = conn.execute("SELECT e.state_root_id,e.installation_id,e.host_binding_id,i.entity_id FROM f2_runtime_epoch e "
+                         "JOIN f2_installation_identity i ON i.installation_id=e.installation_id ORDER BY e.started_at DESC LIMIT 1").fetchone()
+        if r:
+            return {"state_root_id": r[0], "installation_id": r[1], "binding_id": r[2], "entity_id": r[3]}
+    except sqlite3.Error:
+        pass
+    i = _ids(db_path, star_dir)
+    ts = _now()
+    conn.execute("INSERT OR IGNORE INTO f2_entity_identity VALUES (?,?,?,?,?)",
+                 (i["entity_id"], ENTITY_LABEL, OWNER, ts, SCHEMA))
+    conn.execute("INSERT OR IGNORE INTO f2_installation_identity VALUES (?,?,?,?,?)",
+                 (i["installation_id"], i["entity_id"], f"{db_path}:{star_dir}", ts, SCHEMA))
+    conn.execute("INSERT OR IGNORE INTO f2_state_root_identity VALUES (?,?,?,?,?)",
+                 (i["state_root_id"], i["installation_id"], db_path, ts, SCHEMA))
+    conn.execute("INSERT OR IGNORE INTO f2_host_binding VALUES (?,?,?,?,?,?)",
+                 (i["binding_id"], i["installation_id"], "local-laptop", "ACTIVE", ts, SCHEMA))
+    conn.commit()
+    return i
+
+
+def epoch_for_session(conn: sqlite3.Connection, ids: dict, session_id: str) -> str:
+    """One runtime epoch per Claude session; predecessor = most recent epoch."""
+    epoch_id = hashlib.sha256(f"F2WP1207_EPOCH/v1:{ids['installation_id']}:{session_id}".encode()).hexdigest()[:32]
+    if conn.execute("SELECT 1 FROM f2_runtime_epoch WHERE runtime_epoch_id=?", (epoch_id,)).fetchone():
+        return epoch_id
+    prev = conn.execute(
+        "SELECT runtime_epoch_id FROM f2_runtime_epoch WHERE installation_id=? ORDER BY started_at DESC, rowid DESC LIMIT 1",
+        (ids["installation_id"],)).fetchone()
+    conn.execute(
+        "INSERT INTO f2_runtime_epoch (runtime_epoch_id,state_root_id,installation_id,host_binding_id,"
+        "started_at,predecessor_epoch_id,schema,session_id) VALUES (?,?,?,?,?,?,?,?)",
+        (epoch_id, ids["state_root_id"], ids["installation_id"], ids["binding_id"], _now(),
+         prev[0] if prev else None, SCHEMA, session_id))
+    conn.commit()
+    return epoch_id
+
+
+def _turn_sync(conn: sqlite3.Connection, db_path: str, star_dir: str, session_id: str,
+         prompt: str, retrieval: str | None) -> dict | None:
+    """Run one canonical turn. Returns a small dict, or None if gate off.
+    Raises on real failure (caller logs). conn must be a plain sqlite3 connection."""
+    if not tl.turn_loop_active(conn):
+        return None
+    ensure_f2_schema(conn)
+    ids = genesis_identity(conn, db_path, star_dir)
+    epoch = epoch_for_session(conn, ids, session_id)
+    conn.row_factory = sqlite3.Row
+    kw = {}
+    if _o08b_q is not None:  # 0.8B-Organ als Quelle fuer modell_* + abstrakt_* (laeuft im abgekoppelten Prozess, kein Hook-Limit; fehlt die Messung -> Achsen None)
+        try:
+            kw = _o08b_q.felder(prompt, lane="hook", session=session_id, db_path=db_path, timeout_s=5.0).get("kwargs") or {}
+        except Exception:
+            kw = {}
+    entry = tl.TypedEntry(
+        session_id=session_id, runtime_epoch_id=epoch, event_type="UserPromptSubmit",
+        prompt_len=len(prompt or ""), retrieval_present=bool(retrieval),
+        retrieval_len=len(retrieval or ""), **kw)
+    res = tl.run_canonical_turn(conn, entry)
+    if res is None:
+        return None
+    try:  # FRANK3 stage E: GRID10 v2 SHADOW lane (computes + logs next to the legacy winner; never drives, never injects)
+        _v2_shadow(conn, session_id, prompt, retrieval, res.jspace.winner_cell_id)
+    except Exception:
+        pass
+    try:  # extended-signal x-lane: own tables, read by nothing, publishes nothing
+        _v2x_shadow(conn, session_id, prompt, retrieval, res.jspace.winner_cell_id)
+    except Exception:
+        pass
+    return {
+        "frame_id": res.frame_id, "reentry": res.reentry.kind,
+        "winner": res.jspace.winner_cell_id,
+        "broadcast": getattr(res.jspace, "broadcast_value", None),
+        "epoch": epoch,
+    }
+
+
+_ASYNC_SNIPPET = """
+import sys, os, json, sqlite3
+sys.path.insert(0, sys.argv[1])
+db, star, sid, spool, lock = sys.argv[2:7]
+try:
+    import register as g
+    c = sqlite3.connect(db, timeout=8)
+    c.execute("PRAGMA busy_timeout=8000")
+    prompt, _, retr = sys.stdin.read().partition(chr(0))
+    r = g._turn_sync(c, db, star, sid, prompt[:4000], retr or None)
+    c.close()
+    if r:
+        tmp = spool + ".tmp"
+        json.dump(r, open(tmp, "w"))
+        os.replace(tmp, spool)
+finally:
+    try:
+        os.remove(lock)
+    except Exception:
+        pass
+"""
+
+
+def turn(conn, db_path, star_dir, session_id, prompt, retrieval):
+    """ASYNC wrapper (2026-10-15). stern.py's UserPromptSubmit hook has a HARD 3 s budget (138 'time limit reached' in 8 h), the canonical turn writes ~15 rows and can
+    wait on the busy DB. So: gate check on the given conn, start the real turn DETACHED (own process, 8 s busy timeout) and return the spooled result of the
+    PREVIOUS prompt of this session (same dict shape as _turn_sync; None if none yet). One run per session in flight."""
+    import json, os, subprocess
+    if not tl.turn_loop_active(conn):
+        return None
+    base = os.path.join(os.path.expanduser(os.environ.get("FRANK3_HIST_DIR") or "~/.local/share/frank3/hist"), "grid10")
+    sid = "".join(ch for ch in str(session_id) if ch.isalnum() or ch == "-")[:60] or "x"
+    spool, lock = os.path.join(base, "turn_%s.json" % sid), os.path.join(base, "run_%s.lock" % sid)
+    prev = None
+    try:
+        if os.path.exists(spool):
+            prev = json.load(open(spool))
+            os.replace(spool, spool + ".done")
+    except Exception:
+        prev = None
+    try:
+        os.makedirs(base, exist_ok=True)
+        if not (os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 20):
+            open(lock, "w").close()
+            pr = subprocess.Popen([sys.executable, "-I", "-c", _ASYNC_SNIPPET, str(_HERE), str(db_path), str(star_dir), str(session_id), spool, lock], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            pr.stdin.write(((prompt or "")[:4000] + chr(0) + (retrieval or "")[:20000]).encode("utf-8", "replace"))
+            pr.stdin.close()
+    except Exception:
+        pass
+    return prev
+
+
+def rueckweg_zeile(r: dict) -> str:
+    bv = r.get("broadcast")
+    bv_txt = f"{bv:.3f}" if isinstance(bv, (int, float)) else "?"
+    return ("GRID10 -- outcome of the cognition-loop competition for exactly this input "
+            "(not the language model):\n"
+            f"  winner cell {r['winner']} | broadcast {bv_txt} | reentry {r['reentry']} | "
+            f"frame {r['frame_id'][:16]}")
+
+
+_V2X_DDL = ("CREATE TABLE IF NOT EXISTS f3_grid_v2x_state(singleton INTEGER PRIMARY KEY CHECK(singleton=1), j TEXT NOT NULL, updated REAL NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS f3_grid_v2x_log(id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, session TEXT, legacy_winner TEXT, "
+            "v2_winner TEXT, abstain INTEGER, max_score REAL, thresh REAL, signals TEXT)",
+            # G9 novelty ring (lexical_percept.py): only token HASHES per user message, <=8 per session, <=400 total; x-lane only, no reader outside it
+            "CREATE TABLE IF NOT EXISTS f3_grid_v2x_hist(id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, session TEXT, digest TEXT, toks TEXT)")
+_V2_DDL = ("CREATE TABLE IF NOT EXISTS f3_grid_v2_state(singleton INTEGER PRIMARY KEY CHECK(singleton=1), j TEXT NOT NULL, updated REAL NOT NULL)",
+           "CREATE TABLE IF NOT EXISTS f3_grid_v2_log(id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, session TEXT, legacy_winner TEXT, "
+           "v2_winner TEXT, abstain INTEGER, max_score REAL, thresh REAL, signals TEXT)")
+_CODE_CUE = None
+
+
+_APPRAISE = None
+
+
+def _appraise(text):
+    """Lexicon appraisal of the prompt via the production kogloop.appraise_ext (modules/hist/kogloop.py:148: German/English phrase lexicons, negation-aware,
+    pure function). HEURISTIC (lexical), not a model measurement. Loaded lazily by path with sys.path restored (kogloop inserts its dir into sys.path).
+    Any failure -> None -> the cells stay 0."""
+    global _APPRAISE
+    if _APPRAISE is None:
+        try:
+            import importlib.util as _iu
+            saved = list(sys.path)
+            try:
+                sp = _iu.spec_from_file_location("grid10_kogloop_lex", str(_HERE.parent / "hist" / "kogloop.py"))
+                m = _iu.module_from_spec(sp)
+                sp.loader.exec_module(m)
+                _APPRAISE = m.appraise_ext
+            finally:
+                sys.path[:] = saved
+        except Exception:
+            _APPRAISE = False
+    if not _APPRAISE:
+        return None
+    try:
+        return _APPRAISE(text)
+    except Exception:
+        return None
+
+
+def v2_signals(conn, prompt, retrieval, extended=True, hist=None, session=None):
+    """Frank's MEASURABLE grid inputs, mirroring OMEGA's honest wiring (omega_grid_signal.go DeriveGridSignalVector).
+    LEGACY (extended=False, what the main lane f3_grid_v2_* still uses -- see _v2_shadow): G10, G6, G7 only.
+    EXTENDED (extended=True, fed ONLY to the separate x-lane f3_grid_v2x_*):
+      G10 Umfang = min(1, est. prompt tokens/3000)                       (measured length; est. = chars/4)
+      G6 Werkzeugdruck = 1 iff prompt looks like a code/tool task        (regex HEURISTIC)
+      G7 Zielkontinuitaet = a goal is active (architect mode or open omega_goal)   (state lookup)
+      G2 Affekt-Intensitaet = max(frustration, praise, urgency) lexicon weight     (HEURISTIC, kogloop.appraise_ext; OMEGA: 4B percept axis Intensitaet)
+      G3 Valenz-Spannung = |praise - max(frustration, correction)|                  (HEURISTIC, same lexicon; OMEGA: |4B valence|)
+      G8 Gedaechtnisdruck = min(1, n_items/5), n_items = bullet lines ("  • ") of the retrieval block the hook already fetched for this prompt
+         (PROXY: OMEGA sums Salience of TITAN candidates /5; the hook passes only text, no per-item salience, so each item counts 1 = upper bound)
+      G1,G4,G5,G9 (2026-11-06): lexical_fallback port of OMEGA omega_lexical_percept.go (modules/grid10/lexical_percept.py; surface features, calibrated on nothing).
+         G4 = (b+1)/2 >= 0.5 for any non-empty prompt (Go semantics). G9 = 1 - max Jaccard vs the last 8 user msgs of this SESSION (hist: list of (digest, token-hashes),
+         default: read f3_grid_v2x_hist for `session`; no history -> G9 stays 0, never invented). The x-lane only; writing the ring is _v2x_shadow's job (this fn never writes).
+    OLD NOTE (before 2026-11-06; G1,G4,G5,G9 are now the lexical fallback above, G2/G3 unchanged from kogloop): G1 Abstraktion, G4 Bindung, G5 Endgueltigkeit (OMEGA: 4B percept axes; the 4B/probe is not run
+      in the hook, abstrakt_* TypedEntry fields are off (ABSTRAKTION_ANBINDUNG_AKTIV=0); f2_grid10_percept.signale_json G1..G5 are NOT these axes:
+      they are per-cell random projections of the world vector, 'function-neutral' by design), G9 Ueberraschung (needs model logprobs; hook lane has
+      modell_ueberraschung=0 in every row). No hash/random values anywhere. Fail-silent per cell."""
+    import re
+    global _CODE_CUE
+    if _CODE_CUE is None:
+        _CODE_CUE = re.compile(r"```|\b(def|class|import|git|pip|bash|python|sqlite|systemctl|traceback|error|fix|bug|build|install|script|datei|file|run)\b|[/~][\w.-]+/[\w.-]+", re.I)
+    p = prompt or ""
+    sig = {"G%d" % i: 0.0 for i in range(1, 11)}
+    sig["G10"] = min(1.0, (len(p) / 4.0) / 3000.0)
+    sig["G6"] = 1.0 if _CODE_CUE.search(p) else 0.0
+    g7 = 0.0
+    try:
+        r = conn.execute("select wert from star_konfig where schluessel='architekt.aktiv'").fetchone()
+        if r and str(r[0]) == "1":
+            g7 = 1.0
+        elif conn.execute("select 1 from omega_goal where lower(status) not in ('done','closed','abandoned','complete','completed') limit 1").fetchone():
+            g7 = 1.0
+    except Exception:
+        pass
+    sig["G7"] = g7
+    if not extended:
+        return sig
+    try:
+        ap = _appraise(p)
+        if ap:
+            fr, pr, ur, co = (float(ap.get(k, 0.0) or 0.0) for k in ("frustration", "praise", "urgency", "correction"))
+            sig["G2"] = max(0.0, min(1.0, max(fr, pr, ur)))
+            sig["G3"] = max(0.0, min(1.0, abs(pr - max(fr, co))))
+    except Exception:
+        pass
+    try:  # lexical_fallback G1,G4,G5,G9 (G2/G3 deliberately NOT taken from it: they stay kogloop)
+        if p.strip():
+            import lexical_percept as _lp
+            if hist is None:
+                hist = []
+                try:
+                    import json as _j
+                    hist = [(r[0], _j.loads(r[1])) for r in reversed(conn.execute(
+                        "select digest,toks from f3_grid_v2x_hist where session=? order by id desc limit 8", (session or "",)).fetchall())]
+                except Exception:
+                    hist = []
+            ax = _lp.lexical_axes(p[:30000], hist)  # cap: 30k chars ~ 100 ms; hook budget 3 s
+            for k in ("G1", "G4", "G5"):
+                sig[k] = float(ax[k])
+            if ax["g9_valid"]:
+                sig["G9"] = float(ax["G9"])
+    except Exception:
+        pass
+    try:
+        if retrieval:
+            n = sum(1 for ln in str(retrieval).splitlines() if ln.startswith("  \u2022 "))
+            sig["G8"] = min(1.0, n / 5.0)
+    except Exception:
+        pass
+    return sig
+
+
+def _v2_shadow(conn, session_id, prompt, retrieval, legacy_winner):
+    import json, time
+    r = conn.execute("select wert from star_konfig where schluessel='frank3.grid_v2.mode'").fetchone()
+    mode = r[0] if r else "shadow"
+    k = conn.execute("select wert from star_konfig where schluessel='frank3.kill'").fetchone()
+    if mode == "off" or (k and k[0] == "1"):
+        return
+    from grid_v2 import GridV2Engine
+    for d in _V2_DDL:
+        conn.execute(d)
+    row = conn.execute("select j from f3_grid_v2_state where singleton=1").fetchone()
+    e = GridV2Engine.from_json(json.loads(row[0])) if row else GridV2Engine()
+    sig = v2_signals(conn, prompt, retrieval, extended=False)  # LEGACY 3-cell input: f3_grid_v2_state feeds frank3_gwt.compete (mode active -> injects); must not change
+    o = e.step(sig)
+    conn.execute("insert or replace into f3_grid_v2_state(singleton,j,updated) values(1,?,?)", (json.dumps(e.to_json()), time.time()))
+    conn.execute("insert into f3_grid_v2_log(ts,session,legacy_winner,v2_winner,abstain,max_score,thresh,signals) values(?,?,?,?,?,?,?,?)",
+                 (time.time(), session_id[:40], legacy_winner, o["winner"], int(o["abstain"]), o["max_score"], o["thresh"], json.dumps({k: v for k, v in sig.items() if v})))
+    conn.execute("delete from f3_grid_v2_log where id < (select max(id) from f3_grid_v2_log) - 5000")  # bounded retention
+    conn.commit()
+    if o["winner"]:
+        try:
+            import frank3_gwt as _g  # star root on sys.path via frank_profile header
+            _g.publish('grid', {'id': 'grid:v2:' + o['winner'], 'kind': 'grid_state', 'source': 'grid:v2', 'payload': 'grid v2 winner %s score %.1f' % (o['winner'], o['max_score']), 'salience': min(1.0, o['max_score'] / 30.0)}, conn=conn)
+            conn.commit()
+        except Exception:
+            pass
+
+
+def _v2x_shadow(conn, session_id, prompt, retrieval, legacy_winner):
+    """Same engine, EXTENDED signals (G2,G3,G8 + lexical_fallback G1,G4,G5,G9 added), SEPARATE state/log (f3_grid_v2x_*). Why separate: frank3_gwt.compete() reads f3_grid_v2_state cells as gain
+    and frank3.gwt.mode=active injects the winning line, so feeding new cells into the main state would steer injected context. This lane is observation only:
+    no frank3_gwt.publish, no reader. Promote = switch the extended=False above to True (behaviour change -> needs Gabriel's OK)."""
+    import json, time
+    k = conn.execute("select wert from star_konfig where schluessel='frank3.kill'").fetchone()
+    r = conn.execute("select wert from star_konfig where schluessel='frank3.grid_v2.mode'").fetchone()
+    if (r and r[0] == "off") or (k and k[0] == "1"):
+        return
+    from grid_v2 import GridV2Engine
+    for d in _V2X_DDL:
+        conn.execute(d)
+    row = conn.execute("select j from f3_grid_v2x_state where singleton=1").fetchone()
+    e = GridV2Engine.from_json(json.loads(row[0])) if row else GridV2Engine()
+    sig = v2_signals(conn, prompt, retrieval, extended=True, session=session_id[:40])
+    try:  # G9 ring: hashes only, bounded (8 per session, 400 total); fail-silent
+        import lexical_percept as _lp
+        if (prompt or "").strip():
+            dg, toks = _lp.history_entry(prompt[:30000])
+            last = conn.execute("select digest from f3_grid_v2x_hist where session=? order by id desc limit 1", (session_id[:40],)).fetchone()
+            if not last or last[0] != dg:
+                conn.execute("insert into f3_grid_v2x_hist(ts,session,digest,toks) values(?,?,?,?)", (time.time(), session_id[:40], dg, json.dumps(toks)))
+                conn.execute("delete from f3_grid_v2x_hist where session=? and id not in (select id from f3_grid_v2x_hist where session=? order by id desc limit 8)",
+                             (session_id[:40], session_id[:40]))
+                conn.execute("delete from f3_grid_v2x_hist where id < (select max(id) from f3_grid_v2x_hist) - 400")
+    except Exception:
+        pass
+    o = e.step(sig)
+    conn.execute("insert or replace into f3_grid_v2x_state(singleton,j,updated) values(1,?,?)", (json.dumps(e.to_json()), time.time()))
+    conn.execute("insert into f3_grid_v2x_log(ts,session,legacy_winner,v2_winner,abstain,max_score,thresh,signals) values(?,?,?,?,?,?,?,?)",
+                 (time.time(), session_id[:40], legacy_winner, o["winner"], int(o["abstain"]), o["max_score"], o["thresh"], json.dumps({k: v for k, v in sig.items() if v})))
+    conn.execute("delete from f3_grid_v2x_log where id < (select max(id) from f3_grid_v2x_log) - 5000")
+    conn.commit()
+=== FILE: a-grid/frank3_gwt.py ===
+#!/usr/bin/env python3
+"""frank3_gwt.py -- Frank-side Global Workspace bus (TOKEN-FREE inter-organ channel). Faithful python port of the OMEGA design:
+  omega_gwt_publish.go (ONE publish site), omega_gridj_cc_api.go GWTBus (bounded pending queue 32, oldest dropped + counted, staleness
+  rescoring on drain), omega_gwt_law.go (conservation ledger per route x source prefix, registry of legal routes), omega_gwt_credit.go
+  (soft credit idea -> per-kind bandit boost), omega_gwt_competition.go (compete under a token budget).  Organs never talk pairwise and never
+  exchange LLM prose: they publish compact structured candidates (kind/source/payload term/salience/confidence/urgency/origin/trust/cost);
+  the competition (grid v2 cell state as gain, novelty, learned boost) decides what wins; only the winning few reach the main session as
+  ONE bounded line. Storage: additive tables in unified.db (WAL), bounded rows, DB-write budget (omega_dbw_day).
+API: publish(), drain(), extra_sources(), compete(), cycle(), credit(), ledger_snapshot(), conservation(), unregistered_routes(), export_jsonl()
+Modes (star_konfig frank3.gwt.mode): off | shadow (default: computes + logs, injects nothing) | active (hook injects <=1 line). Kill: frank3.kill=1.
+WIRE FORMAT (OMEGA interop, docs/FRANK3.md): JSON lines, one object per candidate, fields in WIRE_FIELDS, v=1."""
+import json, math, os, re, sqlite3, time
+
+DB = os.environ.get("FRANK3_DB", os.path.expanduser("~/.local/share/agentzero/unified.db"))
+PENDING_MAX = 32
+PAYLOAD_MAX = 600
+HALF_LIFE_S = float(os.environ.get("FRANK3_GWT_HALFLIFE", 600))  # OMEGA 60 s; turns here are minutes apart (documented deviation)
+DAY_CAP = int(os.environ.get("FRANK3_DBW_CAP", 50 * 1024 * 1024))
+INBOX = os.path.expanduser("~/.local/share/frank3/gwt_inbox/omega.jsonl")
+OUTBOX = os.path.expanduser("~/.local/share/frank3/gwt_outbox.jsonl")
+WIRE_FIELDS = ("v", "id", "kind", "source", "goal_ref", "payload", "salience", "confidence", "urgency", "origin", "trust", "producer", "cost", "ts")
+
+# registry of legal routes (law): every way a candidate reaches the competition
+ROUTES = {
+    "publish": "gwt.publish() -> f3_gwt_pending (envelope: producer, age, cost)",
+    "extra:grid": "grid v2 shadow lane state (f3_grid_v2_log)",
+    "extra:strain": "STRAIN vector (f3_strain_state)",
+    "extra:reflection": "reflector lessons (f3_reflection)",
+    "extra:improver": "DB-improver probe/health regression",
+    "extra:omega": "OMEGA outbox via wire-format inbox (untrusted, advisory)",
+    "extra:net": "netaware change-gated environment candidate (modules/organs/webnet.py tick)",
+    "extra:grid_antrieb": "grid_antrieb: Warnungen/Vorschlags-Angebote/Ton-Aenderung (f2_vorschlag, f2_ton_stand), max 1 Zeile/h, shadow-first (grid_antrieb/bus.py)",
+}
+PRODUCERS = {"hook", "grid", "strain", "reflector", "improver", "retrieval", "bridge", "agent", "omega", "organ"}
+KIND_CELL = {"strain_state": "G3", "strain": "G3", "reflection": "G5", "tool": "G6", "grid_state": "G7", "goal": "G7",
+             "db_event": "G8", "improver_event": "G8", "anomaly": "G9", "scope": "G10"}  # design mapping, documented in FRANK3.md
+
+DDL = [
+    """CREATE TABLE IF NOT EXISTS f3_gwt_pending(seq INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, producer TEXT NOT NULL, cid TEXT NOT NULL,
+       kind TEXT NOT NULL, source TEXT NOT NULL, goal_ref TEXT NOT NULL DEFAULT '', payload TEXT NOT NULL, salience REAL NOT NULL, confidence REAL NOT NULL,
+       urgency REAL NOT NULL, origin TEXT NOT NULL, trust TEXT NOT NULL, cost INTEGER NOT NULL DEFAULT 0)""",
+    "CREATE TABLE IF NOT EXISTS f3_gwt_ledger(route TEXT NOT NULL, prefix TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(route,prefix))",
+    "CREATE TABLE IF NOT EXISTS f3_gwt_counter(name TEXT PRIMARY KEY, v INTEGER NOT NULL DEFAULT 0)",
+    """CREATE TABLE IF NOT EXISTS f3_gwt_broadcast(id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, session TEXT, cids TEXT NOT NULL, kinds TEXT NOT NULL,
+       line TEXT NOT NULL, tokens INTEGER NOT NULL, injected INTEGER NOT NULL, n_cand INTEGER NOT NULL, us INTEGER NOT NULL)""",
+    "CREATE TABLE IF NOT EXISTS f3_gwt_boost(kind TEXT PRIMARY KEY, a REAL NOT NULL DEFAULT 1, b REAL NOT NULL DEFAULT 1)",
+]
+_ready = set()
+
+
+def connect(db=None, timeout=0.8):
+    c = sqlite3.connect(db or DB, timeout=timeout)
+    c.execute("pragma busy_timeout=%d" % int(timeout * 1000))
+    if (db or DB) not in _ready:
+        c.execute("pragma journal_mode=wal")
+        for d in DDL:
+            c.execute(d)
+        c.commit()
+        _ready.add(db or DB)
+    return c
+
+
+def _clamp(x, lo=0.0, hi=1.0):
+    try:
+        return lo if x < lo else hi if x > hi else float(x)
+    except Exception:
+        return lo
+
+
+def prefix(src):
+    s = (src or "").split(":", 1)[0] or "(none)"
+    return s[:24]
+
+
+def _count(c, name, n=1):
+    c.execute("insert into f3_gwt_counter(name,v) values(?,?) on conflict(name) do update set v=v+?", (name, n, n))
+
+
+def _note(c, route, cands):
+    for x in cands:
+        c.execute("insert into f3_gwt_ledger(route,prefix,n) values(?,?,1) on conflict(route,prefix) do update set n=n+1", (route, prefix(x["source"])))
+
+
+def mode(c):
+    try:
+        if (c.execute("select wert from star_konfig where schluessel='frank3.kill'").fetchone() or ("0",))[0] == "1":
+            return "off"
+        return (c.execute("select wert from star_konfig where schluessel='frank3.gwt.mode'").fetchone() or ("shadow",))[0]
+    except Exception:
+        return "off"
+
+
+_PIX = re.compile(r"data:image/|^\x89PNG|^GIF8|^\xff\xd8\xff")
+_SECRET = re.compile(r"(?i)(sk-[A-Za-z0-9_\-]{12,}|gsk_\S+|nvapi-\S+|Bearer\s+\S+|(api[_-]?key|token|secret|passw\w*)\s*[=:]\s*\S+)")
+
+
+def _budget(c, n):
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    c.execute("insert or ignore into omega_dbw_day(day,bytes,writes,denied) values(?,0,0,0)", (day,))
+    used = c.execute("select bytes from omega_dbw_day where day=?", (day,)).fetchone()[0]
+    if used + n > DAY_CAP:
+        c.execute("update omega_dbw_day set denied=denied+1 where day=?", (day,))
+        return False
+    c.execute("update omega_dbw_day set bytes=bytes+?, writes=writes+1 where day=?", (n, day))
+    return True
+
+
+# ---------------------------------------------------------------------------------------------- THE publish site
+def publish(producer, cand, cost_tokens=0, conn=None):
+    """THE ONLY publish site (static scanner enforces). Never raises, never blocks long. Returns False when not accepted (counted as missed)."""
+    own = conn is None
+    c = conn
+    try:
+        c = c or connect()
+        if producer not in PRODUCERS or not isinstance(cand, dict) or mode(c) == "off":
+            _count(c, "published_missed")
+            c.commit()
+            return False
+        pay = str(cand.get("payload", ""))
+        if _PIX.search(pay):
+            _count(c, "published_missed")
+            c.commit()
+            return False
+        pay = _SECRET.sub("<redacted>", pay)[:PAYLOAD_MAX]
+        row = (time.time(), producer, str(cand.get("id") or "%s:%x" % (producer, hash(pay) & 0xffffffff))[:80], str(cand.get("kind", "event"))[:40],
+               str(cand.get("source", producer))[:80], str(cand.get("goal_ref", ""))[:60], pay, _clamp(cand.get("salience", 0.3)),
+               _clamp(cand.get("confidence", 0.8)), _clamp(cand.get("urgency", 0.0)), str(cand.get("origin") or "body")[:20],
+               str(cand.get("trust") or "measured")[:20], int(cost_tokens))
+        if not _budget(c, len(pay) + 120):
+            _count(c, "published_missed")
+            c.commit()
+            return False
+        c.execute("insert into f3_gwt_pending(ts,producer,cid,kind,source,goal_ref,payload,salience,confidence,urgency,origin,trust,cost) values(?,?,?,?,?,?,?,?,?,?,?,?,?)", row)
+        over = c.execute("select count(*) from f3_gwt_pending").fetchone()[0] - PENDING_MAX
+        if over > 0:
+            c.execute("delete from f3_gwt_pending where seq in (select seq from f3_gwt_pending order by seq limit ?)", (over,))
+            _count(c, "pending_dropped", over)
+        _count(c, "published_ok")
+        _note(c, "publish", [{"source": row[4]}])
+        c.commit()
+        return True
+    except Exception:
+        try:
+            c.rollback()
+            _count(c, "published_missed")
+            c.commit()
+        except Exception:
+            pass
+        return False
+    finally:
+        if own and c is not None:
+            try:
+                c.close()
+            except Exception:
+                pass
+
+
+def _row_to_cand(r, now):
+    ts, producer, cid, kind, source, goal_ref, payload, sal, conf, urg, origin, trust, cost = r
+    age = max(0.0, now - ts)
+    return {"id": cid, "kind": kind, "source": source, "goal_ref": goal_ref, "payload": payload, "salience": sal * math.pow(0.5, age / HALF_LIFE_S),
+            "confidence": conf, "urgency": urg, "origin": origin, "trust": trust, "producer": producer, "cost": cost, "ts": ts, "age": age}
+
+
+def drain(conn, now=None):
+    """returns pending candidates re-scored for staleness (on arrival, like OMEGA) and empties the queue."""
+    now = now or time.time()
+    rows = conn.execute("select ts,producer,cid,kind,source,goal_ref,payload,salience,confidence,urgency,origin,trust,cost from f3_gwt_pending order by seq").fetchall()
+    conn.execute("delete from f3_gwt_pending")
+    _count(conn, "drained", len(rows))
+    return [_row_to_cand(r, now) for r in rows]
+
+
+# ---------------------------------------------------------------------------------------------- pull sources (aggregated here, metered per route)
+def _mk(cid, kind, source, payload, sal, conf=0.9, urg=0.0, origin="body", trust="measured", producer="hook"):
+    return {"id": cid, "kind": kind, "source": source, "goal_ref": "", "payload": payload[:PAYLOAD_MAX], "salience": _clamp(sal), "confidence": conf,
+            "urgency": urg, "origin": origin, "trust": trust, "producer": producer, "cost": 0, "ts": time.time(), "age": 0.0}
+
+
+def extra_sources(conn, now=None):
+    now = now or time.time()
+    out = {}
+    try:
+        r = conn.execute("select discomfort,guilt,frustration,n_open from f3_strain_state order by ts desc limit 1").fetchone()
+        if r and r[0] >= 0.3:
+            out["extra:strain"] = [_mk("strain_state", "strain_state", "strain:state", "strain d%.2f g%.2f f%.2f n%d" % r, 0.3 + 0.4 * r[0], urg=r[1])]
+    except sqlite3.Error:
+        pass
+    try:
+        r = conn.execute("select id,lesson,confidence from f3_reflection where status in ('active','shadow') and origin='self' and confidence>=0.7 "
+                         "order by (last_surfaced is null) desc, confidence desc limit 1").fetchone()
+        if r:
+            out["extra:reflection"] = [_mk("reflection:%d" % r[0], "reflection", "reflector:%d" % r[0], r[1][:200], r[2] * 0.8, conf=r[2], urg=0.3)]
+    except sqlite3.Error:
+        pass
+    try:
+        r = conn.execute("select v2_winner,max_score,thresh,legacy_winner from f3_grid_v2_log order by id desc limit 1").fetchone()
+        if r and r[0]:
+            out["extra:grid"] = [_mk("grid:v2:" + r[0], "grid_state", "grid:v2", "grid v2 winner %s score %.1f thr %.1f (legacy %s)" % (r[0], r[1], r[2], r[3]),
+                                     min(1.0, r[1] / 30.0))]
+    except sqlite3.Error:
+        pass
+    try:
+        rs = conn.execute("select hit_at_5 from f3_probe_run order by id desc limit 2").fetchall()
+        if len(rs) == 2 and rs[0][0] is not None and rs[1][0] is not None and rs[1][0] - rs[0][0] > 0.05:
+            out["extra:improver"] = [_mk("improver:probe_regress", "improver_event", "improver:probe", "probe hit@5 fell %.3f -> %.3f" % (rs[1][0], rs[0][0]), 0.6, urg=0.4)]
+    except sqlite3.Error:
+        pass
+    try:  # netaware: change-gated (steady state publishes nothing)
+        import sys as _s
+        _o = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules", "organs")
+        if _o not in _s.path:
+            _s.path.insert(0, _o)
+        import gwt_glue
+        nc = gwt_glue.net_candidate(conn)
+        if nc:
+            out["extra:net"] = [_mk(nc["id"], nc["kind"], nc["source"], nc["payload"], nc["salience"], conf=nc["confidence"], urg=nc["urgency"], origin="environment", producer="hook")]
+    except Exception:
+        pass
+    try:  # grid_antrieb (Schritt 4+6): Schalter star_konfig grid.antrieb.vorschlag / grid.antrieb.ton (off|shadow|active); Rueckweg: rollback-antrieb-20261107
+        import sys as _s
+        _g = os.path.dirname(os.path.abspath(__file__))
+        if _g not in _s.path:
+            _s.path.append(_g)
+        from grid_antrieb import bus as _ab
+        _cs = [_mk(c[0], c[1], c[2], c[3], c[4], urg=c[5]) for c in _ab.kandidaten(conn, now)]
+        if _cs:
+            out["extra:grid_antrieb"] = _cs
+    except Exception:
+        pass
+    try:  # OMEGA inbox: untrusted, advisory, strict validation, bounded
+        if os.path.exists(INBOX) and os.path.getsize(INBOX) < 262144:
+            cs = []
+            for ln in open(INBOX, encoding="utf-8").read().splitlines()[-16:]:
+                try:
+                    j = json.loads(ln)
+                    if j.get("v") == 1 and isinstance(j.get("payload"), str) and now - float(j.get("ts", 0)) < 3600:
+                        cs.append(_mk(str(j.get("id", "omega"))[:60], str(j.get("kind", "event"))[:30], "omega:" + str(j.get("source", "x"))[:40], j["payload"],
+                                      min(0.6, float(j.get("salience", 0.3))), conf=0.5, origin="peer", trust="advisory", producer="omega"))
+                except Exception:
+                    continue
+            if cs:
+                out["extra:omega"] = cs
+    except Exception:
+        pass
+    for route, cs in out.items():
+        _note(conn, route, cs)  # per-route metering (gwtLedgerRoute): pass-through, never alters
+    return out
+
+
+# ---------------------------------------------------------------------------------------------- competition
+def _cells(conn):
+    try:
+        r = conn.execute("select j from f3_grid_v2_state where singleton=1").fetchone()
+        return json.loads(r[0])["cells"] if r else {}
+    except Exception:
+        return {}
+
+
+def _boost(conn, kind):
+    r = conn.execute("select a,b from f3_gwt_boost where kind=?", (kind,)).fetchone()
+    return (r[0] / (r[0] + r[1])) if r else 0.5
+
+
+def compete(conn, cands, session="", budget_tokens=60, max_n=2, min_score=0.2):
+    """score = salience * (1+0.5*urgency) * grid gain (v2 cell of the kind's cell, clamped 0..2) * novelty (recent broadcasts) * learned boost.
+    Winners must beat min_score and fit the token budget. Abstain = empty list."""
+    cells = _cells(conn)
+    recent = {}
+    for (cids,) in conn.execute("select cids from f3_gwt_broadcast order by id desc limit 20").fetchall():
+        for x in cids.split(","):
+            recent[x] = recent.get(x, 0) + 1
+    scored = []
+    for x in cands:
+        gain = 1.0 + 0.25 * _clamp(cells.get(KIND_CELL.get(x["kind"], ""), 0.0), 0.0, 2.0)
+        s = x["salience"] * (1 + 0.5 * x["urgency"]) * gain / (1 + recent.get(x["id"], 0)) * (0.75 + 0.5 * _boost(conn, x["kind"]))
+        scored.append((s, x))
+    scored.sort(key=lambda t: -t[0])
+    win, used, seen = [], 0, set()
+    for s, x in scored:
+        t = max(1, len(x["payload"]) // 4)
+        if s >= min_score and x["id"] not in seen and used + t <= budget_tokens and len(win) < max_n:
+            win.append(x)
+            used += t
+            seen.add(x["id"])
+    return win
+
+
+def format_line(win):
+    if not win:
+        return ""
+    return ("GWT: " + " | ".join("[%s] %s" % (x["kind"], x["payload"][:110]) for x in win))[:260]
+
+
+def cycle(session="", prompt="", db=None, now=None):
+    """one workspace cycle (called by the UserPromptSubmit hook): drain pushes + pull extras -> compete -> broadcast (log) -> line.
+    Returns (line_to_inject_or_'', info). shadow: line='' but everything is logged with injected=0."""
+    t0 = time.perf_counter()
+    c = connect(db)
+    try:
+        md = mode(c)
+        if md == "off":
+            return "", {"mode": "off"}
+        try:  # mathlab: exact-calc candidate through THE publish site (producer organ); bus mode decides injection
+            import sys as _s
+            _o = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules", "organs")
+            if _o not in _s.path:
+                _s.path.insert(0, _o)
+            import gwt_glue
+            _cc = gwt_glue.calc_candidate(c, prompt)
+            if _cc:
+                publish("organ", _cc, conn=c)
+        except Exception:
+            pass
+        try:  # kognition (historic organs via kogloop): shadow = measured + counted in f3_run, nothing published; active publishes one structured candidate
+            import gwt_glue as _gg
+            _kc = _gg.kog_candidate(c, prompt, session)
+            if _kc:
+                publish("organ", _kc, conn=c)
+        except Exception:
+            pass
+        cands = drain(c, now)
+        for cs in extra_sources(c, now).values():
+            cands.extend(cs)
+        win = compete(c, cands, session)
+        line = format_line(win)
+        tokens = (len(line) + 3) // 4 if line else 0
+        inj = 1 if (md == "active" and line) else 0
+        us = int((time.perf_counter() - t0) * 1e6)
+        c.execute("insert into f3_gwt_broadcast(ts,session,cids,kinds,line,tokens,injected,n_cand,us) values(?,?,?,?,?,?,?,?,?)",
+                  (time.time(), session[:40], ",".join(x["id"] for x in win), ",".join(x["kind"] for x in win), line, tokens, inj, len(cands), us))
+        c.execute("delete from f3_gwt_broadcast where id < (select max(id) from f3_gwt_broadcast) - 500")  # bounded retention
+        _count(c, "broadcasts")
+        c.commit()
+        return (line if inj else ""), {"mode": md, "n_cand": len(cands), "winners": [x["id"] for x in win], "tokens": tokens, "us": us}
+    except Exception as e:
+        return "", {"error": str(e)[:80]}
+    finally:
+        c.close()
+
+
+# ---------------------------------------------------------------------------------------------- credit (soft, per kind)
+def credit(conn, kind, value):
+    """value in [0,1] fractional reward (omega_gwt_credit idea: credit in {0,1} == hard reward). Beta(a,b) per candidate kind -> boost."""
+    v = _clamp(value)
+    conn.execute("insert into f3_gwt_boost(kind,a,b) values(?,1+?,1+?) on conflict(kind) do update set a=a+?, b=b+?", (kind, v, 1 - v, v, 1 - v))
+
+
+# ---------------------------------------------------------------------------------------------- law: ledger, conservation, scanner support
+def ledger_snapshot(conn):
+    routes = {}
+    for r, p, n in conn.execute("select route,prefix,n from f3_gwt_ledger").fetchall():
+        routes.setdefault(r, {})[p] = n
+    counters = dict(conn.execute("select name,v from f3_gwt_counter").fetchall())
+    return {"routes": routes, "counters": counters, "pending": conn.execute("select count(*) from f3_gwt_pending").fetchone()[0]}
+
+
+def unregistered_routes(conn):
+    return sorted(r for (r,) in conn.execute("select distinct route from f3_gwt_ledger").fetchall() if r not in ROUTES)
+
+
+def conservation(conn):
+    """LAW: every accepted publish is exactly one of {still pending, drained, dropped}; ledger['publish'] == published_ok; no unregistered route."""
+    s = ledger_snapshot(conn)
+    k = s["counters"]
+    ok_pub = k.get("published_ok", 0)
+    led_pub = sum(s["routes"].get("publish", {}).values())
+    accounted = k.get("drained", 0) + k.get("pending_dropped", 0) + s["pending"]
+    return {"published_ok": ok_pub, "ledger_publish": led_pub, "accounted": accounted, "missed": k.get("published_missed", 0),
+            "pending_dropped": k.get("pending_dropped", 0), "holds": ok_pub == led_pub == accounted and not unregistered_routes(conn),
+            "unregistered": unregistered_routes(conn)}
+
+
+def export_jsonl(winners_or_cands, path=OUTBOX):
+    """wire format v=1 for the OMEGA side (JSON lines, fields WIRE_FIELDS). Append-only, bounded by caller."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        for x in winners_or_cands:
+            d = {k: x.get(k) for k in WIRE_FIELDS if k != "v"}
+            d["v"] = 1
+            f.write(json.dumps(d, ensure_ascii=False) + "\n")
+
+
+if __name__ == "__main__":
+    import sys
+    c = connect()
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    if cmd == "status":
+        print(json.dumps({"mode": mode(c), **ledger_snapshot(c), "conservation": conservation(c)}))
+    elif cmd == "publish" and len(sys.argv) >= 5:  # gwt publish <producer> <kind> <payload> [salience]
+        print(publish(sys.argv[2], {"kind": sys.argv[3], "payload": sys.argv[4], "salience": float(sys.argv[5]) if len(sys.argv) > 5 else 0.5}, conn=c))
+        c.commit()
+    elif cmd == "cycle":
+        print(cycle(session="cli"))
+    elif cmd == "tail":
+        for r in c.execute("select ts,kinds,line,tokens,injected,n_cand,us from f3_gwt_broadcast order by id desc limit 10"):
+            print(r)

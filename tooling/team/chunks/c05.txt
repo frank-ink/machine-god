@@ -1,0 +1,793 @@
+=== FILE: a-grid/grid10/f2wp1207_p10_workspace_reentry.py ===
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+F2-WP-1207 P10: workspace-reentry reconstruction -- closes the gap P9 left
+open. P9 (f2wp1207_epoch_reconciler.py) gives a new epoch a typed
+`f2_reentry_record` pointing at its real predecessor epoch (evidence-bound
+termination classification + `last_grid10_frame_id` + `last_work_ref`). But
+nothing yet turns that pointer into validated, typed workspace content, and
+nothing yet feeds it into P7's (f2wp1207_grid10_p7_coordination.py)
+state(t=0) seed. Today `coordinate_real_turn`'s `read_prior_state` just reads
+whatever is currently sitting in `f2_grid10_p6d_state` under the single
+global `f2wp1207_p7_live` condition_key -- no explicit, evidenced connection
+to "this new epoch's real predecessor's real last workspace state." That is
+the gap this module closes.
+
+Gabriel's spec (F2-WP-1207 P5-P13 roadmap, P10): "Kernkette: last accepted
+workspace state -> persist -> runtime death/restart -> typed reentry record
+-> workspace reconstruction -> new competition -> measurable influence on
+next selection. Nicht einfach alten Kontext blind in den Prompt kippen. Nur
+typisierte, bestaetigte Workspace-Artefakte rehydrieren: letzter Broadcast,
+letzter Winner, relevante Zellzustaende, offene Goals/Tasks, unresolved
+conflicts, last accepted external/world evidence, predecessor frame IDs."
+
+Field-by-field real-data audit (performed against the live
+~/.local/share/agentzero/unified.db schema + row population before writing
+any of this, per house discipline -- measurement before belief):
+
+  INCLUDED (real backing found, wired below):
+    - last broadcast / last winner  -> f2_grid10_frame.broadcast_value /
+      .broadcast_winner_cell, keyed by f2_reentry_record.last_grid10_frame_id.
+    - relevant cell states          -> f2_grid10_cell_state (installation_id-
+      scoped rolling accumulator), cross-checked against the predecessor
+      epoch's own frame set via updated_by_frame_id for a HIGH/MEDIUM
+      confidence split (see `_cell_state_confidence`).
+    - unresolved conflicts          -> f2_grid10_cell_observation.conflict_flag
+      for rows at last_grid10_frame_id -- exactly frame-scoped, no ambiguity.
+    - predecessor frame IDs         -> f2_grid10_frame.frame_id for all frames
+      of the predecessor epoch (ordered by opened_at), plus P9's own
+      last_grid10_frame_id pointer.
+    - open goals/tasks              -> entityos_arbeitspaket WHERE
+      session_id=<predecessor epoch's session_id> AND stand='laeuft'. Real
+      table, real columns. NOTE (honest gap, not glossed over): in the live
+      DB inspected 2026-09-04, zero rows of entityos_arbeitspaket share a
+      session_id with any real f2_runtime_epoch row (arbeitspaket sessions
+      are harness-sess-*/manuell-style ids; GRID10 epoch sessions are UUIDs
+      from the live Claude Code hook). The JOIN is real and mechanically
+      correct, but currently returns empty for every real epoch observed --
+      documented here rather than silently hidden. Exercised with populated
+      data in the gold test via synthetic-but-realistic rows on a DB COPY.
+
+  EXCLUDED (checked, no real backing -- see EXCLUDED_FIELDS below):
+    - "last accepted external/world evidence": no table in the current data
+      model ties external/world evidence to a runtime_epoch_id/session_id/
+      frame_id with "accepted" semantics. `effects` exists but is keyed to
+      user_id/episode_id (a tool-call-authorization log, unrelated concept).
+      f2_grid10_cell_observation.input_digest_sha256/output_digest_sha256 are
+      per-cell stimulus fingerprints (already exposed structurally, not
+      elevated to a first-class field since they carry no "accepted"
+      semantics of their own). Left out rather than invented.
+
+Persistence convention: same as P7/P9 -- plain sqlite3.Connection supplied by
+the caller, no new database opened, no new tables, NO SCHEMA CHANGE AT ALL
+(this module only reads existing P7/P9/GRID10 tables). Cells stay opaque
+G1..G10. No Effects.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import sqlite3
+from typing import Optional
+
+import f2wp1207_grid10_p7_coordination as p7mod  # vendored copy, same dir
+
+SCHEMA = "F2WP1207_P10_RECONSTRUCTED_WORKSPACE/v1"
+
+# Fallback condition_key used by the canonical turn loop's own inline cell-
+# state persistence (f2wp1207_grid10_turn_loop.CONDITION_KEY, module constant
+# "f2wp1207_canonical_turn_loop"). Duplicated here as a literal (NOT imported)
+# to avoid a circular import -- the turn loop module imports THIS module, not
+# the other way round. Found live 2026-09-06/07 (Testreihe 4, Epochenwechsel):
+# f2_grid10_cell_state (installation_id-scoped, read by `_cell_states` below)
+# had 0 rows for an installation whose canonical loop had committed 202+ real
+# frames, because the canonical loop persists per-cell state into a DIFFERENT
+# table, f2_grid10_p6d_state (condition_key-scoped), under this exact literal.
+# `_cell_states` alone therefore always returned empty for canonical-loop-only
+# installations, making `reconstruct_workspace` permanently invalid=False for
+# them regardless of real data. Regression test:
+# f2wp1207_p10_p6d_fallback_test.py asserts these two literals stay in sync
+# (independent hardcoded copy in the test) and fails loudly on drift.
+CANONICAL_LOOP_CONDITION_KEY = "f2wp1207_canonical_turn_loop"
+
+# Documented, checked absence -- see module docstring. Kept as data (not just
+# prose) so a caller/test can assert on it mechanically.
+EXCLUDED_FIELDS = {
+    "last_accepted_external_world_evidence": (
+        "No mechanically clean, epoch/frame/session-scoped table for "
+        "'accepted external/world evidence' exists in the current data "
+        "model (checked 2026-09-04 against live unified.db: `effects` is "
+        "keyed to user_id/episode_id from an unrelated tool-call-"
+        "authorization log; f2_grid10_cell_observation's "
+        "input_digest_sha256/output_digest_sha256 are per-cell stimulus "
+        "fingerprints without 'accepted' semantics). Deliberately omitted "
+        "rather than invented."
+    ),
+}
+
+
+# --------------------------------------------------------------------------
+# Typed artifacts -- every field carries its own provenance, nothing is a
+# blind dump.
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Provenance:
+    source_table: str
+    source_key: str
+    confidence: float  # 0..1
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class CellStateArtifact:
+    cell_id: str
+    state_value: float
+    provenance: Provenance
+
+
+@dataclass(frozen=True)
+class OpenTaskArtifact:
+    paket_id: str
+    auftrag: str
+    stand: str
+    provenance: Provenance
+
+
+@dataclass(frozen=True)
+class ReconstructedWorkspace:
+    schema: str
+    successor_epoch_id: str
+    predecessor_epoch_id: Optional[str]
+    reentry_id: Optional[str]
+    last_grid10_frame_id: Optional[str]
+
+    last_broadcast_value: Optional[float] = None
+    last_broadcast_provenance: Optional[Provenance] = None
+    last_winner_cell_id: Optional[str] = None
+    last_winner_provenance: Optional[Provenance] = None
+
+    relevant_cell_states: tuple = field(default_factory=tuple)  # tuple[CellStateArtifact,...]
+    unresolved_conflicts: tuple = field(default_factory=tuple)  # tuple[str,...] cell_ids
+    unresolved_conflicts_provenance: Optional[Provenance] = None
+
+    predecessor_frame_ids: tuple = field(default_factory=tuple)  # tuple[str,...]
+    predecessor_frame_ids_provenance: Optional[Provenance] = None
+
+    open_goals_tasks: tuple = field(default_factory=tuple)  # tuple[OpenTaskArtifact,...]
+
+    predecessor_termination_reason: Optional[str] = None
+    predecessor_termination_confidence: Optional[float] = None
+
+    valid: bool = False
+    invalid_reason: Optional[str] = None
+
+    def seeded_state(self) -> dict:
+        """cell_id -> state_value, for the cells this workspace has real
+        state for. Missing cells are left absent -- the caller (P7's own
+        state-update formula) already defaults absent cells to 0.0, same
+        convention as `read_prior_state`'s cold-start behavior."""
+        return {c.cell_id: c.state_value for c in self.relevant_cell_states}
+
+
+# --------------------------------------------------------------------------
+# Reconstruction -- read-only, no schema change, no writes.
+# --------------------------------------------------------------------------
+
+
+def _find_reentry_record(conn: sqlite3.Connection, successor_epoch_id: str) -> Optional[sqlite3.Row]:
+    """A successor epoch can have MULTIPLE f2_reentry_record rows -- P9's
+    reconcile() closes every open epoch sharing the same
+    installation_id/state_root_id, not just one, so several unrelated
+    predecessors can legitimately chain to the same successor in one
+    reconcile() call. Picking `created_at DESC` alone is not a reliable
+    tie-break (all rows from one reconcile() call share the same `now`
+    timestamp) and would nondeterministically select an arbitrary
+    predecessor. Instead: prefer the candidate whose last_grid10_frame_id
+    resolves to a REAL f2_grid10_frame row with the MOST RECENT opened_at --
+    i.e. the predecessor that was actually most recently active, the most
+    relevant real workspace to inherit. Falls back to created_at DESC among
+    candidates with no resolvable frame (keeps `reconstruct_workspace`'s own
+    per-candidate invalid_reason machinery honest rather than guessing)."""
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM f2_reentry_record WHERE successor_epoch_id=? ORDER BY created_at DESC",
+        (successor_epoch_id,),
+    ).fetchall()
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return rows[0]
+    best = None
+    best_opened_at = None
+    for row in rows:
+        frame_id = row["last_grid10_frame_id"]
+        if not frame_id:
+            continue
+        frame = conn.execute(
+            "SELECT opened_at FROM f2_grid10_frame WHERE frame_id=?", (frame_id,)
+        ).fetchone()
+        if frame is None:
+            continue
+        opened_at = frame[0]
+        if best_opened_at is None or opened_at > best_opened_at:
+            best, best_opened_at = row, opened_at
+    return best if best is not None else rows[0]
+
+
+def _predecessor_epoch_row(conn: sqlite3.Connection, predecessor_epoch_id: str) -> Optional[sqlite3.Row]:
+    conn.row_factory = sqlite3.Row
+    return conn.execute(
+        "SELECT * FROM f2_runtime_epoch WHERE runtime_epoch_id=?",
+        (predecessor_epoch_id,),
+    ).fetchone()
+
+
+def _last_frame_row(conn: sqlite3.Connection, frame_id: str) -> Optional[sqlite3.Row]:
+    conn.row_factory = sqlite3.Row
+    return conn.execute(
+        "SELECT * FROM f2_grid10_frame WHERE frame_id=?", (frame_id,)
+    ).fetchone()
+
+
+def _predecessor_frame_ids(conn: sqlite3.Connection, predecessor_epoch_id: str) -> tuple:
+    rows = conn.execute(
+        "SELECT frame_id FROM f2_grid10_frame WHERE runtime_epoch_id=? "
+        "ORDER BY opened_at ASC",
+        (predecessor_epoch_id,),
+    ).fetchall()
+    return tuple(r[0] for r in rows)
+
+
+def _cell_states(
+    conn: sqlite3.Connection, installation_id: str, predecessor_frame_ids: tuple, last_frame_id: str
+) -> tuple:
+    """Real state per cell from the installation-scoped rolling accumulator
+    f2_grid10_cell_state. This table is NOT epoch-scoped (a real, documented
+    architectural gap in the current data model -- it upserts per
+    installation_id/logical_cell_id, latest value only). Confidence:
+      HIGH (0.9)  -- updated_by_frame_id belongs to the predecessor epoch's
+                      own frame set (state provably unmoved since).
+      MEDIUM (0.5) -- row exists but updated_by_frame_id is outside the
+                      predecessor epoch's frame set (rolling accumulator may
+                      have been advanced by a different/later epoch sharing
+                      the same installation_id -- honestly flagged, not
+                      hidden)."""
+    rows = conn.execute(
+        "SELECT logical_cell_id, state_value, updated_by_frame_id, updated_at "
+        "FROM f2_grid10_cell_state WHERE installation_id=?",
+        (installation_id,),
+    ).fetchall()
+    frame_set = set(predecessor_frame_ids)
+    out = []
+    for cell_id, state_value, updated_by_frame_id, updated_at in rows:
+        if updated_by_frame_id in frame_set:
+            conf = 0.9
+            note = "updated_by_frame_id belongs to predecessor epoch's own frame set"
+        else:
+            conf = 0.5
+            note = (
+                "f2_grid10_cell_state is installation-scoped, not epoch-scoped -- "
+                "updated_by_frame_id does not belong to predecessor epoch's frame "
+                "set, rolling accumulator may have moved since (documented gap)"
+            )
+        out.append(
+            CellStateArtifact(
+                cell_id=cell_id,
+                state_value=float(state_value),
+                provenance=Provenance(
+                    source_table="f2_grid10_cell_state",
+                    source_key=f"installation_id={installation_id},logical_cell_id={cell_id},"
+                    f"updated_by_frame_id={updated_by_frame_id},updated_at={updated_at}",
+                    confidence=conf,
+                    note=note,
+                ),
+            )
+        )
+    return tuple(out)
+
+
+def _cell_states_from_p6d(
+    conn: sqlite3.Connection, condition_key: str, predecessor_frame_ids: tuple
+) -> tuple:
+    """Fallback source for relevant_cell_states: f2_grid10_p6d_state, the
+    condition_key-scoped table the CANONICAL TURN LOOP actually writes
+    (f2wp1207_grid10_turn_loop.CONDITION_KEY). Only consulted by
+    `reconstruct_workspace` when `_cell_states` (the installation_id-scoped
+    f2_grid10_cell_state table) returns nothing -- additive, no priority
+    change for installations where f2_grid10_cell_state IS populated (e.g.
+    the existing gold-test fixture). Same HIGH/MEDIUM confidence-tiering
+    logic as `_cell_states`, adapted to condition_key scoping semantics."""
+    rows = conn.execute(
+        "SELECT logical_cell_id, state_value, updated_by_frame_id, updated_at "
+        "FROM f2_grid10_p6d_state WHERE condition_key=?",
+        (condition_key,),
+    ).fetchall()
+    frame_set = set(predecessor_frame_ids)
+    out = []
+    for cell_id, state_value, updated_by_frame_id, updated_at in rows:
+        if updated_by_frame_id in frame_set:
+            conf = 0.9
+            note = "updated_by_frame_id belongs to predecessor epoch's own frame set"
+        else:
+            conf = 0.5
+            note = (
+                "f2_grid10_p6d_state is condition_key-scoped, not epoch-scoped -- "
+                "updated_by_frame_id does not belong to predecessor epoch's frame "
+                "set, rolling accumulator may have moved since (fallback source, "
+                "see CANONICAL_LOOP_CONDITION_KEY docstring)"
+            )
+        out.append(
+            CellStateArtifact(
+                cell_id=cell_id,
+                state_value=float(state_value),
+                provenance=Provenance(
+                    source_table="f2_grid10_p6d_state",
+                    source_key=f"condition_key={condition_key},logical_cell_id={cell_id},"
+                    f"updated_by_frame_id={updated_by_frame_id},updated_at={updated_at}",
+                    confidence=conf,
+                    note=note,
+                ),
+            )
+        )
+    return tuple(out)
+
+
+def _unresolved_conflicts(conn: sqlite3.Connection, last_frame_id: str) -> tuple:
+    rows = conn.execute(
+        "SELECT logical_cell_id FROM f2_grid10_cell_observation "
+        "WHERE frame_id=? AND conflict_flag=1 ORDER BY logical_cell_id",
+        (last_frame_id,),
+    ).fetchall()
+    return tuple(r[0] for r in rows)
+
+
+def _open_goals_tasks(conn: sqlite3.Connection, predecessor_session_id: Optional[str]) -> tuple:
+    if not predecessor_session_id:
+        return tuple()
+    try:
+        rows = conn.execute(
+            "SELECT paket_id, auftrag, stand FROM entityos_arbeitspaket "
+            "WHERE session_id=? AND stand='laeuft' ORDER BY erstellt DESC",
+            (predecessor_session_id,),
+        ).fetchall()
+    except sqlite3.Error:
+        return tuple()
+    return tuple(
+        OpenTaskArtifact(
+            paket_id=paket_id,
+            auftrag=auftrag,
+            stand=stand,
+            provenance=Provenance(
+                source_table="entityos_arbeitspaket",
+                source_key=f"paket_id={paket_id},session_id={predecessor_session_id}",
+                confidence=0.9,
+                note="stand='laeuft' at reconstruction time",
+            ),
+        )
+        for paket_id, auftrag, stand in rows
+    )
+
+
+def reconstruct_workspace(conn: sqlite3.Connection, successor_epoch_id: str) -> Optional[ReconstructedWorkspace]:
+    """Given a successor epoch id, find its P9 f2_reentry_record (if any) and
+    build a validated, typed, per-field-provenanced ReconstructedWorkspace.
+    Returns None if no reentry record exists at all (fresh install / no
+    predecessor) -- the caller's fallback is then simply "call P7 exactly as
+    before". Never raises for missing/absent data -- degrades to
+    valid=False with an explicit invalid_reason instead."""
+    try:
+        reentry = _find_reentry_record(conn, successor_epoch_id)
+    except sqlite3.Error:
+        return None
+    if reentry is None:
+        return None
+
+    predecessor_epoch_id = reentry["predecessor_epoch_id"]
+    last_frame_id = reentry["last_grid10_frame_id"]
+
+    if not last_frame_id:
+        return ReconstructedWorkspace(
+            schema=SCHEMA,
+            successor_epoch_id=successor_epoch_id,
+            predecessor_epoch_id=predecessor_epoch_id,
+            reentry_id=reentry["reentry_id"],
+            last_grid10_frame_id=None,
+            predecessor_termination_reason=reentry["predecessor_termination_reason"],
+            predecessor_termination_confidence=reentry["predecessor_confidence"],
+            valid=False,
+            invalid_reason="reentry record has no last_grid10_frame_id (predecessor never ran a GRID10 frame)",
+        )
+
+    frame = _last_frame_row(conn, last_frame_id)
+    if frame is None:
+        return ReconstructedWorkspace(
+            schema=SCHEMA,
+            successor_epoch_id=successor_epoch_id,
+            predecessor_epoch_id=predecessor_epoch_id,
+            reentry_id=reentry["reentry_id"],
+            last_grid10_frame_id=last_frame_id,
+            predecessor_termination_reason=reentry["predecessor_termination_reason"],
+            predecessor_termination_confidence=reentry["predecessor_confidence"],
+            valid=False,
+            invalid_reason=f"last_grid10_frame_id={last_frame_id} does not resolve to a real f2_grid10_frame row",
+        )
+
+    installation_id = frame["installation_id"]
+    pred_frame_ids = _predecessor_frame_ids(conn, predecessor_epoch_id) if predecessor_epoch_id else (last_frame_id,)
+    cell_states = _cell_states(conn, installation_id, pred_frame_ids, last_frame_id)
+    if not cell_states:
+        # f2_grid10_cell_state empty (canonical-loop-only installation) --
+        # fall back to the table the canonical loop actually writes. See
+        # CANONICAL_LOOP_CONDITION_KEY docstring above.
+        cell_states = _cell_states_from_p6d(conn, CANONICAL_LOOP_CONDITION_KEY, pred_frame_ids)
+    conflicts = _unresolved_conflicts(conn, last_frame_id)
+
+    predecessor_session_id = None
+    if predecessor_epoch_id:
+        pred_epoch = _predecessor_epoch_row(conn, predecessor_epoch_id)
+        if pred_epoch is not None:
+            predecessor_session_id = pred_epoch["session_id"]
+    goals = _open_goals_tasks(conn, predecessor_session_id)
+
+    valid = bool(cell_states) and frame["broadcast_value"] is not None
+    invalid_reason = None if valid else "no relevant_cell_states or broadcast_value resolved for last frame"
+
+    return ReconstructedWorkspace(
+        schema=SCHEMA,
+        successor_epoch_id=successor_epoch_id,
+        predecessor_epoch_id=predecessor_epoch_id,
+        reentry_id=reentry["reentry_id"],
+        last_grid10_frame_id=last_frame_id,
+        last_broadcast_value=frame["broadcast_value"],
+        last_broadcast_provenance=Provenance(
+            "f2_grid10_frame", f"frame_id={last_frame_id}", 0.95, "direct row match on P9's last_grid10_frame_id"
+        ),
+        last_winner_cell_id=frame["broadcast_winner_cell"],
+        last_winner_provenance=Provenance(
+            "f2_grid10_frame", f"frame_id={last_frame_id}", 0.95, "direct row match on P9's last_grid10_frame_id"
+        ),
+        relevant_cell_states=cell_states,
+        unresolved_conflicts=conflicts,
+        unresolved_conflicts_provenance=Provenance(
+            "f2_grid10_cell_observation", f"frame_id={last_frame_id},conflict_flag=1", 0.95, "frame-scoped, exact"
+        ),
+        predecessor_frame_ids=pred_frame_ids,
+        predecessor_frame_ids_provenance=Provenance(
+            "f2_grid10_frame", f"runtime_epoch_id={predecessor_epoch_id}", 0.95, "all frames of predecessor epoch"
+        ),
+        open_goals_tasks=goals,
+        predecessor_termination_reason=reentry["predecessor_termination_reason"],
+        predecessor_termination_confidence=reentry["predecessor_confidence"],
+        valid=valid,
+        invalid_reason=invalid_reason,
+    )
+
+
+# --------------------------------------------------------------------------
+# Wiring into coordinate_real_turn's state-seeding -- strictly additive.
+# Does NOT modify f2wp1207_grid10_p7_coordination.py at all (zero drift on
+# the sha256-pinned vendored file, zero behavioral change to the
+# p7-bridge-turn call site). Reuses coordinate_real_turn's own pure
+# functions (run_coordination_cycle / persist_coordination_result /
+# append_transition_log / p7_active) unmodified and unduplicated -- only the
+# SOURCE of prior_state differs from calling read_prior_state directly.
+# --------------------------------------------------------------------------
+
+
+def coordinate_real_turn_with_reentry(
+    conn: sqlite3.Connection,
+    evidence_path,
+    turn,  # p7mod.RealTurn
+    *,
+    env=None,
+):
+    """Gate-checked, exactly like coordinate_real_turn. When a valid
+    reconstructed workspace exists for turn.runtime_epoch_id, seeds
+    state(t=0) from it instead of read_prior_state's default. When no valid
+    reentry record exists (fresh install / no predecessor / low-confidence
+    classification that failed validity), falls back to calling
+    read_prior_state EXACTLY as coordinate_real_turn does -- same table,
+    same condition_key, same call -- so the result is provably identical to
+    unmodified P7 behavior in that case (see gold test)."""
+    if not p7mod.p7_active(conn, env=env):
+        return None, None
+
+    workspace = reconstruct_workspace(conn, turn.runtime_epoch_id)
+    if workspace is not None and workspace.valid:
+        prior_state = workspace.seeded_state()
+        used_reentry = True
+    else:
+        prior_state = p7mod.read_prior_state(conn, p7mod.P7_LIVE_CONDITION_KEY)
+        used_reentry = False
+
+    result = p7mod.run_coordination_cycle(turn, prior_state)
+    p7mod.persist_coordination_result(conn, result)
+    p7mod.append_transition_log(evidence_path, result)
+    return result, {"used_reentry": used_reentry, "workspace": workspace}
+=== FILE: a-grid/grid10/grid_v2.py ===
+"""grid_v2.py -- GRID10 v2 engine, pure python port of omega_grid_v2.go (branch omega-B-deeptest / omega-B-gridj, OE-01).
+Self-leveling core: divisive normalisation (change vs own slowly adapting baseline / own learned noise), fatigue on repeated winners
+(Score_eff = score*(1-alpha*recency)), explicit ABSTAIN when no cell changed beyond noise, G7 = STATE (bias on the abstain threshold).
+No clock, no I/O. step(None) = autonomous tick (decay only, abstain). Parity: modules/grid10/test_grid_v2_parity.py vs recorded vectors."""
+import math
+
+CELLS = ["G%d" % i for i in range(1, 11)]
+CLAMP_MIN, CLAMP_MAX = -1.0, 4.0
+G7 = "G7"
+
+DEFAULT = dict(alpha_base=0.10, alpha_burst=0.60, burst_k=3.0, alpha_sigma=0.02, z_floor=0.03, offset_weight=0.4, zabs=4.0,
+               goal_bias=0.15, lam=0.7, gain=1.0, fatigue_alpha=0.5, recency_rate=0.1, no_fatigue=False, no_abstain=False, no_norm=False,
+               fixed_sigma=0.05)
+
+
+def _clamp(x, lo, hi):
+    return lo if x < lo else hi if x > hi else x
+
+
+class GridV2Engine:
+    def __init__(self, **cfg):
+        self.c = dict(DEFAULT, **cfg)
+        self.reset()
+
+    def reset(self):
+        self.init = False
+        self.base = {i: 0.0 for i in CELLS}
+        self.sigma = {i: 0.0 for i in CELLS}
+        self.cells = {i: 0.0 for i in CELLS}
+        self.recency = {i: 0.0 for i in CELLS}
+        self.steps = 0
+
+    def to_json(self):
+        return {"init": self.init, "base": self.base, "sigma": self.sigma, "cells": self.cells, "recency": self.recency, "steps": self.steps}
+
+    @classmethod
+    def from_json(cls, d, **cfg):
+        e = cls(**cfg)
+        e.init, e.base, e.sigma, e.cells, e.recency, e.steps = d["init"], d["base"], d["sigma"], d["cells"], d["recency"], d["steps"]
+        return e
+
+    def step(self, signals):
+        """-> dict(winner, abstain, observed, max_score, thresh, score)"""
+        c = self.c
+        self.steps += 1
+        out = {"winner": "", "max_score": 0.0, "thresh": 0.0, "score": {}, "abstain": False, "observed": False}
+        if signals is None:
+            for i in CELLS:
+                self.cells[i] = _clamp(c["lam"] * self.cells[i], CLAMP_MIN, CLAMP_MAX)
+                self.recency[i] *= 1 - c["recency_rate"]
+            out["abstain"] = True
+            return out
+        out["observed"] = True
+        if not self.init:
+            for i in CELLS:
+                self.base[i] = _clamp(signals.get(i, 0.0), 0.0, 1.0)
+            self.init = True
+            out["abstain"] = True
+            return out
+        x = {i: _clamp(signals.get(i, 0.0), 0.0, 1.0) for i in CELLS}
+        best, best_score = "", 0.0
+        drive = {}
+        for i in CELLS:  # Go iterates GridCellIDs() order; ties: first max wins (strict >)
+            d = x[i] - self.base[i]
+            ad = abs(d)
+            w = c["offset_weight"] if d < 0 else 1.0
+            sg = self.sigma[i] + c["z_floor"]
+            if c["no_norm"]:
+                sg = c["fixed_sigma"]
+            z = w * ad / sg
+            fat = 1.0 if c["no_fatigue"] else 1 - c["fatigue_alpha"] * self.recency[i]
+            sc = z * fat
+            out["score"][i] = sc
+            drive[i] = w * ad
+            if best == "" or sc > best_score:
+                best, best_score = i, sc
+            a = c["alpha_base"]
+            if ad > c["burst_k"] * (self.sigma[i] + c["z_floor"]):
+                a = c["alpha_burst"]
+            self.base[i] += a * d
+            capped = min(ad, c["burst_k"] * (self.sigma[i] + c["z_floor"]))
+            self.sigma[i] += c["alpha_sigma"] * (capped - self.sigma[i])
+        thresh = c["zabs"] * (1 - c["goal_bias"] * x[G7])
+        out["max_score"], out["thresh"] = best_score, thresh
+        if c["no_abstain"] or best_score >= thresh:
+            out["winner"] = best
+        else:
+            out["abstain"] = True
+        for i in CELLS:
+            self.cells[i] = _clamp(c["lam"] * self.cells[i] + c["gain"] * drive[i], CLAMP_MIN, CLAMP_MAX)
+            win = 1.0 if i == out["winner"] else 0.0
+            self.recency[i] += c["recency_rate"] * (win - self.recency[i])
+        return out
+=== FILE: a-grid/grid10/lexical_percept.py ===
+"""lexical_percept.py -- Python port of OMEGA's omega_lexical_percept.go (2026-10-09) "lexical_fallback".
+
+SOURCE (read-only reference): omegacv1/harness/overlay/internal/omega/omega_lexical_percept.go (+ omega_grid_signal.go for the cell mapping).
+Lexicons and formulas are copied VERBATIM (DE+EN); only syntax is Python. Byte-length comparisons of Go (len(string)) are kept via _blen().
+
+WHAT THIS IS: deterministic SURFACE features of the user's message, NOT a semantic measurement. Label: "lexical_fallback". Lexicons are
+"calibrated on nothing" (small on purpose, listed here so the mapping is auditable; only monotone in the stated feature).
+SHADOW ONLY: used by register.v2_signals(extended=True) -> separate x-lane f3_grid_v2x_*. Never fed into prompt/context/GWT/behaviour.
+
+Cell mapping (as omega_grid_signal.go DeriveGridSignalVector, lexical branch):
+  G1 Abstraktion      = clamp(abstract_tokens / n * 4)            (nominalisation suffixes + abstract-concept lexicon; digit tokens = concrete)
+  G2 Affekt           = clamp(0.35 emo + 0.15 '!' + 0.15 CAPS + 0.10 intens + 0.15 emoji)
+  G3 Valenz-Spannung  = |clamp((pos-neg)/(pos+neg+0.5), -1, 1)|
+  G4 Bindung          = (b+1)/2, b = clamp(personal/n*4 + 0.3 rel)  -> ALWAYS >= 0.5 for any non-empty text (lexical text cannot evidence aversion)
+  G5 Endgueltigkeit   = clamp(0.25 definite + 0.15 (closing '.'/'!') - 0.15 hedge - 0.1 ('?' present))
+  G9 Ueberraschung    = 1 - max Jaccard(content tokens, each of the last 8 user messages); no history -> g9_valid False -> 0 (never invented)
+
+History for G9 is passed in by the caller (list of (digest, frozenset(token-hashes))); only hashes are ever stored, never prompt text.
+Pure python, stdlib only, no I/O. Any error in the caller -> cell 0 (fail-silent there)."""
+import hashlib
+import math
+
+LABEL = "lexical_fallback"
+NOVELTY_RING = 8
+
+ABSTRACT_STEMS = (
+    "sinn", "wahrheit", "bewusstsein", "existenz", "realitaet", "realität", "wesen", "freiheit", "gerechtigkeit",
+    "moral", "ethik", "ethisch", "philosoph", "metaphys", "ontolog", "erkenntnis", "vernunft", "geist", "seele",
+    "unendlich", "ewig", "begriff", "konzept", "prinzip", "theorie", "idee", "natur", "zeit", "raum",
+    "meaning", "truth", "conscious", "existence", "reality", "essence", "freedom", "justice", "ethic", "philosoph",
+    "metaphys", "ontolog", "knowledge", "reason", "soul", "infinite", "eternal", "concept", "principle", "theory",
+    "idea", "nature", "abstract", "universe", "universum", "dasein", "kausal", "causal")
+ABSTRACT_SUFFIX = ("heit", "keit", "ung", "tion", "ismus", "taet", "tät", "ness", "ity", "ism", "schaft")
+EMOTION_STEMS = (
+    "lieb", "hass", "angst", "traurig", "trauer", "freu", "wuetend", "wütend", "zorn", "glueck", "glück", "gluecklich",
+    "einsam", "vermiss", "weine", "weinen", "schmerz", "sorge", "sorgen", "veraerger", "verärger", "begeister", "furcht",
+    "scham", "stolz", "eifersuch", "verzweif", "hoffnung", "panik", "wut", "herz", "sehnsucht", "schrecklich", "wunderbar",
+    "love", "hate", "afraid", "fear", "sad", "happy", "angry", "anger", "lonely", "cry", "pain", "worry",
+    "worried", "excited", "proud", "ashamed", "jealous", "desperate", "hope", "panic", "terrible", "wonderful", "heart")
+INTENSIFIERS = ("sehr", "total", "extrem", "unglaublich", "so", "voll", "mega", "wahnsinn", "really", "very", "extremely",
+                "incredibly", "totally", "absolutely", "so much", "too")
+POSITIVE = ("lieb", "freu", "glueck", "glück", "gluecklich", "wunderbar", "toll", "super", "gut", "schoen", "schön",
+            "danke", "begeister", "stolz", "hoffnung", "love", "happy", "wonderful", "great", "good", "thanks", "thank", "excited",
+            "proud", "hope", "beautiful", "nice")
+NEGATIVE = ("hass", "angst", "traurig", "trauer", "wuetend", "wütend", "zorn", "einsam", "schmerz", "sorge",
+            "schlecht", "schrecklich", "verzweif", "panik", "furcht", "scham", "fehler", "problem", "kaputt", "error", "hate",
+            "afraid", "fear", "sad", "angry", "lonely", "pain", "worry", "bad", "terrible", "panic", "broken", "wrong", "fail")
+PERSONAL = frozenset((
+    "ich", "mich", "mir", "mein", "meine", "meinem", "meinen", "meiner", "meines", "wir", "uns", "unser", "unsere", "du", "dich", "dir",
+    "dein", "deine", "deinem", "deinen", "deiner", "i", "me", "my", "mine", "we", "us", "our", "you", "your", "yours", "i'm", "i've", "you're"))
+RELATIONAL = ("freund", "familie", "mama", "papa", "mutter", "vater", "bruder", "schwester", "kind", "partner",
+              "liebling", "schatz", "friend", "family", "mother", "father", "brother", "sister", "child", "partner", "darling")
+DEFINITE = ("endgueltig", "endgültig", "definitiv", "immer", "nie", "niemals", "nichts", "alles", "muss", "genau",
+            "fertig", "ausschliesslich", "ausschließlich", "unbedingt", "garantiert", "final", "definitely", "always", "never", "must",
+            "exactly", "only", "absolutely", "certainly", "done", "nothing", "everything")
+HEDGE = ("vielleicht", "eventuell", "koennte", "könnte", "koennten", "könnten", "wohl", "ungefaehr", "ungefähr",
+         "etwa", "irgendwie", "moeglicherweise", "möglicherweise", "maybe", "perhaps", "might", "could", "probably", "somewhat",
+         "sort of", "kind of", "roughly", "possibly")
+
+
+def _blen(s):
+    """Go len(string) = UTF-8 byte length (kept so thresholds behave like the Go original)."""
+    return len(s.encode("utf-8"))
+
+
+def _tokens(s):
+    """lexTokens: lower-case, split on everything that is not letter/digit/apostrophe."""
+    out, cur = [], []
+    for ch in s.lower():
+        if ch.isalpha() or ch.isdecimal() or ch == "'":
+            cur.append(ch)
+        elif cur:
+            out.append("".join(cur))
+            cur = []
+    if cur:
+        out.append("".join(cur))
+    return out
+
+
+def _has_prefix_any(tok, stems):
+    for st in stems:
+        if _blen(st) >= 4:
+            if tok.startswith(st):
+                return True
+        elif tok == st:  # short stems must match whole words
+            return True
+    return False
+
+
+def _has_suffix_any(tok, sufs):
+    for sf in sufs:
+        if _blen(tok) > _blen(sf) + 2 and tok.endswith(sf):
+            return True
+    return False
+
+
+def _clamp(x, lo=0.0, hi=1.0):
+    return max(lo, min(hi, x))
+
+
+def _has_digit(t):
+    return any(c.isdecimal() for c in t)
+
+
+def content_tokens(prompt):
+    """set of tokens with byte length >= 4 (the Jaccard basis)."""
+    return {t for t in _tokens(prompt) if _blen(t) >= 4}
+
+
+def _h(tok):
+    return hashlib.sha256(tok.encode("utf-8")).hexdigest()[:8]
+
+
+def digest(prompt):
+    return hashlib.sha256(prompt.strip().encode("utf-8")).hexdigest()[:16]
+
+
+def history_entry(prompt):
+    """(digest, sorted list of token HASHES) -- what may be stored between hook processes. No plain text."""
+    return digest(prompt), sorted(_h(t) for t in content_tokens(prompt))
+
+
+def lexical_axes(text, history=None):
+    """-> dict G1..G5, G9 in [0,1] (cell values as omega_grid_signal.go builds them), 'g9_valid', 'label'.
+    history: iterable of (digest, iterable of token-hashes) of the previous user messages (<=8 used; same digest as `text` is skipped = idempotent).
+    Empty/blank text -> all 0, g9_valid False (Go: ComputeLexicalPercept returns zero value; grid code needs non-blank prompt)."""
+    res = {"G1": 0.0, "G2": 0.0, "G3": 0.0, "G4": 0.0, "G5": 0.0, "G9": 0.0, "g9_valid": False, "label": LABEL}
+    text = text or ""
+    toks = _tokens(text)
+    if not toks or not text.strip():
+        return res
+    n = float(len(toks))
+    content = set()
+    abstract = emo = intens = pos = neg = personal = rel = definite = hedge = 0
+    for t in toks:
+        if _blen(t) >= 4:
+            content.add(t)
+        if not _has_digit(t) and (_has_prefix_any(t, ABSTRACT_STEMS) or _has_suffix_any(t, ABSTRACT_SUFFIX)):
+            abstract += 1
+        if _has_prefix_any(t, EMOTION_STEMS):
+            emo += 1
+        if _has_prefix_any(t, INTENSIFIERS):
+            intens += 1
+        if _has_prefix_any(t, POSITIVE):
+            pos += 1
+        if _has_prefix_any(t, NEGATIVE):
+            neg += 1
+        if t in PERSONAL:
+            personal += 1
+        if _has_prefix_any(t, RELATIONAL):
+            rel += 1
+        if _has_prefix_any(t, DEFINITE):
+            definite += 1
+        if _has_prefix_any(t, HEDGE):
+            hedge += 1
+    excl = text.count("!")
+    caps = 0
+    for w in text.split():
+        if len(w) >= 3 and w.upper() == w and any(c.isalpha() for c in w):
+            caps += 1
+    emoji = sum(1 for ch in text if 0x1F300 <= ord(ch) <= 0x1FAFF)
+    abstraktion = _clamp(abstract / n * 4)
+    intensitaet = _clamp(0.35 * emo + 0.15 * excl + 0.15 * caps + 0.10 * intens + 0.15 * emoji)
+    valenz = _clamp((pos - neg) / (pos + neg + 0.5), -1.0, 1.0)
+    bindung = _clamp(personal / n * 4 + 0.3 * rel)
+    trimmed = text.strip()
+    end = 0.15 if (trimmed.endswith(".") or trimmed.endswith("!")) else 0.0
+    q = 0.1 if "?" in trimmed else 0.0
+    endg = _clamp(0.25 * definite + end - 0.15 * hedge - q)
+    res["G1"] = _clamp(abstraktion)
+    res["G2"] = _clamp(intensitaet)
+    res["G3"] = _clamp(abs(valenz))
+    res["G4"] = _clamp((bindung + 1) / 2)
+    res["G5"] = _clamp(endg)
+    # novelty vs. the last 8 user messages (hashes), skipping an identical digest
+    d = digest(text)
+    best, anyh = 0.0, False
+    hset = {_h(t) for t in content}
+    for hd, hs in list(history or [])[-NOVELTY_RING:]:
+        if hd == d:
+            continue
+        anyh = True
+        hs = set(hs)
+        inter = len(hset & hs)
+        union = len(hset) + len(hs) - inter
+        if union > 0:
+            best = max(best, inter / union)
+    if anyh and content:
+        res["G9"], res["g9_valid"] = _clamp(1.0 - best), True
+    return res

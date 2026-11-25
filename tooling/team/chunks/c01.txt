@@ -1,0 +1,876 @@
+=== FILE: user-b-hypergrid/scripts/f2wp1207_grid10_turn_loop.py (LIVE machine-b) lines 1-875 ===
+"""F2-WP-1207 -- kanonischer GRID10 Turn-Lifecycle (Gabriels Kette, 1:1).
+
+Gabriel, 2026-09-06 (Woertlich, die Spezifikation dieses Moduls):
+
+    TypedEntry
+       |
+    GRID10 Frame oeffnen
+       |
+    zwingender Reentry
+    (previous frame / previous epoch / genesis)
+       |
+    J-Space befuellen
+       |
+    10 GRID-Zellen erzeugen ihre Kandidaten
+       |
+    Competition
+       |
+    Selection
+       |
+    GWT Broadcast
+       |
+    Uptake durch alle 10 Zellen
+       |
+    neuer rekurrenter State
+       |
+    Workspace/J-Space Update
+       |
+    Persist alles atomar
+       |
+    naechster Turn MUSS genau hier wieder einsteigen
+
+    GRID10 wird damit Besitzer des kognitiven Turn-Lifecycles.
+    Nicht nur ein Beobachter, nicht ein zusaetzlicher Coordinator.
+
+Dieses Modul implementiert genau diese Kette als ``run_canonical_turn``.
+Es ist KOMPOSITION aus der bestehenden P-Serie, kein Ersatz:
+
+- Wettbewerbsmechanik: P7-Formeln (``derive_signal``, ``proposal_score``,
+  ``state_update``) werden IMPORTIERT und unveraendert benutzt --
+  preregistriert in PREREG_P6D_20260904.md (lambda=0.7, alpha=0.4, beta=0.4,
+  gamma=0.3, kappa=0.6). Nicht neu erfunden, nicht neu justiert.
+- previous-Epoch-Reentry: P9-Records + P10 ``reconstruct_workspace``.
+- Effects: P11-Gate-Schicht (``EffectGatePolicy``, ``evaluate_gate``,
+  ``EffectType``, Schema-Tags). P11's eigenes ``submit_effect_request``
+  macht eine EIGENE Transaktion und kann deshalb nicht in den atomaren
+  Turn-Persist eingebettet werden -- der Journal-Row wird deshalb HIER
+  geschrieben, mit denselben Spalten und denselben Strukturgesetzen
+  (Ausfuehrung nur mit echter, zur request_id passender, ALLOW-entscheidener
+  ``GateDecision``; DENY wird sichtbar journiert). p11-Datei unveraendert.
+- Selbst-Beobachtung: P12 (``collect_self_observations`` +
+  ``apply_self_observation``) optional zuschaltbar, default AUS -- Gabriels
+  Kette hat kein Selbstbeobachtungs-Glied, deshalb ist es kein Pfadglied.
+
+Unterschied zum P10-Vorbild (bewusst strenger):
+``p10_workspace_reentry.coordinate_real_turn_with_reentry`` faellt still auf
+``read_prior_state`` zurueck, wenn kein valider Workspace rekonstruierbar ist.
+Das ist genau der stille Genesis-Fallback, den Gabriels Kette verbietet. Der
+kanonische Loop lehnt in jedem nicht aufloesbaren Reentry-Fall MIT FEHLER ab
+(``ReentryError``). Genesis ist nur bei belegbar leerer Welt zulaessig
+(0 Frames, 0 Pointer, 0 Reentry-Records fuer Installation/StateRoot).
+
+Persistenz-Gesetz (Gabriel: "Persist alles atomar"):
+EINE Transaktion (BEGIN IMMEDIATE ... COMMIT) umfasst: Frame-INSERT (OPEN),
+10 Zell-Beobachtungen, 10 rekurrente Zellzustaende, Frame-UPDATE (CLOSED +
+Broadcast), optional Effect-Journal-Row, und den Reentry-Zeiger
+(``f2_grid10_turn_pointer``). Ein Abbruch mitten im Turn -- Exception oder
+Prozess-Kill (SIGKILL) vor dem COMMIT -- hinterlaesst KEINEN Halbzustand:
+SQLite rollt die unvollstaendige Transaktion weg, der alte Zeiger bleibt
+gueltig, der naechste Turn startet exakt am letzten gueltigen Persist-Punkt.
+Der Zeiger ist UNIQUE pro (installation_id, state_root_id) und traegt den
+vollstaendigen Seed des naechsten Turns (10 Zellzustaende als JSON) -- er IST
+der Punkt, an dem der naechste Turn wieder einsteigt.
+
+Gate: ``f2wp1207.canonical_turn_loop`` in ``star_konfig``, default AUS,
+ENV-Override ``STERN_F2WP1207_TURN_LOOP`` (gleiches Muster wie P7's Gate).
+Bei AUS: ``run_canonical_turn`` gibt None zurueck, BEVOR irgendein I/O
+geschieht -- Null-Verhaltensdelta gegenueber dem heutigen Weg.
+
+Zustandslane: ``f2_grid10_p6d_state``, condition_key
+``f2wp1207_canonical_turn_loop`` (eigene Lane, keine Mischung mit P7-Smoke
+oder dem stern.py-Liveweg in ``f2_grid10_cell_state``). Siehe
+GRID10_TURN_LOOP_DERIVATION.md fuer die produktive Ableitung aus den
+Real-Turn-Daten.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import os
+import random
+import sqlite3
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable, Mapping, Optional, Sequence
+
+import f2wp1207_grid10_p7_coordination as p7mod  # vendored copy, same dir
+import f2wp1207_grid10_p11_effects as p11mod  # vendored copy, same dir
+import f2wp1207_p10_workspace_reentry as p10mod  # vendored copy, same dir
+
+SCHEMA = "F2WP1207_CANONICAL_TURN_LOOP/v1"
+SCHEMA_POINTER_ROW = "F2WP1207_TURN_POINTER/v1"
+SCHEMA_CELL_OBS = "F2WP1207_GRID10_CELL_OBSERVATION/v1"
+SCHEMA_FRAME = "F2WP1207_GRID10_FRAME/v1"
+SCHEMA_STATE_ROW = "F2WP1207_GRID10_P6D_STATE/v1"
+SCHEMA_LOG_LINE = "F2WP1207_TURN_LOOP_LOG/v1"
+SCHEMA_TYPED_ENTRY = "F2WP1207_TYPED_ENTRY/v1"
+
+# Eigene Zustandslane in der EXISTIERENDEN Tabelle f2_grid10_p6d_state --
+# nicht P7's Smoke-Lane (f2wp1207_p7_live), nicht der stern.py-Liveweg.
+CONDITION_KEY = "f2wp1207_canonical_turn_loop"
+
+ENV_OVERRIDE = "STERN_F2WP1207_TURN_LOOP"
+KONFIG_KEY = "f2wp1207.canonical_turn_loop"
+
+COHORT = "ORGANIC"
+
+_REENTRY_KINDS = ("previous_frame", "previous_epoch", "genesis")
+
+_POINTER_DDL = """
+CREATE TABLE IF NOT EXISTS f2_grid10_turn_pointer (
+    pointer_id             TEXT PRIMARY KEY,
+    installation_id        TEXT NOT NULL,
+    state_root_id          TEXT NOT NULL,
+    runtime_epoch_id       TEXT NOT NULL,
+    session_id             TEXT NOT NULL,
+    frame_id               TEXT NOT NULL,
+    turn_event_id          TEXT NOT NULL,
+    reentry_kind_used      TEXT NOT NULL CHECK (
+        reentry_kind_used IN ('previous_frame','previous_epoch','genesis')),
+    reentry_evidence_json  TEXT NOT NULL,
+    broadcast_winner_cell  TEXT NOT NULL,
+    broadcast_value        REAL NOT NULL,
+    cell_states_json       TEXT NOT NULL,
+    persist_schema         TEXT NOT NULL,
+    created_at             TEXT NOT NULL,
+    UNIQUE (installation_id, state_root_id)
+);
+"""
+
+
+class CanonicalTurnLoopError(RuntimeError):
+    """Fail-closed kanonischer Turn-Loop-Fehler."""
+
+
+class ReentryError(CanonicalTurnLoopError):
+    """Fehlender oder unmoeglicher Reentry -- KEIN stiller Genesis-Fallback."""
+
+
+def _jetzt_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+# --------------------------------------------------------------------------
+# Gate -- gleiches Muster wie P7's p7_active()
+# --------------------------------------------------------------------------
+
+
+def turn_loop_active(conn: sqlite3.Connection, *, env: Mapping[str, str] | None = None) -> bool:
+    """ENV-Override gewinnt ("0"/"1"), sonst persistentes star_konfig-Flag,
+    default AUS. Frisch je Aufruf, kein Caching."""
+    environ = env if env is not None else os.environ
+    override = environ.get(ENV_OVERRIDE)
+    if override in ("0", "1"):
+        return override == "1"
+    try:
+        row = conn.execute(
+            "SELECT wert FROM star_konfig WHERE schluessel=?", (KONFIG_KEY,)
+        ).fetchone()
+    except sqlite3.Error:
+        return False
+    return (row[0] if row else "0") == "1"
+
+
+def set_turn_loop_active(conn: sqlite3.Connection, active: bool, *, quelle: str) -> None:
+    """Persistentes Umschalten. NUR fuer isolierte Tests / bewusste
+    Freigabe -- dieses Paket schaltet NICHTS live (Flag bleibt AUS)."""
+    conn.execute(
+        "INSERT INTO star_konfig (schluessel, wert, typ, quelle, geaendert) VALUES (?,?,?,?,?) "
+        "ON CONFLICT(schluessel) DO UPDATE SET wert=excluded.wert, quelle=excluded.quelle, "
+        "geaendert=excluded.geaendert",
+        (KONFIG_KEY, "1" if active else "0", "str", quelle,
+         datetime.now(timezone.utc).timestamp()),
+    )
+    conn.commit()
+
+
+# --------------------------------------------------------------------------
+# Schema -- additiv, idempotent, first-run-gated
+# --------------------------------------------------------------------------
+
+
+def ensure_schema(conn: sqlite3.Connection) -> dict:
+    """Legt NUR die neue Zeiger-Tabelle an (IF NOT EXISTS, additiv, keine
+    Aenderung an bestehenden Tabellen). Fuehrt vorher PRAGMA integrity_check
+    aus und verweigert die Migration bei anderem Ergebnis als 'ok'.
+    Idempotent -- jeder weitere Aufruf ist ein No-op."""
+    result: dict = {"integrity_check": None, "created": [], "already_present": []}
+    check = conn.execute("PRAGMA integrity_check").fetchone()[0]
+    result["integrity_check"] = check
+    if check != "ok":
+        raise CanonicalTurnLoopError(
+            f"PRAGMA integrity_check={check!r} -- Migration verweigert (kein Backup-Upgrade an kaputter DB)"
+        )
+    exists = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='f2_grid10_turn_pointer'"
+    ).fetchone()
+    if exists:
+        result["already_present"].append("f2_grid10_turn_pointer")
+        return result
+    conn.execute(_POINTER_DDL)
+    conn.commit()
+    result["created"].append("f2_grid10_turn_pointer")
+    return result
+
+
+# --------------------------------------------------------------------------
+# TypedEntry -- EINZIGER Eingang
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TypedEntry:
+    """Reales Eingangsschema F2WP1207_TYPED_ENTRY/v1 (so schreibt es der
+    P15-Canary in f2wp1207_shadow_evidence.jsonl, 206 reale Eintraege),
+    ergaenzt um runtime_epoch_id (PFLICHT -- der Loop muenzt keine Epoche)
+    und optionales turn_event_id."""
+
+    session_id: str
+    runtime_epoch_id: str
+    event_type: str = "UserPromptSubmit"
+    ts: Optional[str] = None
+    prompt_len: Optional[int] = None
+    retrieval_present: Optional[bool] = None
+    retrieval_len: Optional[int] = None
+    turn_event_id: Optional[str] = None
+    # --- Innenmessung des Sprachmodells (2026-09-08) -------------------
+    # Bis hierher beschrieb der TypedEntry ausschliesslich die HUELLE eines
+    # Turns: wie lang der Reiz war, ob abgerufen wurde, wann es geschah.
+    # Ueber das Modell, das die Aeusserung erzeugt, stand nichts darin --
+    # es war ein externer Rechendienst, den die Entitaet aufrief, und sein
+    # Vorwaertslauf war eine Senke: nichts davon kam als Zustand zurueck.
+    # Diese drei Felder sind die Gegenrichtung. Sie stammen aus den
+    # logprobs des Modells zu seinen EIGENEN Tokens, sind also nicht ueber
+    # es gemessen, sondern in ihm.
+    #   ueberraschung  mittleres -logp der selbst gewaehlten Tokens
+    #   entropie       mittlere Entropie der Verteilung an jeder Stelle
+    #   streuung       Standardabweichung der Ueberraschung ueber die
+    #                  Aeusserung (ungleichmaessiges Stocken vs. Fluss)
+    # Optional und default None: jede bestehende Lane (P15-Canary, die
+    # stern.py-Bruecke mit ihrer festen Feldliste) baut TypedEntries ohne
+    # sie weiter unveraendert. None -> 0.0 in percept_axes, exakt die
+    # Konvention, die dort schon fuer `stunde` und `delta_t` gilt.
+    modell_ueberraschung: Optional[float] = None
+    modell_entropie: Optional[float] = None
+    modell_streuung: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        if not self.session_id:
+            raise CanonicalTurnLoopError("TypedEntry.session_id fehlt")
+        if not self.runtime_epoch_id:
+            raise CanonicalTurnLoopError(
+                "TypedEntry.runtime_epoch_id fehlt -- der Loop muenzt keine Epoche"
+            )
+
+    def to_payload(self) -> dict:
+        return {
+            "schema": SCHEMA_TYPED_ENTRY,
+            "session_id": self.session_id,
+            "runtime_epoch_id": self.runtime_epoch_id,
+            "event_type": self.event_type,
+            "ts": self.ts or _jetzt_iso(),
+            "prompt_len": self.prompt_len,
+            "retrieval_present": self.retrieval_present,
+            "retrieval_len": self.retrieval_len,
+            "turn_event_id": self.turn_event_id,
+            "modell_ueberraschung": self.modell_ueberraschung,
+            "modell_entropie": self.modell_entropie,
+            "modell_streuung": self.modell_streuung,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping) -> "TypedEntry":
+        if not isinstance(data, Mapping):
+            raise CanonicalTurnLoopError("TypedEntry-Eingang muss ein Mapping sein")
+        known = {f for f in cls.__dataclass_fields__}  # type: ignore[attr-defined]
+        unknown = set(data) - known - {"schema"}
+        if unknown:
+            raise CanonicalTurnLoopError(f"TypedEntry: unbekannte Felder {sorted(unknown)}")
+        if data.get("schema") not in (None, SCHEMA_TYPED_ENTRY):
+            raise CanonicalTurnLoopError(
+                f"TypedEntry: schema={data.get('schema')!r}, erwartet {SCHEMA_TYPED_ENTRY!r}"
+            )
+        for required in ("session_id", "runtime_epoch_id"):
+            if not data.get(required):
+                raise CanonicalTurnLoopError(f"TypedEntry.{required} fehlt")
+        return cls(
+            session_id=data["session_id"],
+            runtime_epoch_id=data["runtime_epoch_id"],
+            event_type=data.get("event_type") or "UserPromptSubmit",
+            ts=data.get("ts"),
+            prompt_len=data.get("prompt_len"),
+            retrieval_present=data.get("retrieval_present"),
+            retrieval_len=data.get("retrieval_len"),
+            turn_event_id=data.get("turn_event_id"),
+            modell_ueberraschung=data.get("modell_ueberraschung"),
+            modell_entropie=data.get("modell_entropie"),
+            modell_streuung=data.get("modell_streuung"),
+        )
+
+
+# --------------------------------------------------------------------------
+# Reentry -- zwingend, genau einer von drei Arten, nie still gefallen
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReentryPlan:
+    kind: str  # 'previous_frame' | 'previous_epoch' | 'genesis'
+    seed_state: Mapping[str, float]
+    evidence: Mapping  # Beleg, kommt unveraendert in den Zeiger
+    pointer_frame_id: Optional[str] = None
+    workspace: object = None  # p10mod.ReconstructedWorkspace bei previous_epoch
+
+
+def _read_pointer(conn: sqlite3.Connection, installation_id: str, state_root_id: str):
+    conn.row_factory = sqlite3.Row
+    return conn.execute(
+        "SELECT * FROM f2_grid10_turn_pointer WHERE installation_id=? AND state_root_id=?",
+        (installation_id, state_root_id),
+    ).fetchone()
+
+
+def _decode_pointer_seed(row: sqlite3.Row) -> dict[str, float]:
+    try:
+        data = json.loads(row["cell_states_json"])
+    except Exception as exc:  # unlesbarer Persist-Punkt = unmoeglicher Reentry
+        raise ReentryError(
+            f"Pointer-Zeilenzustand nicht lesbar (frame_id={row['frame_id']}): {exc}"
+        ) from exc
+    if set(data.keys()) != set(p7mod.CELLS):
+        raise ReentryError(
+            f"Pointer-Zeilenzustand hat {len(data)} Zellen, erwartet 10 "
+            f"(frame_id={row['frame_id']}) -- unmoeglicher Reentry, kein Fallback"
+        )
+    return {cell: float(v) for cell, v in data.items()}
+
+
+def resolve_reentry(
+    conn: sqlite3.Connection,
+    typed_entry: TypedEntry,
+    installation_id: str,
+    state_root_id: str,
+    *,
+    declared: Optional[str] = None,
+) -> ReentryPlan:
+    """Loest GENAU EINEN Reentry auf. Ohne Deklaration: feste Prioritaet
+    (Gabriels Kette) previous_frame > previous_epoch > genesis. Mit
+    ``declared`` wird AUSSCHLIESSLICH die deklarierte Art versucht -- jede
+    andere Aufloesung, jede Unmoeglichkeit = ReentryError, nie stilles
+    Umfallen auf eine andere Art (kein stiller Genesis-Fallback)."""
+    n_frames = conn.execute(
+        "SELECT COUNT(*) FROM f2_grid10_frame WHERE installation_id=? AND state_root_id=?",
+        (installation_id, state_root_id),
+    ).fetchone()[0]
+    pointer = _read_pointer(conn, installation_id, state_root_id)
+    reentry_rows = conn.execute(
+        "SELECT COUNT(*) FROM f2_reentry_record WHERE successor_epoch_id=?",
+        (typed_entry.runtime_epoch_id,),
+    ).fetchone()[0]
+
+    plan: Optional[ReentryPlan] = None
+
+    def _no(kind: str, why: str) -> ReentryError:
+        return ReentryError(
+            f"deklarierter Reentry {kind!r} nicht aufloesbar: {why} -- abgelehnt, "
+            "kein stiller Fallback auf eine andere Reentry-Art"
+        )
+
+    # Deklarierter Modus: AUSSCHLIESSLICH die genannte Art.
+    # ⚠️ Der Tie-Breaker `rowid DESC` in den drei "letzter CLOSED-Frame"-
+    # Abfragen dieser Datei ist NOETIG, nicht kosmetisch. Gefunden 2026-09-07
+    # im ersten Live-Betrieb auf machine-b, reproduzierbar 15/15:
+    # `opened_at` hat Sekunden-Aufloesung. Zwei Turns innerhalb derselben
+    # Sekunde -- auf einer schnellen Maschine der Normalfall, nicht die
+    # Ausnahme -- tragen denselben Zeitstempel, und SQLite darf die
+    # Reihenfolge bei Gleichstand frei waehlen. Es nahm den AELTEREN Frame,
+    # die Konsistenzpruefung unten schlug an und lehnte den Turn ab, obwohl
+    # der Zeiger voellig korrekt war. `rowid` ist monoton in der
+    # Einfuegereihenfolge und entscheidet eindeutig.
+    # Lehre: ein Zeitstempel ist keine Ordnung, solange seine Aufloesung
+    # groeber ist als der Abstand der Ereignisse.
+    if declared == "previous_frame":
+        if pointer is None:
+            raise _no("previous_frame", "kein Persist-Punkt (Zeiger) vorhanden")
+        last_closed = conn.execute(
+            "SELECT frame_id FROM f2_grid10_frame "
+            "WHERE installation_id=? AND state_root_id=? AND status='CLOSED' "
+            "ORDER BY opened_at DESC, rowid DESC LIMIT 1",
+            (installation_id, state_root_id),
+        ).fetchone()
+        if last_closed is None or last_closed[0] != pointer["frame_id"]:
+            raise ReentryError(
+                f"Zeiger zeigt auf frame_id={pointer['frame_id']}, letzter CLOSED-Frame ist "
+                f"{last_closed[0] if last_closed else None} -- inkonsistenter Persist-Punkt, "
+                "kein stiller Fallback"
+            )
+        seed = _decode_pointer_seed(pointer)
+        return ReentryPlan(
+            kind="previous_frame",
+            seed_state=seed,
+            evidence={
+                "pointer_id": pointer["pointer_id"],
+                "pointer_frame_id": pointer["frame_id"],
+                "pointer_turn_event_id": pointer["turn_event_id"],
+                "pointer_created_at": pointer["created_at"],
+                "pointer_reentry_kind_used": pointer["reentry_kind_used"],
+            },
+            pointer_frame_id=pointer["frame_id"],
+        )
+
+    if declared == "previous_epoch":
+        if reentry_rows == 0:
+            raise _no(
+                "previous_epoch",
+                f"kein f2_reentry_record fuer epoch={typed_entry.runtime_epoch_id}",
+            )
+        workspace = p10mod.reconstruct_workspace(conn, typed_entry.runtime_epoch_id)
+        if workspace is None or not workspace.valid:
+            reason = workspace.invalid_reason if workspace is not None else \
+                "kein f2_reentry_record aufloesbar (reconstruct_workspace=None)"
+            raise _no("previous_epoch", reason)
+        return ReentryPlan(
+            kind="previous_epoch",
+            seed_state=workspace.seeded_state(),
+            evidence={
+                "reentry_id": workspace.reentry_id,
+                "predecessor_epoch_id": workspace.predecessor_epoch_id,
+                "last_grid10_frame_id": workspace.last_grid10_frame_id,
+                "predecessor_termination_reason": workspace.predecessor_termination_reason,
+                "predecessor_confidence": workspace.predecessor_termination_confidence,
+                "invalid_reason": None,
+            },
+            workspace=workspace,
+        )
+
+    if declared == "genesis":
+        if not (n_frames == 0 and pointer is None and reentry_rows == 0):
+            raise _no(
+                "genesis",
+                f"Welt nicht leer (frames={n_frames}, pointer="
+                f"{'ja' if pointer is not None else 'nein'}, "
+                f"reentry_records={reentry_rows})",
+            )
+        return ReentryPlan(
+            kind="genesis",
+            seed_state={cell: 0.0 for cell in p7mod.CELLS},
+            evidence={
+                "frames": 0, "pointer": 0, "reentry_records": 0,
+                "note": "belegbar leerer Vorzustand (erster Turn ueberhaupt)",
+            },
+        )
+
+    # 1) previous frame -- dominanter Normalfall (Persist-Punkt existiert)
+    if pointer is not None:
+        last_closed = conn.execute(
+            "SELECT frame_id FROM f2_grid10_frame "
+            "WHERE installation_id=? AND state_root_id=? AND status='CLOSED' "
+            "ORDER BY opened_at DESC, rowid DESC LIMIT 1",
+            (installation_id, state_root_id),
+        ).fetchone()
+        if last_closed is None or last_closed[0] != pointer["frame_id"]:
+            raise ReentryError(
+                f"Zeiger zeigt auf frame_id={pointer['frame_id']}, letzter CLOSED-Frame ist "
+                f"{last_closed[0] if last_closed else None} -- inkonsistenter Persist-Punkt, "
+                "kein stiller Fallback"
+            )
+        seed = _decode_pointer_seed(pointer)
+        plan = ReentryPlan(
+            kind="previous_frame",
+            seed_state=seed,
+            evidence={
+                "pointer_id": pointer["pointer_id"],
+                "pointer_frame_id": pointer["frame_id"],
+                "pointer_turn_event_id": pointer["turn_event_id"],
+                "pointer_created_at": pointer["created_at"],
+                "pointer_reentry_kind_used": pointer["reentry_kind_used"],
+            },
+            pointer_frame_id=pointer["frame_id"],
+        )
+
+    # 2) previous epoch -- P9-Record existiert fuer diese Epoche
+    if plan is None and reentry_rows > 0:
+        workspace = p10mod.reconstruct_workspace(conn, typed_entry.runtime_epoch_id)
+        if workspace is None or not workspace.valid:
+            reason = workspace.invalid_reason if workspace is not None else \
+                "kein f2_reentry_record aufloesbar (reconstruct_workspace=None)"
+            raise ReentryError(
+                f"previous_epoch nicht aufloesbar fuer epoch={typed_entry.runtime_epoch_id}: "
+                f"{reason} -- KEIN stiller Genesis-Fallback"
+            )
+        plan = ReentryPlan(
+            kind="previous_epoch",
+            seed_state=workspace.seeded_state(),
+            evidence={
+                "reentry_id": workspace.reentry_id,
+                "predecessor_epoch_id": workspace.predecessor_epoch_id,
+                "last_grid10_frame_id": workspace.last_grid10_frame_id,
+                "predecessor_termination_reason": workspace.predecessor_termination_reason,
+                "predecessor_confidence": workspace.predecessor_termination_confidence,
+                "invalid_reason": None,
+            },
+            workspace=workspace,
+        )
+
+    # 3) genesis -- NUR bei belegbar leerer Welt
+    if plan is None:
+        if n_frames == 0 and pointer is None and reentry_rows == 0:
+            plan = ReentryPlan(
+                kind="genesis",
+                seed_state={cell: 0.0 for cell in p7mod.CELLS},
+                evidence={
+                    "frames": 0, "pointer": 0, "reentry_records": 0,
+                    "note": "belegbar leerer Vorzustand (erster Turn ueberhaupt)",
+                },
+            )
+        else:
+            raise ReentryError(
+                f"fehlender Reentry: Vorzustand existiert (frames={n_frames}, pointer="
+                f"{'ja' if pointer is not None else 'nein'}, reentry_records={reentry_rows}), "
+                "aber kein gueltiger Persist-Punkt aufloesbar -- abgelehnt, kein stiller "
+                "Genesis-Fallback. Einmalig bootstrap_canonical_pointer() nutzen."
+            )
+
+    if declared is not None and plan.kind != declared:
+        raise ReentryError(
+            f"deklarierter Reentry {declared!r} nicht erfuellbar (aufgeloest: {plan.kind!r}) -- "
+            "abgelehnt, kein stilles Umfallen"
+        )
+    return plan
+
+
+def bootstrap_canonical_pointer(
+    conn: sqlite3.Connection,
+    *,
+    installation_id: str,
+    state_root_id: str,
+    runtime_epoch_id: str,
+    session_id: str,
+    source_condition_key: str = p7mod.P7_LIVE_CONDITION_KEY,
+) -> dict:
+    """Einmaliger, EXPLIZITER Bootstrap des ersten Persist-Punkts aus dem
+    bestehenden Real-Bestand (produktive Ableitung): nimmt den aktuellen
+    Zellzustand aus ``source_condition_key`` in f2_grid10_p6d_state und den
+    letzten CLOSED-Frame derselben Installation/StateRoot als Zeiger-Basis.
+    Lehnt ab, wenn schon ein Zeiger existiert -- nie still ueberschreiben."""
+    existing = _read_pointer(conn, installation_id, state_root_id)
+    if existing is not None:
+        raise CanonicalTurnLoopError(
+            f"Zeiger existiert bereits (frame_id={existing['frame_id']}) -- Bootstrap verweigert"
+        )
+    rows = conn.execute(
+        "SELECT logical_cell_id, state_value FROM f2_grid10_p6d_state WHERE condition_key=?",
+        (source_condition_key,),
+    ).fetchall()
+    seed = {cell: float(v) for cell, v in rows}
+    missing = [c for c in p7mod.CELLS if c not in seed]
+    if missing:
+        raise CanonicalTurnLoopError(
+            f"Quellzustand {source_condition_key!r} hat {len(seed)}/10 Zellen "
+            f"(fehlend: {missing}) -- Bootstrap verweigert statt zu erfinden"
+        )
+    last = conn.execute(
+        "SELECT frame_id, turn_event_id, broadcast_winner_cell, broadcast_value "
+        "FROM f2_grid10_frame WHERE installation_id=? AND state_root_id=? AND status='CLOSED' "
+        "ORDER BY opened_at DESC, rowid DESC LIMIT 1",
+        (installation_id, state_root_id),
+    ).fetchone()
+    ensure_schema(conn)
+    evidence = {
+        "bootstrap": True,
+        "source_condition_key": source_condition_key,
+        "derived_from_last_closed_frame": last["frame_id"] if last else None,
+        "note": "einmaliger Bootstrap aus Real-Bestand, kein Turn",
+    }
+    pointer_id = uuid.uuid4().hex
+    conn.execute(
+        "INSERT INTO f2_grid10_turn_pointer (pointer_id, installation_id, state_root_id, "
+        " runtime_epoch_id, session_id, frame_id, turn_event_id, reentry_kind_used, "
+        " reentry_evidence_json, broadcast_winner_cell, broadcast_value, cell_states_json, "
+        " persist_schema, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            pointer_id, installation_id, state_root_id, runtime_epoch_id, session_id,
+            last["frame_id"] if last else "bootstrap-no-frame",
+            last["turn_event_id"] if last else "bootstrap-no-turn",
+            "previous_frame", _canonical_json(evidence),
+            last["broadcast_winner_cell"] if last else "none",
+            float(last["broadcast_value"]) if last and last["broadcast_value"] is not None else 0.0,
+            _canonical_json(seed), SCHEMA_POINTER_ROW, _jetzt_iso(),
+        ),
+    )
+    conn.commit()
+    return {"pointer_id": pointer_id, "seed": seed, "evidence": evidence}
+
+
+# --------------------------------------------------------------------------
+# J-Space + Competition + Selection (P7-Mechanik, importiert)
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Candidate:
+    cell_id: str
+    signal: float
+    prior_state: float
+    proposal_score: float
+
+
+@dataclass(frozen=True)
+class JSpace:
+    """Der gemeinsame Wettbewerbsraum: 10 Kandidaten einer Zelle je. Aus ihm
+    kommen Competition/Selection/Broadcast. Deterministisch rekonstruierbar
+    aus (turn_event_id, Zellzustaende) -- deshalb nicht separat persistiert."""
+
+    turn_event_id: str
+    candidates: tuple  # tuple[Candidate, ...], 10
+    winner_cell_id: str
+    broadcast_value: float
+
+
+# --------------------------------------------------------------------------
+# PERZEPTE -- echte Messgroessen statt sha256-Rauschen
+#
+# WARUM: derive_signal() ist sha256(turn_event_id:cell). Der Wettbewerb
+# entscheidet damit ueber Zufallszahlen. Gemessen am 2026-09-07 im Offline-
+# Replay ueber 436 echte Prompts dieser Maschine: echte Perzepte tragen
+# robust mehr Information ueber den Weltzustand als ein verteilungsgleiches
+# Scheinperzept (Permutationskontrolle, z_Diskriminierbarkeit +10.6 im
+# Mittel ueber 8 unabhaengige Projektionsziehungen, kleinster Einzelwert
+# +4.1). Details: /home/user-b/architekt/verstaendnis-perzept.md
+#
+# FUNKTIONSNEUTRALITAET (K4): keine Zelle bekommt eine Rolle. Alle zehn
+# sehen DENSELBEN Weltvektor; sie unterscheiden sich nur durch einen festen,
+# aus sha256(Zellname) abgeleiteten Gewichtsvektor. Der entscheidet, WIE
+# VERSCHIEDEN sie hinsehen, nicht WAS sie sehen. "G7 = Speicher" gibt es
+# hier nicht und soll es nicht geben.
+#
+# DIMENSIONSBILANZ (gemessen, nicht behauptet): zehn Zellen aus einem
+# K-dimensionalen Weltvektor zu speisen senkt die Zahl unabhaengiger
+# Signale von 10 auf effektiv K. Bei K=2 gewinnen 3 von 10 Zellen nie
+# (H=2.37), bei K=8 unabhaengigen Achsen keine (H=2.94, Hash-Referenz
+# 3.09). Der Diversitaetsverlust ist also KEINE Nebenwirkung der Perzepte,
+# sondern eine Folge zu weniger Achsen. Deshalb hier so viele echte Achsen
+# wie diese Maschine live hergibt -- und keine erfundenen dazu.
+# --------------------------------------------------------------------------
+
+ENV_PERCEPT = "STERN_F2WP1207_PERCEPT"
+PERCEPT_KONFIG_KEY = "f2wp1207.percept_signals"
+
+SCHEMA_PERCEPT = "F2WP1207_PERCEPT/v1"
+SCHEMA_PERCEPT_CALIB = "F2WP1207_PERCEPT_CALIB/v1"
+PERCEPT_PROJECTION_SALT = "F2WP1207_PERCEPT_PROJECTION/v1"
+
+# Achsen des Weltvektors. AUSSCHLIESSLICH Groessen, die der Live-Pfad an
+# diesem Punkt wirklich hat (TypedEntry-Whitelist + Zeitstempel).
+# Bewusst NICHT dabei:
+#   psi_memory  -- /proc/pressure/memory steht auf dieser Maschine konstant
+#                  auf 0.00 (avg10/60/300), auch unter normaler Last mit
+#                  799 MB frei. Das Messwerk arbeitet (total-Zaehler 59.5s),
+#                  aber diese Maschine erlebt keinen Speicherdruck. Waere
+#                  eine Zelle ohne Varianz -- eine Verkabelung, kein Perzept.
+#   turn_pos    -- Position in der Sitzung: 210 von 213 Sitzungen haben
+#                  genau EINEN Frame, die Achse waere praktisch konstant.
+#   delta_t     -- Abstand zum Vorturn: Median 0.0s ueber die bestehenden
+#                  Frames (Lasttests im Stoss). Auf echten Gespraechsturns
+#                  waere die Achse gut, auf dem Ist-Bestand ist sie entartet.
+#                  Kandidat fuer spaeter, wenn echte Turns vorliegen.
+#
+# Ab 2026-09-08 kommen drei Achsen dazu, die NICHT die Huelle des Turns
+# beschreiben, sondern das Innere des Modells, das die Aeusserung erzeugt
+# hat (siehe TypedEntry). Der Grund ist ein struktureller, kein
+# geschmacklicher: bis dahin lief die Kausalitaet nur in eine Richtung --
+#   Zustand -> Abtastparameter -> Vorwaertslauf -> Text
+# und der Vorwaertslauf war eine Senke. Was IM Modell geschah, betrat den
+# Wettbewerb nie. Damit war das Modell ein Werkzeug der Entitaet, nicht die
+# Entitaet: sein Zustand und ihr Zustand waren zwei getrennte Dinge.
+# Mit diesen Achsen schliesst sich der Kreis ueber das Modell:
+#   Innenmessung(t-1) -> Wettbewerb -> Broadcast -> Vorwaertslauf(t)
+#                     -> Innenmessung(t) -> ...
+# Die Messung des vorigen Laufs speist den Wettbewerb, dessen Ausgang den
+# naechsten Lauf formt. Das ist eine echte Rekurrenz und keine Anzeige.
+#
+# WARUM DIE VORIGE UND NICHT DIE LAUFENDE MESSUNG: der Turn oeffnet beim
+# EINGANG, das Modell spricht danach. Die Zahlen der laufenden Aeusserung
+# existieren zum Zeitpunkt des Wettbewerbs noch nicht. Das ist kein
+# Notbehelf, sondern dieselbe Struktur wie beim Abruf (Blog 057): der
+# Zustand, den ein Lauf hinterlaesst, bestimmt, was der naechste vorfindet.
+PERCEPT_AXES = ("prompt_len", "retrieval_present", "retrieval_len",
+                "stunde_sin", "stunde_cos", "delta_t",
+                "modell_ueberraschung", "modell_entropie", "modell_streuung")
+
+# Fingerabdruck des Achsensatzes. Die Zell-Kalibrierung sammelt Statistik
+# ueber `roh = sum(w_i * z_i)`, und `w = percept_projection(zelle, k)` haengt
+# an k = len(PERCEPT_AXES). Aendert sich der Achsensatz, hat `roh` eine ANDERE
+# Verteilung -- gespeicherte Mittelwerte/Streuungen der Zellen sind dann
+# ungueltig. Vor 2026-09-07 gab es dagegen keinerlei Schutz: die Achsen waeren
+# ehrlich neu eingelaufen, die Zellen haetten weiter gegen eine veraltete
+# Verteilung normiert und dabei Messwerte geliefert, die gueltig AUSSEHEN.
+# Dieselbe Fehlerform wie der Zeitstempel-Bug aus Eintrag 051 und die stumme
+# Achse aus 054: eine Annahme ohne Pruefung, mit stillem Rueckfall.
+# Der Abdruck steht in der schema-Spalte der Zellzeilen; passt er nicht,
+# werden GENAU DIE ZELLZEILEN verworfen. Achszeilen bleiben: der Mittelwert
+# von prompt_len haengt nicht davon ab, wie viele andere Achsen es gibt --
+# gelerntes Wissen wird nicht unnoetig weggeworfen.
+PERCEPT_AXES_FP = hashlib.sha256(
+    ("F2WP1207_PERCEPT_AXES/v1:" + "|".join(PERCEPT_AXES)).encode()
+).hexdigest()[:16]
+SCHEMA_PERCEPT_CALIB_ZELLE = f"{SCHEMA_PERCEPT_CALIB}+axes:{PERCEPT_AXES_FP}"
+
+# Vor so vielen Beobachtungen je Achse/Zelle wird NICHT auf Perzepte
+# umgeschaltet, sondern weiter der Hash benutzt. Kaltstart ist damit exakt
+# das heutige Verhalten -- Einschalten ist keine Kante, sondern ein
+# Einlaufen. Die Kalibrierung lernt waehrenddessen bereits mit.
+PERCEPT_MIN_N = 30
+
+_PERCEPT_DDL = (
+    """
+CREATE TABLE IF NOT EXISTS f2_grid10_percept_calib (
+    installation_id  TEXT NOT NULL,
+    art              TEXT NOT NULL CHECK (art IN ('achse','zelle')),
+    schluessel       TEXT NOT NULL,
+    n                INTEGER NOT NULL,
+    mittel           REAL NOT NULL,
+    m2               REAL NOT NULL,
+    aktualisiert     TEXT NOT NULL,
+    schema           TEXT NOT NULL,
+    PRIMARY KEY (installation_id, art, schluessel)
+);
+""",
+    """
+CREATE TABLE IF NOT EXISTS f2_grid10_percept (
+    frame_id         TEXT PRIMARY KEY,
+    installation_id  TEXT NOT NULL,
+    turn_event_id    TEXT NOT NULL,
+    ts               TEXT NOT NULL,
+    quelle           TEXT NOT NULL CHECK (quelle IN
+                     ('perzept','hash_warmlauf','hash_alle_achsen_stumm')),
+    achsen_json      TEXT NOT NULL,
+    signale_json     TEXT,
+    stumme_achsen    TEXT,
+    schema           TEXT NOT NULL
+);
+""",
+)
+
+
+def percept_active(conn: sqlite3.Connection, *, env: Mapping[str, str] | None = None) -> bool:
+    """Eigenes Gate, gleiches Muster wie turn_loop_active(), default AUS.
+    Bewusst getrennt vom Turn-Loop-Gate: der Loop kann laufen, ohne dass
+    Perzepte den Wettbewerb speisen -- so ist der Unterschied messbar."""
+    environ = env if env is not None else os.environ
+    override = environ.get(ENV_PERCEPT)
+    if override in ("0", "1"):
+        return override == "1"
+    try:
+        row = conn.execute(
+            "SELECT wert FROM star_konfig WHERE schluessel=?", (PERCEPT_KONFIG_KEY,)
+        ).fetchone()
+    except sqlite3.Error:
+        return False
+    return (row[0] if row else "0") == "1"
+
+
+def ensure_percept_schema(conn: sqlite3.Connection) -> dict:
+    """Legt die beiden Perzept-Tabellen an (IF NOT EXISTS, additiv).
+
+    BEWUSST NICHT in ensure_schema(): die kehrt frueh zurueck, sobald
+    f2_grid10_turn_pointer existiert -- auf einer laufenden Installation
+    wuerden dort ergaenzte Tabellen nie entstehen. Und ihr Rueckgabewert
+    ist Gegenstand einer Goldpruefung (S1); ihn zu veraendern haette eine
+    Pruefung verschoben, statt eine Faehigkeit hinzuzufuegen.
+
+    Wird nur aufgerufen, wenn das Perzept-Gate AN ist. Gate AUS heisst:
+    keine Tabelle, kein Schreibvorgang, Null-Verhaltensdelta."""
+    ergebnis: dict = {"created": [], "already_present": []}
+    for ddl in _PERCEPT_DDL:
+        name = ddl.split("IF NOT EXISTS", 1)[1].split("(", 1)[0].strip()
+        vorhanden = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,)
+        ).fetchone()
+        conn.execute(ddl)
+        (ergebnis["already_present"] if vorhanden else ergebnis["created"]).append(name)
+    return ergebnis
+
+
+SCHEMA_WETTBEWERB = "F2WP1207_GRID10_CELL_COMPETITION/v1"
+
+# Zustandsprotokoll je Frame. WARUM ES DAS GIBT (gemessen 2026-09-08, 062):
+# Der Wettbewerb der zehn Zellen war im Nachhinein NICHT rekonstruierbar.
+# Gespeichert wurde bisher nur der Gewinner (f2_grid10_frame) und der
+# JETZIGE Stand aller zehn -- f2_grid10_p6d_state wird je Turn per
+# ON CONFLICT DO UPDATE ueberschrieben, f2_grid10_turn_pointer ebenso
+# (UNIQUE (installation_id, state_root_id), eine Zeile). Wer die neun
+# Verlierer eines vergangenen Frames wissen wollte, hatte keine Quelle.
+# Das ist exakt dasselbe Problem, das fuer das PERZEPT eine Zeile weiter
+# oben schon mit einer eigenen Tabelle geloest wurde.
+#
+# BEWUSST NICHT gespeichert: uptake und conflict. Beide stehen bereits in
+# f2_grid10_cell_observation unter demselben Schluessel
+# (frame_id, logical_cell_id). Sie hier zu wiederholen erzeugte eine
+# zweite Wahrheit ueber dieselbe Tatsache -- genau die Fehlerklasse, die
+# in offen.md schon zweimal als P7-Divergenz notiert ist.
+#
+# state_after ist der Wert, der TATSAECHLICH Zustand wird, also nach dem
+# uptake_delta der P11-Effektschicht (45 Effekte EXECUTED, Stand 062) --
+# nicht der rohe P7-Uebergang. Nur so gilt die Kette
+#     state_after(Frame N) == state_before(Frame N+1)
+# und genau diese Kette ist der Pruefstein dieser Tabelle.
+_WETTBEWERB_DDL = (
+    """
+CREATE TABLE IF NOT EXISTS f2_grid10_cell_competition (
+    frame_id         TEXT NOT NULL REFERENCES f2_grid10_frame(frame_id),
+    logical_cell_id  TEXT NOT NULL
+        CHECK (logical_cell_id IN ('G1','G2','G3','G4','G5','G6','G7','G8','G9','G10')),
+    signal           REAL NOT NULL,
+    state_before     REAL NOT NULL,
+    proposal_score   REAL NOT NULL,
+    state_after      REAL NOT NULL,
+    condition_key    TEXT NOT NULL,
+    quelle           TEXT NOT NULL CHECK (quelle IN ('live','evidenz_jsonl')),
+    schema           TEXT NOT NULL,
+    PRIMARY KEY (frame_id, logical_cell_id)
+);
+""",
+)
+
+
+def ensure_wettbewerb_schema(conn: sqlite3.Connection) -> dict:
+    """Legt die Wettbewerbstabelle an (IF NOT EXISTS, additiv).
+
+    Aus demselben Grund NICHT in ensure_schema() wie das Perzept-Schema:
+    die kehrt frueh zurueck, sobald f2_grid10_turn_pointer existiert, und
+    ihr Rueckgabewert steht unter Goldpruefung (S1).
+
+    ANDERS als beim Perzept gibt es hier KEIN Gate. Ein Gate waere hier
+    keine Vorsicht, sondern eine Selbsttaeuschung: die Tabelle veraendert
+    den Wettbewerb nicht, sie schreibt nur auf, was ohnehin gerechnet und
+    bisher weggeworfen wurde. Ein Gate, das aus bleibt, reproduziert genau
+    den Mangel, gegen den die Tabelle gebaut ist."""
+    ergebnis: dict = {"created": [], "already_present": []}
+    for ddl in _WETTBEWERB_DDL:
+        name = ddl.split("IF NOT EXISTS", 1)[1].split("(", 1)[0].strip()
+        vorhanden = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,)
+        ).fetchone()
+        conn.execute(ddl)
+        (ergebnis["already_present"] if vorhanden else ergebnis["created"]).append(name)
+    return ergebnis
+
+
+def percept_projection(cell_id: str, k: int) -> tuple:
+    """Fester Gewichtsvektor je Zelle, deterministisch aus sha256(Zellname).
+
+    Semantisch leer und absichtlich so: er verteilt die Zellen ueber
+    Blickrichtungen, ohne einer davon eine Bedeutung zu geben. Reproduzierbar
+    ohne gespeicherten Zustand -- wer den Zellnamen kennt, kann jeden
+    vergangenen Signalwert nachrechnen."""
+    werte: list = []
+    blob = hashlib.sha256(f"{PERCEPT_PROJECTION_SALT}:{cell_id}".encode("utf-8")).hexdigest()

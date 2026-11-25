@@ -1,0 +1,875 @@
+=== FILE: user-b-hypergrid/scripts/f2wp1207_grid10_turn_loop.py (LIVE machine-b) lines 876-end ===
+    while len(werte) < k:
+        for i in range(len(blob) // 8):
+            if len(werte) >= k:
+                break
+            werte.append(int(blob[i * 8:(i + 1) * 8], 16) / 2**32 * 2 - 1)
+        blob = hashlib.sha256(blob.encode("utf-8")).hexdigest()
+    return tuple(werte[:k])
+
+
+def percept_axes(typed_entry: "TypedEntry", ts: str, vorher_ts: Optional[str] = None) -> tuple:
+    """Weltvektor aus dem TypedEntry. Reine Funktion, kein I/O.
+
+    Fehlende Felder werden zu 0.0 -- nicht geraten, nicht interpoliert.
+    log1p auf die Laengen, weil deren Verteilung ueber Groessenordnungen
+    laeuft; die Tageszeit als sin/cos, weil 23:59 und 00:01 benachbart sind
+    und eine lineare Stunde diesen Sprung erfinden wuerde."""
+    plen = float(typed_entry.prompt_len or 0)
+    rpresent = 1.0 if typed_entry.retrieval_present else 0.0
+    rlen = float(typed_entry.retrieval_len or 0)
+    # Zeitstempel ROBUST lesen. Die erste Fassung nahm strikt
+    # "%Y-%m-%dT%H:%M:%SZ" und fiel sonst still auf Stunde 0 zurueck.
+    # Gemessen: die echten Transkript-Zeitstempel dieser Maschine tragen
+    # Millisekunden ("2026-08-30T07:37:50.407Z"). Beide Stundenachsen waren
+    # damit ueber alle 438 Turns konstant -- zwei tote Achsen, die wie
+    # Perzepte aussahen. Dieselbe Fehlerform wie der Zeitstempel-Bug aus
+    # Eintrag 051: ein Format wird angenommen statt geprueft, und der
+    # Rueckfall ist still.
+    stunde = None
+    if isinstance(ts, str) and ts:
+        roh = ts.strip()
+        if roh.endswith("Z"):
+            roh = roh[:-1] + "+00:00"
+        try:
+            moment = datetime.fromisoformat(roh)
+        except ValueError:
+            moment = None
+        if moment is not None:
+            stunde = moment.hour + moment.minute / 60.0 + moment.second / 3600.0
+    # delta_t: Abstand zum vorigen Turn in Sekunden, log1p wie die Laengen.
+    # Quelle ist der Zeiger-Beleg des Wiedereinstiegs (pointer_created_at) --
+    # keine zusaetzliche Abfrage, und derselbe Wert, auf den sich der Turn
+    # ohnehin beruft. Kein Vorgaenger (genesis) oder unparsbar -> 0.0, also
+    # "keine Information", NICHT "null Sekunden": die Eichung sieht das dann
+    # als varianzarm und meldet die Achse gegebenenfalls als stumm.
+    # Eintrag 054 hatte delta_t verworfen, weil der Median dort 0,0 s war --
+    # das lag an 211 Lasttest-Frames, nicht an der Achse. Bei echten Turns
+    # (Minuten bis Stunden Abstand) ist sie die am staerksten streuende
+    # Groesse, die ohne zusaetzliche Hardware zu haben ist.
+    dt = 0.0
+    if isinstance(vorher_ts, str) and vorher_ts and stunde is not None:
+        v = vorher_ts.strip()
+        if v.endswith("Z"):
+            v = v[:-1] + "+00:00"
+        try:
+            vorher = datetime.fromisoformat(v)
+            jetzt_dt = datetime.fromisoformat(
+                ts.strip()[:-1] + "+00:00" if ts.strip().endswith("Z") else ts.strip()
+            )
+            sek = (jetzt_dt - vorher).total_seconds()
+            dt = math.log1p(sek) if sek > 0 else 0.0
+        except (ValueError, TypeError):
+            dt = 0.0
+
+    # Innenmessung des Modells. None -> 0.0, dieselbe Konvention wie oben:
+    # "keine Information", nicht "null Ueberraschung". Turns aus Lanes ohne
+    # Sprachmodell (P15-Canary, stern.py-Hook) liefern hier dauerhaft 0.0.
+    # Das ist kein Makel, sondern ehrlich: in diesen Turns hat kein Modell
+    # gesprochen. Die Eichung sieht dann eine Mischverteilung und normiert
+    # gegen sie -- und weil die Sprachspur auf dieser Maschine inzwischen
+    # die groessere ist (gemessen 2026-09-08: 193 Sprach-Frames gegen 64
+    # aus Hook-Sitzungen), traegt die Achse echte Varianz statt Rauschen.
+    m_ueb = float(getattr(typed_entry, "modell_ueberraschung", None) or 0.0)
+    m_ent = float(getattr(typed_entry, "modell_entropie", None) or 0.0)
+    m_str = float(getattr(typed_entry, "modell_streuung", None) or 0.0)
+
+    if stunde is None:
+        # Kein stiller Nullwert: unparsbar heisst "keine Information".
+        # Beide Achsen auf 0.0 -> die laufende Eichung sieht sie als
+        # varianzlos und meldet sie im Protokoll als stumme Achse.
+        return (math.log1p(plen), rpresent, math.log1p(rlen), 0.0, 0.0, dt,
+                m_ueb, m_ent, m_str)
+    winkel = 2 * math.pi * stunde / 24.0
+    return (math.log1p(plen), rpresent, math.log1p(rlen),
+            math.sin(winkel), math.cos(winkel), dt,
+            m_ueb, m_ent, m_str)
+
+
+def _welford_lesen(conn: sqlite3.Connection, installation_id: str) -> dict:
+    """Laufende Statistik lesen -- MIT Achsensatz-Pruefung fuer die Zellen.
+
+    Zellzeilen tragen den Fingerabdruck des Achsensatzes in ihrer
+    schema-Spalte (siehe PERCEPT_AXES_FP). Passt er nicht zum aktuellen
+    Achsensatz, ist ihre Statistik unter einem anderen k entstanden und
+    damit ungueltig -- sie wird verworfen und faengt neu an, statt still
+    gegen eine veraltete Verteilung zu normieren.
+
+    Achszeilen bleiben unangetastet: der Mittelwert einer Achse haengt
+    nicht davon ab, wie viele andere Achsen es gibt. Ein neuer Sinn kostet
+    also den Warmlauf der Zellen und der NEUEN Achse -- nicht das, was ueber
+    die alten Achsen schon gelernt wurde.
+
+    Der Verwurf wird nicht still gemacht: er hinterlaesst eine Zeile in
+    f2_grid10_percept_reset, damit spaeter nachvollziehbar ist, warum die
+    Zellen an einem bestimmten Tag wieder bei n=0 standen."""
+    veraltet = [
+        s for (s,) in conn.execute(
+            "SELECT DISTINCT schema FROM f2_grid10_percept_calib "
+            "WHERE installation_id=? AND art='zelle' AND schema<>?",
+            (installation_id, SCHEMA_PERCEPT_CALIB_ZELLE),
+        )
+    ]
+    if veraltet:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS f2_grid10_percept_reset (
+                reset_id        TEXT PRIMARY KEY,
+                installation_id TEXT NOT NULL,
+                alt_schema      TEXT NOT NULL,
+                neu_schema      TEXT NOT NULL,
+                achsen          TEXT NOT NULL,
+                verworfen       INTEGER NOT NULL,
+                ts              TEXT NOT NULL
+            )""")
+        anzahl = conn.execute(
+            "SELECT count(*) FROM f2_grid10_percept_calib "
+            "WHERE installation_id=? AND art='zelle' AND schema<>?",
+            (installation_id, SCHEMA_PERCEPT_CALIB_ZELLE),
+        ).fetchone()[0]
+        conn.execute(
+            "DELETE FROM f2_grid10_percept_calib "
+            "WHERE installation_id=? AND art='zelle' AND schema<>?",
+            (installation_id, SCHEMA_PERCEPT_CALIB_ZELLE),
+        )
+        conn.execute(
+            "INSERT INTO f2_grid10_percept_reset (reset_id, installation_id, "
+            "alt_schema, neu_schema, achsen, verworfen, ts) VALUES (?,?,?,?,?,?,?)",
+            (uuid.uuid4().hex, installation_id, ",".join(sorted(veraltet)),
+             SCHEMA_PERCEPT_CALIB_ZELLE, "|".join(PERCEPT_AXES), anzahl,
+             _jetzt_iso()),
+        )
+
+    zustand: dict = {}
+    for art, schluessel, n, mittel, m2 in conn.execute(
+        "SELECT art, schluessel, n, mittel, m2 FROM f2_grid10_percept_calib "
+        "WHERE installation_id=?", (installation_id,)
+    ):
+        zustand[(art, schluessel)] = [int(n), float(mittel), float(m2)]
+    return zustand
+
+
+def _welford_schritt(eintrag: list, x: float) -> list:
+    """Ein Welford-Schritt (laufender Mittelwert/Varianz, numerisch stabil).
+    Kausal: benutzt ausschliesslich, was vor diesem Turn schon da war."""
+    n, mittel, m2 = eintrag
+    n += 1
+    delta = x - mittel
+    mittel += delta / n
+    m2 += delta * (x - mittel)
+    return [n, mittel, m2]
+
+
+def _sd(eintrag: list) -> float:
+    n, _mittel, m2 = eintrag
+    return math.sqrt(m2 / (n - 1)) if n > 1 and m2 > 0 else 0.0
+
+
+def derive_percept_signals(
+    conn: sqlite3.Connection,
+    installation_id: str,
+    achsen: tuple,
+    *,
+    jetzt: str,
+) -> tuple:
+    """Weltvektor -> zehn Signale in (0,1). Gibt (signale, quelle) zurueck;
+    signale ist None, solange die Kalibrierung nicht warm ist.
+
+    Kette: Achse -> laufende z-Normierung -> feste Projektion je Zelle ->
+    laufende z-Normierung -> Logistik. Die zwei Normierungsstufen sind
+    beide noetig und tun Verschiedenes:
+
+      Stufe 1 (je Achse) verhindert, dass die Achse mit der groessten
+      Rohspanne die Projektion dominiert und damit die effektive Dimension
+      wieder auf 1 drueckt -- genau der Effekt, der im Dimensionstest 8 von
+      10 Zellen verhungern liess.
+
+      Stufe 2 (je Zelle) bringt das Signal auf dieselbe Randverteilung, die
+      derive_signal() hat. Ohne sie waere der Vergleich zwischen Hash und
+      Perzept unfair: ein schwaecher streuendes Signal verliert automatisch
+      gegen den Zustandsterm, unabhaengig von seinem Informationsgehalt.
+
+    Beide Stufen sind KAUSAL (nur Vergangenheit). Im Offline-Replay stand
+    dort eine Rangnormierung ueber alle Turns -- die kennt die Zukunft und
+    waere hier falsch gewesen. Der Preis der Kausalitaet ist der Warmlauf.
+
+    Die Kalibrierung wird IMMER fortgeschrieben, auch waehrend des
+    Warmlaufs. Sonst koennte sie nie warm werden."""
+    zustand = _welford_lesen(conn, installation_id)
+    k = len(achsen)
+
+    for i, wert in enumerate(achsen):
+        schluessel = ("achse", PERCEPT_AXES[i])
+        zustand[schluessel] = _welford_schritt(zustand.get(schluessel, [0, 0.0, 0.0]), wert)
+
+    # STUMME ACHSEN VETIEREN NICHT.
+    # Erste Fassung setzte bei sd<=0 global warm=False. Folge, im Live-A/B
+    # gemessen: 438 von 438 Turns blieben 'hash_warmlauf', kein Perzept hat
+    # den Wettbewerb je erreicht -- eine einzige konstante Achse legte den
+    # ganzen Pfad still. Das ist falsch herum gedacht: eine Achse ohne
+    # Varianz traegt nach Kriterium K2 schlicht keine Information. Sie
+    # gehoert mit z=0 in die Projektion (wirkungslos, nicht schaedlich),
+    # nicht als Veto ueber die anderen. Warm ist der Pfad, sobald genug
+    # Turns gesehen wurden UND mindestens eine Achse streut.
+    z_achsen = []
+    stumm = []
+    genug = True
+    for i in range(k):
+        eintrag = zustand[("achse", PERCEPT_AXES[i])]
+        sd = _sd(eintrag)
+        if eintrag[0] < PERCEPT_MIN_N:
+            genug = False
+        if sd <= 0.0:
+            stumm.append(PERCEPT_AXES[i])
+            z_achsen.append(0.0)
+        else:
+            z_achsen.append((achsen[i] - eintrag[1]) / sd)
+    warm = genug and len(stumm) < k
+
+    signale = {}
+    for cell in p7mod.CELLS:
+        w = percept_projection(cell, k)
+        roh = sum(w[i] * z_achsen[i] for i in range(k))
+        schluessel = ("zelle", cell)
+        zustand[schluessel] = _welford_schritt(zustand.get(schluessel, [0, 0.0, 0.0]), roh)
+        eintrag = zustand[schluessel]
+        sd = _sd(eintrag)
+        if eintrag[0] < PERCEPT_MIN_N or sd <= 0.0:
+            warm = False
+            signale[cell] = None
+        else:
+            z = (roh - eintrag[1]) / sd
+            # Logistik: (-inf,inf) -> (0,1), streng monoton, keine Kappung.
+            # Randverteilung nahe uniform, weil z bereits standardisiert ist.
+            signale[cell] = 1.0 / (1.0 + math.exp(-1.702 * z))
+
+    for (art, schluessel), (n, mittel, m2) in zustand.items():
+        conn.execute(
+            "INSERT INTO f2_grid10_percept_calib "
+            "(installation_id, art, schluessel, n, mittel, m2, aktualisiert, schema) "
+            "VALUES (?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(installation_id, art, schluessel) DO UPDATE SET "
+            "n=excluded.n, mittel=excluded.mittel, m2=excluded.m2, "
+            "aktualisiert=excluded.aktualisiert",
+            (installation_id, art, schluessel, n, mittel, m2, jetzt,
+             SCHEMA_PERCEPT_CALIB_ZELLE if art == "zelle" else SCHEMA_PERCEPT_CALIB),
+        )
+
+    if not warm:
+        grund = "hash_warmlauf" if not genug else "hash_alle_achsen_stumm"
+        return None, grund, stumm
+    return signale, "perzept", stumm
+
+
+def fill_jspace(
+    turn_event_id: str,
+    seed_state: Mapping[str, float],
+    *,
+    kappa: float = p7mod.KAPPA,
+    signal_overrides: Mapping[str, float] | None = None,
+) -> JSpace:
+    """J-Space befuellen: 10 GRID-Zellen erzeugen ihre Kandidaten
+    (P7-Signal + P7-Proposal-Score), Competition = max, Selection = Winner,
+    Broadcast = Winner-Score. Reine Funktion, kein I/O.
+
+    ``kappa`` (F2WP1207 tune-passthrough, 2026-09-06): keyword-only override,
+    default is p7mod's own module constant -- omitting it is byte-identical
+    to before.
+
+    ``signal_overrides`` (2026-09-07, percept passthrough): keyword-only,
+    exactly the same shape and semantics as
+    ``p7mod.run_coordination_cycle``'s parameter of the same name -- maps a
+    subset of ``p7mod.CELLS`` to a signal in [0,1) that REPLACES
+    ``derive_signal()``'s hash-noise for that cell, for this one call.
+    ``None``/``{}`` is byte-identical to omitting it.
+
+    WHY THIS EXISTS: the percept hook was added to
+    ``p7mod.run_coordination_cycle`` on 2026-09-07, but the canonical turn
+    loop does not call that function -- it re-implements the same
+    competition here. Without this parameter the hook is unreachable from
+    the only path that actually runs, so no real measurement could ever
+    enter the competition. Measured before the fix: 208 frames, 100% of
+    signals sha256 noise.
+
+    NOTE the signal is now computed ONCE per cell and reused for both the
+    ``signal`` field and ``proposal_score``. It used to be derived twice
+    from the same inputs. That was harmless while it was a pure function of
+    (turn_event_id, cell), and would have become a real defect the moment
+    an override made the two call sites disagree -- the same
+    one-value-computed-in-two-places shape as the opened_at ordering bug of
+    2026-09-07."""
+    signals = {cell: p7mod.derive_signal(turn_event_id, cell) for cell in p7mod.CELLS}
+    if signal_overrides:
+        for cell, value in signal_overrides.items():
+            if cell in signals:
+                signals[cell] = float(value)
+    candidates = tuple(
+        Candidate(
+            cell_id=cell,
+            signal=signals[cell],
+            prior_state=float(seed_state.get(cell, 0.0)),
+            proposal_score=p7mod.proposal_score(
+                signals[cell],
+                float(seed_state.get(cell, 0.0)),
+                kappa=kappa,
+            ),
+        )
+        for cell in p7mod.CELLS
+    )
+    winner = max(candidates, key=lambda c: c.proposal_score)
+    return JSpace(
+        turn_event_id=turn_event_id,
+        candidates=candidates,
+        winner_cell_id=winner.cell_id,
+        broadcast_value=winner.proposal_score,
+    )
+
+
+def uptake_and_state(
+    jspace: JSpace,
+    *,
+    lam: float = p7mod.LAMBDA_PRIMARY,
+    alpha: float = p7mod.ALPHA,
+    beta: float = p7mod.BETA,
+    gamma: float = p7mod.GAMMA,
+) -> tuple:
+    """Uptake durch alle 10 Zellen + neuer rekurrenter State (P7-Formeln,
+    importiert): state(t+1) = lambda*state + alpha*uptake + beta*broadcast
+    - gamma*conflict. Winner uptake=1, Konflikt nach 0.05-Margin-Regel.
+    Reine Funktion. Gibt (transitions, new_state_map) zurueck.
+
+    ``lam``/``alpha``/``beta``/``gamma`` (F2WP1207 tune-passthrough,
+    2026-09-06): keyword-only overrides, defaults are p7mod's own module
+    constants -- omitting them is byte-identical to before."""
+    transitions = []
+    new_state = {}
+    for cand in jspace.candidates:
+        uptake = 1 if cand.cell_id == jspace.winner_cell_id else 0
+        conflict = 1 if (
+            cand.cell_id != jspace.winner_cell_id
+            and abs(cand.proposal_score - jspace.broadcast_value) <= p7mod.CONFLICT_MARGIN
+        ) else 0
+        new = p7mod.state_update(
+            cand.prior_state,
+            uptake,
+            jspace.broadcast_value if uptake else 0.0,
+            conflict,
+            lam=lam,
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+        )
+        new_state[cand.cell_id] = new
+        transitions.append({
+            "cell_id": cand.cell_id, "signal": cand.signal,
+            "old_state": cand.prior_state, "proposal_score": cand.proposal_score,
+            "uptake": uptake, "conflict": conflict, "new_state": new,
+        })
+    return tuple(transitions), new_state
+
+
+# --------------------------------------------------------------------------
+# Effect (P11-Gate-Schicht importiert, Journal-Row in DIESER Transaktion)
+# --------------------------------------------------------------------------
+
+
+def _submit_effect_in_transaction(
+    conn: sqlite3.Connection,
+    turn: p7mod.RealTurn,
+    *,
+    jspace: JSpace,
+    policy: "p11mod.EffectGatePolicy",
+) -> dict:
+    """P11-Gate (evaluate_gate, importiert, rein) + Journal-Row mit P11s
+    Spalten/Schema-Tags -- hier innerhalb der atomaren Turn-Transaktion, weil
+    P11s eigenes submit_effect_request selbst committet. Strukturgesetz
+    unveraendert: EXECUTED nur mit echter ALLOW-Entscheidung zur request_id,
+    DENY wird sichtbar journiert. Readback (re-SELECT) im selben Block."""
+    request_id = uuid.uuid4().hex
+    marker_text = (
+        f"P11 journal marker (canonical turn loop): winner={jspace.winner_cell_id} "
+        f"broadcast_value={jspace.broadcast_value:.6f} "
+        f"condition_key={CONDITION_KEY} turn_event_id={turn.turn_event_id}"
+    )
+    request = p11mod.EffectRequest(
+        schema=p11mod.SCHEMA_REQUEST,
+        request_id=request_id,
+        effect_type=p11mod.EffectType.JOURNAL_MARKER,
+        turn=turn,
+        condition_key=CONDITION_KEY,
+        winner_cell_id=jspace.winner_cell_id,
+        broadcast_value=jspace.broadcast_value,
+        payload={"marker_text": marker_text},
+        requested_at=_jetzt_iso(),
+    )
+    decision = p11mod.evaluate_gate(request, policy)
+    journal_id = uuid.uuid4().hex
+    now = _jetzt_iso()
+    status = "EXECUTED" if decision.allowed else "DENIED"
+    conn.execute(
+        "INSERT INTO f2_grid10_effect_journal "
+        "(journal_id, request_id, effect_type, schema, frame_id, turn_event_id, "
+        " runtime_epoch_id, session_id, condition_key, winner_cell_id, broadcast_value, "
+        " payload_json, gate_policy_id, gate_min_broadcast_value, gate_allowed, gate_reason, "
+        " gate_decided_at, status, executed_marker_text, executed_at, readback_ok, "
+        " readback_row_hash, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            journal_id, request_id, request.effect_type.value, p11mod.SCHEMA_JOURNAL_ROW,
+            turn.frame_id, turn.turn_event_id, turn.runtime_epoch_id, turn.session_id,
+            CONDITION_KEY, jspace.winner_cell_id, jspace.broadcast_value,
+            _canonical_json(dict(request.payload)), decision.policy_id,
+            decision.min_broadcast_value, 1 if decision.allowed else 0, decision.reason,
+            decision.decided_at, status,
+            marker_text if decision.allowed else None,
+            now if decision.allowed else None, None, None, now,
+        ),
+    )
+    row = conn.execute(
+        "SELECT status, executed_marker_text, request_id FROM f2_grid10_effect_journal "
+        "WHERE journal_id=?", (journal_id,),
+    ).fetchone()
+    readback_ok = (
+        row is not None and row[0] == status
+        and (status == "DENIED" or row[1] == marker_text)
+        and row[2] == request_id
+    )
+    row_hash = p11mod._row_hash(journal_id, status, marker_text if decision.allowed else None)
+    conn.execute(
+        "UPDATE f2_grid10_effect_journal SET readback_ok=?, readback_row_hash=? "
+        "WHERE journal_id=?",
+        (1 if readback_ok else 0, row_hash, journal_id),
+    )
+    return {
+        "journal_id": journal_id,
+        "request_id": request_id,
+        "policy_id": policy.policy_id,
+        "allowed": bool(decision.allowed),
+        "status": status,
+        "readback_ok": bool(readback_ok),
+        "gate_reason": decision.reason,
+        "uptake_delta": p11mod.effect_uptake_delta(
+            p11mod.EffectOutcome(
+                request=request, decision=decision, executed=decision.allowed,
+                journal_id=journal_id,
+                readback_ok=(bool(readback_ok) if decision.allowed else None),
+                readback_row=None,
+            )
+        ),
+    }
+
+
+# --------------------------------------------------------------------------
+# Der kanonische Turn
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CanonicalTurnResult:
+    schema: str
+    frame_id: str
+    turn_event_id: str
+    runtime_epoch_id: str
+    session_id: str
+    reentry: ReentryPlan
+    jspace: JSpace
+    transitions: tuple
+    new_state: Mapping[str, float]
+    pointer_id: str
+    effect: Optional[dict]
+    self_observation: Optional[dict]
+
+
+def run_canonical_turn(
+    conn: sqlite3.Connection,
+    typed_entry: TypedEntry | Mapping,
+    *,
+    declared_reentry: Optional[str] = None,
+    effect_policy: Optional["p11mod.EffectGatePolicy"] = None,
+    include_self_observation: bool = False,
+    evidence_path: Optional[Path] = None,
+    env: Mapping[str, str] | None = None,
+    crash_hook: Optional[Callable[[str], None]] = None,
+    tune: Optional[Mapping[str, float]] = None,
+    signal_overrides: Optional[Mapping[str, float]] = None,
+) -> Optional[CanonicalTurnResult]:
+    """Gabriels Kette, 1:1, alles in EINER Transaktion.
+
+    Gate AUS -> None, BEVOR irgendein I/O geschieht (Null-Verhaltensdelta).
+    crash_hook: NUR fuer Tests -- wird nach dem Frame-INSERT, vor dem COMMIT,
+    mit einem Etikett aufgerufen (Kill-mitten-im-Turn-Nachweis).
+    Fehler jeglicher Art -> rollback + raise (fail-closed, kein Schlucken).
+
+    ``tune`` (F2WP1207 tune-passthrough, 2026-09-06): optional dict, keys
+    ``kappa``/``lam``/``alpha``/``beta``/``gamma`` (p7mod's own parameter
+    names), forwarded per-call into ``fill_jspace``/``uptake_and_state``.
+    ``None``/``{}`` -> both calls use p7mod's own module-constant defaults,
+    byte-identical to before this parameter existed. Purely a local dict
+    read once per call -- no module constant is ever mutated, so there is
+    no leakage into the next call in the same process.
+
+    ``signal_overrides`` (2026-09-07, percept passthrough): optional mapping
+    cell -> signal in [0,1), forwarded into ``fill_jspace``. ``None``/``{}``
+    is byte-identical to before. Deliberately NOT a key inside ``tune``:
+    ``tune`` carries competition *constants* and is written to
+    f2_grid10_tune_audit as a tuning change; a percept is a measured *input*
+    and would be mislabelled there. Tune says how the competition weighs;
+    a percept says what it weighs."""
+    if isinstance(typed_entry, Mapping):
+        typed_entry = TypedEntry.from_mapping(typed_entry)
+    if declared_reentry is not None and declared_reentry not in _REENTRY_KINDS:
+        raise CanonicalTurnLoopError(
+            f"declared_reentry={declared_reentry!r} ungueltig, erlaubt: {_REENTRY_KINDS}"
+        )
+
+    # --- Gate VOR jedem I/O ---------------------------------------------
+    environ = env if env is not None else os.environ
+    override = environ.get(ENV_OVERRIDE)
+    if override not in ("0", "1"):
+        try:
+            row = conn.execute(
+                "SELECT wert FROM star_konfig WHERE schluessel=?", (KONFIG_KEY,)
+            ).fetchone()
+            if not row or row[0] != "1":
+                return None
+        except sqlite3.Error:
+            return None
+    elif override == "0":
+        return None
+
+    ensure_schema(conn)
+
+    # Perzept-Schema nur anlegen, wenn das Perzept-Gate AN ist -- Gate AUS
+    # heisst weiterhin: keine Tabelle, kein Schreibvorgang, kein Delta.
+    # Vor BEGIN IMMEDIATE, damit kein DDL in der Turn-Transaktion liegt.
+    _percept_an = percept_active(conn, env=environ)
+    if _percept_an:
+        ensure_percept_schema(conn)
+        conn.commit()
+
+    # Wettbewerbsprotokoll: ungegated, aber aus demselben Grund wie oben
+    # VOR BEGIN IMMEDIATE -- kein DDL in der Turn-Transaktion.
+    ensure_wettbewerb_schema(conn)
+    conn.commit()
+
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        # --- Identitaet: die Epoche des TypedEntry traegt Installation/   -
+        # StateRoot (f2_runtime_epoch) -- kein Kreuzprodukt ueber die
+        # Identity-Tabellen, damit mehrere Installationen je DB korrekt sind.
+        runtime_epoch_id = typed_entry.runtime_epoch_id
+        epoch = conn.execute(
+            "SELECT installation_id, state_root_id FROM f2_runtime_epoch "
+            "WHERE runtime_epoch_id=?",
+            (runtime_epoch_id,),
+        ).fetchone()
+        if epoch is None:
+            raise CanonicalTurnLoopError(
+                f"runtime_epoch_id={runtime_epoch_id} existiert nicht in f2_runtime_epoch"
+            )
+        installation_id, state_root_id = epoch[0], epoch[1]
+        entity_row = conn.execute(
+            "SELECT entity_id FROM f2_installation_identity WHERE installation_id=?",
+            (installation_id,),
+        ).fetchone()
+        if entity_row is None:
+            raise CanonicalTurnLoopError(
+                f"installation_id={installation_id} fehlt in f2_installation_identity"
+            )
+        entity_id = entity_row[0]
+
+        turn_event_id = typed_entry.turn_event_id or _mint_turn_event_id(
+            conn, typed_entry.session_id
+        )
+        frame_id = hashlib.sha256(
+            f"{runtime_epoch_id}:{turn_event_id}".encode()
+        ).hexdigest()
+        turn = p7mod.RealTurn(
+            frame_id=frame_id,
+            turn_event_id=turn_event_id,
+            runtime_epoch_id=runtime_epoch_id,
+            session_id=typed_entry.session_id,
+        )
+        ts = typed_entry.ts or _jetzt_iso()
+
+        # --- zwingender Reentry -----------------------------------------
+        reentry = resolve_reentry(
+            conn, typed_entry, installation_id, state_root_id,
+            declared=declared_reentry,
+        )
+
+        # --- optional P12 (kein Kettenglied, default AUS) ----------------
+        self_observation = None
+        seed_state = dict(reentry.seed_state)
+        if include_self_observation:
+            observations = _collect_observations(conn, turn)
+            seed_state, delta, contributions = _apply_observations(
+                seed_state, observations
+            )
+            self_observation = {
+                "n_observations": len(observations),
+                "delta": delta,
+                "contributions": contributions,
+            }
+
+        # --- Perzepte: echte Messung statt sha256-Rauschen ---------------
+        # Ein ausdruecklich uebergebenes signal_overrides gewinnt IMMER --
+        # der Parameter behaelt seine Bedeutung, Perzepte draengen sich
+        # keinem Aufrufer auf. Waehrend des Warmlaufs liefert
+        # derive_percept_signals() None: dann laeuft exakt der bisherige
+        # Hash-Wettbewerb, und nur die Kalibrierung lernt mit.
+        _percept_achsen = None
+        _percept_signale = None
+        _percept_quelle = None
+        _percept_stumm = []
+        if _percept_an and not signal_overrides:
+            _percept_achsen = percept_axes(
+                typed_entry, ts,
+                vorher_ts=(reentry.evidence or {}).get("pointer_created_at"),
+            )
+            _percept_signale, _percept_quelle, _percept_stumm = (
+                derive_percept_signals(
+                    conn, installation_id, _percept_achsen, jetzt=ts
+                )
+            )
+
+        # --- J-Space befuellen -> 10 Kandidaten --------------------------
+        _tune = tune or {}
+        _jspace_kwargs = {k: _tune[k] for k in ("kappa",) if k in _tune}
+        if signal_overrides:
+            _jspace_kwargs["signal_overrides"] = signal_overrides
+        elif _percept_signale:
+            _jspace_kwargs["signal_overrides"] = _percept_signale
+        jspace = fill_jspace(turn_event_id, seed_state, **_jspace_kwargs)
+
+        # --- Uptake durch alle 10 + neuer rekurrenter State --------------
+        _uptake_kwargs = {k: _tune[k] for k in ("lam", "alpha", "beta", "gamma") if k in _tune}
+        transitions, new_state = uptake_and_state(jspace, **_uptake_kwargs)
+
+        # --- Workspace/J-Space Update + atomarer Persist -----------------
+        # Frame oeffnen (INNERHALB der Turn-Transaktion)
+        conn.execute(
+            "INSERT INTO f2_grid10_frame "
+            "(frame_id, entity_id, installation_id, state_root_id, runtime_epoch_id, "
+            " session_id, turn_event_id, opened_at, closed_at, status, schema, cohort, "
+            " experiment_condition, state_weight) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                frame_id, entity_id, installation_id, state_root_id, runtime_epoch_id,
+                typed_entry.session_id, turn_event_id, ts, None, "OPEN", SCHEMA_FRAME,
+                COHORT, CONDITION_KEY, 1.0,
+            ),
+        )
+        # Perzept-Protokoll: WAS gemessen wurde und WELCHES Signal daraus
+        # wurde, je Turn, in derselben Transaktion wie der Frame. Ohne diese
+        # Zeile waere der Wettbewerb wieder unpruefbar -- f2_grid10_frame hat
+        # keine Spalte fuer die Messung, und der Zeiger wird jeden Turn
+        # ueberschrieben. Genau daran scheiterte die Rekonstruktion der
+        # bisherigen 216 Frames.
+        if _percept_achsen is not None:
+            conn.execute(
+                "INSERT INTO f2_grid10_percept "
+                "(frame_id, installation_id, turn_event_id, ts, quelle, "
+                " achsen_json, signale_json, stumme_achsen, schema) VALUES (?,?,?,?,?,?,?,?,?)",
+                (
+                    frame_id, installation_id, turn_event_id, ts, _percept_quelle,
+                    _canonical_json({
+                        PERCEPT_AXES[i]: _percept_achsen[i]
+                        for i in range(len(_percept_achsen))
+                    }),
+                    _canonical_json(_percept_signale) if _percept_signale else None,
+                    ",".join(_percept_stumm) if _percept_stumm else None,
+                    SCHEMA_PERCEPT,
+                ),
+            )
+
+        if crash_hook is not None:
+            crash_hook("after_frame_open")
+
+        # 10 Zell-Beobachtungen (execution_position: Liveweg-Konvention,
+        # deterministisch pseudozufaellig aus frame_id; timing_ms bewusst
+        # NULL -- hier wird nichts gemessen/erfunden)
+        zellen = list(p7mod.CELLS)
+        random.Random(frame_id).shuffle(zellen)
+        reentry_flag = 0 if reentry.kind == "genesis" else 1
+        for pos, cell in enumerate(zellen, start=1):
+            t = next(x for x in transitions if x["cell_id"] == cell)
+            conn.execute(
+                "INSERT INTO f2_grid10_cell_observation "
+                "(observation_id, frame_id, logical_cell_id, input_digest_sha256, "
+                " output_digest_sha256, uptake, reentry_flag, conflict_flag, timing_ms, "
+                " cpu_ru_utime_delta_s, rss_delta_kb, predecessor_observation_id, schema, "
+                " execution_position) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    hashlib.sha256(f"{frame_id}:{cell}".encode()).hexdigest(),
+                    frame_id, cell,
+                    hashlib.sha256(f"{turn_event_id}:{cell}:in".encode()).hexdigest(),
+                    hashlib.sha256(f"{turn_event_id}:{cell}:out".encode()).hexdigest(),
+                    t["uptake"], reentry_flag, t["conflict"],
+                    None, None, None, None, SCHEMA_CELL_OBS, pos,
+                ),
+            )
+
+        # 10 rekurrente Zellzustaende (eigene Lane)
+        for cell in p7mod.CELLS:
+            conn.execute(
+                "INSERT INTO f2_grid10_p6d_state "
+                "(condition_key, logical_cell_id, state_value, updated_at, "
+                " updated_by_frame_id, won_broadcast_count, schema) VALUES (?,?,?,?,?,?,?) "
+                "ON CONFLICT(condition_key, logical_cell_id) DO UPDATE SET "
+                "state_value=excluded.state_value, updated_at=excluded.updated_at, "
+                "updated_by_frame_id=excluded.updated_by_frame_id, "
+                "won_broadcast_count=won_broadcast_count + (CASE WHEN ?=? THEN 1 ELSE 0 END)",
+                (
+                    CONDITION_KEY, cell, new_state[cell], ts, frame_id,
+                    1 if cell == jspace.winner_cell_id else 0, SCHEMA_STATE_ROW,
+                    cell, jspace.winner_cell_id,
+                ),
+            )
+
+        # Frame schliessen + Broadcast (Workspace-Update, P10-lesbar)
+        conn.execute(
+            "UPDATE f2_grid10_frame SET status='CLOSED', closed_at=?, "
+            "broadcast_winner_cell=?, broadcast_value=? WHERE frame_id=?",
+            (_jetzt_iso(), jspace.winner_cell_id, jspace.broadcast_value, frame_id),
+        )
+
+        # optionaler Effect (P11-Gate-Schicht, gleiche Transaktion)
+        effect = None
+        if effect_policy is not None:
+            effect = _submit_effect_in_transaction(
+                conn, turn, jspace=jspace, policy=effect_policy
+            )
+            # P11's uptake-Delta: belegte Ausfuehrung +epsilon auf Winner-State
+            if effect["uptake_delta"]:
+                conn.execute(
+                    "UPDATE f2_grid10_p6d_state SET state_value=state_value+? "
+                    "WHERE condition_key=? AND logical_cell_id=?",
+                    (effect["uptake_delta"], CONDITION_KEY, jspace.winner_cell_id),
+                )
+                new_state = dict(new_state)
+                new_state[jspace.winner_cell_id] = (
+                    new_state[jspace.winner_cell_id] + effect["uptake_delta"]
+                )
+
+        # Wettbewerbsprotokoll: die neun Verlierer ueberleben diesen Turn.
+        # NACH der Effektschicht, damit state_after der Wert ist, der
+        # wirklich Zustand wird (siehe _WETTBEWERB_DDL). Nichts hiervon
+        # wird gemessen oder geschaetzt -- alle vier Zahlen liegen seit
+        # uptake_and_state() fertig vor und wurden bisher nur in die
+        # JSONL-Beweiskette geschrieben, nicht in die Datenbank.
+        for t in transitions:
+            conn.execute(
+                "INSERT INTO f2_grid10_cell_competition "
+                "(frame_id, logical_cell_id, signal, state_before, proposal_score, "
+                " state_after, condition_key, quelle, schema) VALUES (?,?,?,?,?,?,?,?,?)",
+                (
+                    frame_id, t["cell_id"], t["signal"], t["old_state"],
+                    t["proposal_score"], new_state[t["cell_id"]],
+                    CONDITION_KEY, "live", SCHEMA_WETTBEWERB,
+                ),
+            )
+
+        # Reentry-Zeiger = GENAU der Einstiegspunkt des naechsten Turns
+        pointer_id = uuid.uuid4().hex
+        evidence = dict(reentry.evidence)
+        evidence["resolved_kind"] = reentry.kind
+        evidence["typed_entry"] = typed_entry.to_payload()
+        if effect is not None:
+            evidence["effect_journal_id"] = effect["journal_id"]
+        conn.execute(
+            "INSERT INTO f2_grid10_turn_pointer (pointer_id, installation_id, state_root_id, "
+            " runtime_epoch_id, session_id, frame_id, turn_event_id, reentry_kind_used, "
+            " reentry_evidence_json, broadcast_winner_cell, broadcast_value, cell_states_json, "
+            " persist_schema, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(installation_id, state_root_id) DO UPDATE SET "
+            "pointer_id=excluded.pointer_id, runtime_epoch_id=excluded.runtime_epoch_id, "
+            "session_id=excluded.session_id, frame_id=excluded.frame_id, "
+            "turn_event_id=excluded.turn_event_id, reentry_kind_used=excluded.reentry_kind_used, "
+            "reentry_evidence_json=excluded.reentry_evidence_json, "
+            "broadcast_winner_cell=excluded.broadcast_winner_cell, "
+            "broadcast_value=excluded.broadcast_value, "
+            "cell_states_json=excluded.cell_states_json, "
+            "persist_schema=excluded.persist_schema, created_at=excluded.created_at",
+            (
+                pointer_id, installation_id, state_root_id, runtime_epoch_id,
+                typed_entry.session_id, frame_id, turn_event_id, reentry.kind,
+                _canonical_json(evidence), jspace.winner_cell_id, jspace.broadcast_value,
+                _canonical_json({c: new_state[c] for c in p7mod.CELLS}),
+                SCHEMA_POINTER_ROW, _jetzt_iso(),
+            ),
+        )
+
+        if crash_hook is not None:
+            crash_hook("before_commit")
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+
+    if evidence_path is not None:
+        _append_log(evidence_path, {
+            "schema": SCHEMA_LOG_LINE,
+            "ts": _jetzt_iso(),
+            "frame_id": frame_id,
+            "turn_event_id": turn_event_id,
+            "runtime_epoch_id": runtime_epoch_id,
+            "session_id": typed_entry.session_id,
+            "reentry_kind": reentry.kind,
+            "reentry_evidence": dict(reentry.evidence),
+            "winner_cell_id": jspace.winner_cell_id,
+            "broadcast_value": jspace.broadcast_value,
+            "transitions": [dict(t) for t in transitions],
+            "effect": effect,
+            "self_observation": self_observation,
+            "pointer_id": pointer_id,
+        })
+    return CanonicalTurnResult(
+        schema=SCHEMA,
+        frame_id=frame_id,
+        turn_event_id=turn_event_id,
+        runtime_epoch_id=runtime_epoch_id,
+        session_id=typed_entry.session_id,
+        reentry=reentry,
+        jspace=jspace,
+        transitions=transitions,
+        new_state=new_state,
+        pointer_id=pointer_id,
+        effect=effect,
+        self_observation=self_observation,
+    )
+
+
+def _mint_turn_event_id(conn: sqlite3.Connection, session_id: str) -> str:
+    """Liveweg-Konvention: {session_id}:{n}, n = bestehende Frames der
+    Session + 1 (innerhalb BEGIN IMMEDIATE konkurrenzfrei)."""
+    n = conn.execute(
+        "SELECT COUNT(*) FROM f2_grid10_frame WHERE session_id=?", (session_id,)
+    ).fetchone()[0]
+    return f"{session_id}:{n + 1}"
+
+
+def _collect_observations(conn: sqlite3.Connection, turn):
+    try:
+        import f2wp1207_p12_self_observation as p12mod  # vendored copy, same dir
+        return p12mod.collect_self_observations(conn, turn)
+    except Exception:
+        return []
+
+
+def _apply_observations(seed_state, observations):
+    try:
+        import f2wp1207_p12_self_observation as p12mod
+        return p12mod.apply_self_observation(
+            seed_state, observations, threshold_s=p12mod.DEFAULT_STALE_THRESHOLD_S
+        )
+    except Exception:
+        return dict(seed_state), 0.0, []
+
+
+def _append_log(evidence_path: Path, line: dict) -> None:
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(evidence_path, "a", encoding="utf-8") as f:
+        f.write(_canonical_json(line) + "\n")

@@ -1,0 +1,74 @@
+name: Install smoke test
+
+# Runs the public one-line installers against the published release on real Linux, macOS and Windows runners.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, macos-15-intel]
+    steps:
+      - name: Install with the README one-liner
+        # the installer asks the unauthenticated GitHub API for the latest release; shared runner IPs get 403 now and then, so retry
+        run: |
+          for i in 1 2 3; do
+            curl -fsSL https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.sh | bash && exit 0
+            sleep 20
+          done
+          exit 1
+        env:
+          MACHINE_GOD_INSTALL_DIR: ${{ runner.temp }}/mg/app
+          MACHINE_GOD_BIN_DIR: ${{ runner.temp }}/mg/bin
+      - name: Launcher and organs
+        env:
+          MG_FIRSTRUN_OFF: "1"
+          MG_DATA_DIR: ${{ runner.temp }}/mg/data
+          MG_CONFIG_DIR: ${{ runner.temp }}/mg/config
+        run: |
+          set -x
+          mg="${{ runner.temp }}/mg/bin/machine-god"
+          "$mg" --help | head -3 | tee help.txt
+          grep -q "Machine God" help.txt
+          "$mg" improve status
+          "$mg" grid init
+          "$mg" interests list
+          "$mg" ais
+
+  windows:
+    name: windows-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-11-arm]
+    steps:
+      - name: Install with the README one-liner
+        shell: powershell
+        env:
+          MACHINE_GOD_INSTALL_DIR: ${{ runner.temp }}\mg\app
+        run: |
+          irm https://raw.githubusercontent.com/frank-ink/machine-god/main/scripts/install/install.ps1 | iex
+          Write-Host "installer exit code: $LASTEXITCODE"
+          exit 0
+      - name: Launcher and organs
+        shell: cmd
+        env:
+          MG_FIRSTRUN_OFF: "1"
+          MG_DATA_DIR: ${{ runner.temp }}\mg\data
+          MG_CONFIG_DIR: ${{ runner.temp }}\mg\config
+        run: |
+          set MG=${{ runner.temp }}\mg\app\machine-god.cmd
+          dir ${{ runner.temp }}\mg\app
+          call "%MG%" --help | findstr /C:"Machine God" || exit /b 1
+          call "%MG%" improve status || exit /b 1
+          call "%MG%" grid init || exit /b 1
+          call "%MG%" interests list || exit /b 1
+          call "%MG%" ais || exit /b 1

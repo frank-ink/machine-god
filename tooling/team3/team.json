@@ -1,0 +1,8 @@
+[
+ {"name":"gabriel-mathematiker","model":"stepfun-ai/step-5-preview","fallback":"nvidia/nemotron-3-ultra-550b-a55b","chief":true},
+ {"name":"coder-kimi","model":"moonshotai/kimi-k3.1-pro"},
+ {"name":"coder-minimax","model":"minimaxai/minimax-m3.1-flash"},
+ {"name":"coder-laguna","model":"poolside/laguna-xs-2.1"},
+ {"name":"coder-mistral","model":"mistralai/mistral-large-4-1t-a52b"},
+ {"name":"coder-nemotron-ultra","model":"nvidia/nemotron-3-ultra-550b-a55b"}
+]

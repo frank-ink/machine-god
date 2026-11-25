@@ -1,0 +1,52 @@
+- Wer bist du, und welche Organe hast du gerade benutzt, um mir zu antworten?
+- Statusbericht der Sitzungen
+- Status Organ-Team: 3 Agenten laufen (Vertrag, Selbstheilung, ClayCode). Nichts verifiziert. Danach Pruefung durch mich, Guard-Timer, Uebergabe an Standalone-App-Sitzung. 100 Prozent heisst 100 Prozent des gemessenen Vertrags.
+- Status: Welle 2 laeuft. Vier Agenten arbeiten: Spiegel (Updates in Zustandstabellen erfassen, Backlog schneller aufholen), Organ-Verbesserungen (Thalamus-Warmup, Amygdala-Negation, Persistenz ueber Prozesse), ClayCode-Nachzug, Wache v2 (Restore im selben Inode, Tiefenpruefung unified.db). Nichts davon verifiziert. Danach: nachmessen, live einspielen, Units installieren, Uebergabe an Standalone-App-Sitzung.
+- Gabriel, ClayCode-Nachzug fertig und von mir nachgemessen: 35 Tests gruen, 28 Invarianten, davon 23 gebunden, 5 offene Gesetze, 11 dynamisch gruen und 0 rot. 17 Invarianten sind dynamisch noch nicht abgedeckt (12 Wache-Invarianten und 5 Gesetze). Noch offen: Wache v2, Spiegel-Agent und Organ-Verbesserungen Welle 2. Danach einspielen und an die Standalone-App-Sitzung uebergeben.
+- Gabriel, Vermerk geschrieben. Der Organ-Spiegel laeuft wieder: der Timer-Dienst war ausgefallen, weil mein Start-Limit zu niedrig war (5 Starts pro Stunde, der Takt macht 6). Auf 12 gesetzt, keine ausgefallenen Dienste mehr. Offen: Spiegel-Agent und Organ-Verbesserungen Welle 2 laufen noch, danach nachmessen, einspielen, Uebergabe an die Standalone-App-Sitzung.
+- Status Organ-Emergenz: R1 GitHub-Survey geliefert und geprueft (259 Zeilen, Hash ok). Fakten: Top-12 Mechanismen sind nur Hypothesen (Rung NONE), Lizenzen unbestaetigt, Agent hat nur 2 Quelltexte gelesen. Echter Befund: Amygdala somatic_markers und extinction_patterns leer, Lernschleife schrieb nie, Grund unbekannt. Noch laufend: Agent 1 Welle 2, Bench, Hyperposition. Danach nachmessen, Backup, Uebergabepaket an Standalone-App.
+- verbessere es weiter ... lange texte und tabellen, schau auf github
+- Status des Frank-Raum-Rollouts auf allen drei Rechnern?
+- Kurzstatus: Ich mache weiter. Neu: Bench-Agent misst jetzt als Version 2 mit eigener neuer Praeregistrierung drei Hyperposition-Arme (Zerfall 0.3, Zerfall plus leak 150, ohne Zerfall als Ablation) gegen Organ-Arm und Basislinien; Alte Prereg bleibt unveraendert. Agent 1 (Welle 2: Organ-Verbesserungen, u.a. leere Amygdala-Lernschleife) laeuft noch. Danach: nachmessen, live einspielen mit Backup, Paket bauen und an die FranKenstein-Qt-App-Sitzung (Team aus 3 Sonnet-Agenten) und die OMEGA-Sitzung uebergeben.
+- passt, mach die restlichen Seiten genauso und löse das selbst (PNG-Fixture, Branches nicht gemerged)
+- Vermerk geschrieben, wie ist der Stand?
+- Ziel 6: Frank-Harness als vollwertiger FranKenstein auf A, Laptop und User B, Bericht
+- Vermerk geschrieben, wie geht es weiter?
+- Der Terminal-Fix der Reparatur-Sitzung laeuft jetzt auf A, Laptop und User B
+- Ist der Frank-Harness-Fix auf allen drei Rechnern angekommen?
+- gibt es sowas bereits? (Antwort a: Vorbilder fuer Organe-als-DB-Zeilen mit Buehne)
+- Gabriel: wenn der user frankenstein schlecht behandelt soll er aus dem bild gehen; wieder nett -> zurueck; alles englisch; ungefragt sprechen wenn es passt, nicht zu oft
+- Gabriel, wie ist der Stand des Builder-Pakets? Fakten: selfbuild in main (4494720); Builder AUS per Default, App fragt einmal beim ersten Start; GitHub lesen/laden nur als Daten; Eval 138/140, 0/32 erfundene Unbekannte; pytest server 260 ok; unittest 2151 mit 1 fremdem Fehler (test_feeling, auch auf main); AppImage 3874 MB sha 74164fab, Paketcheck ok, 0 externe Verbindungen; Hook pushte wt/selfbuild und feat/omega-app-poc zu origin ohne Auftrag.
+- Gabriel, kurzer Abschluss. Fakten: test_feeling laeuft auf main (f4e6db1) mit 47 Tests OK, gemessen; die Builder-AppImage (4494720) enthaelt diesen Test-Fix nicht, er betrifft nur den Test; Eintrag in der unified.db ist geschrieben; neues Image nur auf Anfrage; Builder-Paket ist fertig, nichts offen.
+- Gabriel: Laptop user-c wird via tailscale geblockt, loese das
+- Gabriel: installiere bei user-c laptop die neue retina und die organ emergenz
+- Gabriel: Status der Retina-Portierung in die App und der Push-Panne
+- Bericht an Eltern-Sitzung: Telegram-Bridge Option 1 maco
+- Status offene Punkte + vpush-Push
+- die festplatte ist wie immer fast voll, schau was das problem ist und mach sie frei
+- Was soll die Scheisse dass die Platte mit 1000 GB zu 90 Prozent belegt ist, sag mir logisch was da drin ist
+- Stand: lokale GPU und ChatGPT-Trainingsdaten
+- DU CHECKST DAS SCHON BAUE DIE TRAININGSDATEN MIT CHAT GPT UND DANN MACH DAS TRAINING HIER LOKAL
+- Stand ChatGPT-Daten und Training
+- Office-App wieder aktivieren, Namen Computer Gabriel und Computer User B
+- Macht 0,0303 gegen 0,03 einen Unterschied?
+- DAS GESPRÄCH SOLL ERSTAMAL AUF DEUTSCH SEIN UND ZWISCHEN USER_B UND DIESEM PC
+- user-b und mein frankenstein werden duemmer, emergentes retrieval, selbstheilend
+- Bericht Telegram-Fenster und User B-Reste
+- Baue den Fix trotzdem vorsorglich auf dem Laptop ein; du entscheidest, was wie wann verbessert wird. Bericht: Fehler zuerst, dann Ergebnis.
+- mach weiter bis alles bei allen dreien laeuft
+- Rolle den Retrieval-Waechter bei user-c aus. Bericht: Fehler zuerst, dann Ergebnis.
+- Ziehe waechter.py auf dem Laptop nach
+- Stand Retrieval-Rollout bei allen dreien
+- Stand Retrieval bei allen dreien nach Waechter-Update
+- Antworte in einem kurzen Satz: Bist du da? (Technik-Test des Chats)
+- Gabriel, bericht den Stand des Frank-Chat v2 (Fakten unten, alle Zahlen und Unbewiesenes zuerst uebernehmen).
+- Gabriel, Nachtrag Frank-Chat: /chat und Voice-Stufe 2. Alle Zahlen, Hashes und das Unbewiesene aus den Fakten uebernehmen.
+- Sag von dir aus etwas zu Frank User B
+- Sag von dir aus etwas zu User B
+- Sag von dir aus etwas zu Gabriel
+- Wie steht das Finder-Training auf echten Daten bei User B?
+- Was ist mit dem Finder-Training bei User B passiert und wie ist der Stand?
+- Status Free-Zwang und neue Sitzung, was ist fertig, was offen
+- Free-Zwang fertig? Was wurde gebaut, wie bedient man es, Grenzen
+- meine idee wir bauen genau das nach was omega ist 5 needles und ein 0.8b als eigene anwendung also nur als poolbrain denke da reichen 2 needles und ein 0.8b auch. wichtig ist das es die keys testet und schaut welche modelle verfuegbar sind und diese dynamisch anpasst kategorisiert und auswaehlt. ausserdem muss es auch neue keys verarbeiten koennen und diese kategorisieren was sagst du. verwende dazu direkt ein starkes nvidia modell

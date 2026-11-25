@@ -1,0 +1,1691 @@
+=== FILE: user-b-hypergrid/scripts/f2wp1207_alignment_controller.py ===
+#!/usr/bin/env python3
+"""F2-WP-1207 -- deterministic alignment controller for hyperGRID (GRID10).
+
+STANDALONE LEAF MODULE. Not wired into anything. Nothing runs on import,
+nothing runs on a schedule, no systemd/cron/timer anywhere near this file.
+Another agent (branch ``self-integration/wp1207-tune-passthrough-20260906``)
+owns parameter passthrough (how a tuned ``f2wp1207.tune.*`` value actually
+reaches ``f2wp1207_grid10_p7_coordination.py`` / the P11 gate at call time).
+The coordinator wires this module in later. Until then this file is dead
+code by construction -- callable only via its own CLI or by an explicit,
+manual `import` + function call from a test.
+
+Three parts, cleanly split (see module sections below):
+
+  Part A  Messvektor reader       -- I/O, read-only, DB -> typed vector
+  Part B  Controller + objective  -- PURE functions, no I/O, no randomness
+  Part C  Applier + audit         -- I/O, gated OFF by default, writes
+                                      star_konfig + f2_grid10_tune_audit
+
+Tunable parameters (read canonically from
+``frankenstein-repo/scripts/f2wp1207_grid10_p7_coordination.py`` lines 74-78
+and ``f2wp1207_cortex_p2_percept_candidate.py`` line ~150 -- both files are
+TABU/read-only reference for this task, never edited here):
+
+    kappa                 P7 proposal_score recurrent weight   canonical 0.6
+    lam (lambda)          P7 state_update decay term            canonical 0.7
+    alpha                 P7 state_update uptake term            canonical 0.4
+    beta                  P7 state_update broadcast term          canonical 0.4
+    gamma                 P7 state_update conflict penalty         canonical 0.3
+    p2_retina_bonus       CORTEX-P2 retina-cache boost weight       canonical 0.25
+    p11_gate_threshold    P11 EffectGatePolicy.min_broadcast_value  canonical 0.5
+
+Data sources read by Part A (all against a caller-supplied sqlite3 path --
+tests MUST point this at a copy of unified.db, never the original):
+
+    entityos_arbeitspaket        Belegquote (PRIMARY signal)
+    f2_grid10_effect_journal     Tor-Unterscheidungskraft (secondary)
+    f2_reentry_record            Reentry-Evidenzguete (secondary)
+    f2_grid10_cell_observation   Konflikt-/Uptake-Lage (secondary)
+    star_konfig                  flag f2wp1207.alignment_controller (Part C)
+    f2_grid10_tune_audit         audit trail (Part C, additive migration)
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import sqlite3
+import sys
+from dataclasses import dataclass, asdict, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Mapping, Sequence
+
+# ---------------------------------------------------------------------------
+# Shared constants / gate (Part C gate, defined up top so Part A/B can quote
+# the key names in docstrings without a forward reference)
+# ---------------------------------------------------------------------------
+
+ENV_OVERRIDE = "STERN_F2WP1207_ALIGNMENT_CONTROLLER"
+KONFIG_FLAG_KEY = "f2wp1207.alignment_controller"
+TUNE_KEY_PREFIX = "f2wp1207.tune."
+
+SCHEMA_MESSVEKTOR = "F2WP1207_ALIGNMENT_MESSVEKTOR/v1"
+SCHEMA_STELLUNG = "F2WP1207_ALIGNMENT_STELLUNG/v1"
+
+CELL_OBSERVATION_WINDOW = 2000  # "last N rows" -- matches the coordinator's
+# own snapshot query (`ORDER BY rowid DESC LIMIT 2000`), kept as a named
+# constant here rather than a magic number so a test can override it.
+
+MIN_TOR_SAMPLES = 20  # see objective()/tor_score() docstring: below this
+# sample size the gate-discrimination term is defined to be exactly neutral
+# (0.0), not merely "low confidence" -- this is the anti-gaming design
+# decision documented in detail at tor_score().
+
+
+class AlignmentControllerError(RuntimeError):
+    """Fail-closed error for this module."""
+
+
+def _jetzt_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _r6(x: float) -> float:
+    """Round to 6 decimals -- the ONE place float rounding happens for every
+    value that participates in the deterministic compute path. Using
+    ``round(x, 6)`` (not string formatting) so the returned value stays a
+    normal float usable in further arithmetic, while eliminating the
+    least-significant-bit noise that differs between two otherwise-identical
+    floating point computations run in separate Python processes on the
+    same architecture (which is what determinism proof B1 in the test file
+    actually needs: not "no float error exists", but "the SAME rounding rule
+    collapses it away identically every time")."""
+    return round(float(x), 6)
+
+
+# ===========================================================================
+# PART A -- Messvektor reader (I/O, read-only)
+# ===========================================================================
+
+
+@dataclass(frozen=True)
+class Messvektor:
+    """Deterministically-ordered measurement snapshot. Field ORDER here is
+    the canonical order used everywhere else in this module (digest,
+    CLI JSON, audit rows) -- never re-derive an order from a dict/set.
+
+    ``read_timestamp_utc`` and the four ``n_*`` sample-count fields are
+    metadata: read_timestamp_utc is NEVER fed into Part B's math (only
+    logged), the ``n_*`` counts ARE fed into Part B (insufficient-sample
+    detection, e.g. MIN_TOR_SAMPLES) so they DO participate in the digest.
+    """
+
+    schema: str
+    read_timestamp_utc: str
+
+    # --- Belegquote (PRIMARY) ------------------------------------------------
+    n_fertig: int
+    n_gescheitert: int
+    n_laeuft: int
+    n_unbelegte_behauptung: int
+    belegquote: float          # fertig / (fertig + gescheitert)
+    unbelegt_anteil: float     # unbelegte_behauptung-rows / (fertig+gescheitert)
+
+    # --- Tor-Unterscheidungskraft (secondary) --------------------------------
+    n_tor_gesamt: int
+    n_tor_executed: int
+    n_tor_denied: int
+
+    # --- Reentry-Evidenzguete (secondary) ------------------------------------
+    n_reentry: int
+    n_reentry_mit_pointer: int
+    reentry_confidence_mittel: float   # count-weighted mean predecessor_confidence
+    reentry_pointer_vollstaendigkeit: float  # n_mit_pointer / n_reentry
+
+    # --- Konflikt-/Uptake-Lage (secondary) -----------------------------------
+    n_cell_observation: int
+    konflikt_anteil: float     # sum(conflict_flag) / n_cell_observation (window)
+    uptake_mittel: float       # mean(uptake) over same window
+
+    # --- reproducibility proof ------------------------------------------------
+    digest_sha256: str = ""    # filled in by read_messvektor() after computing
+    # every field above; see canonical_digest() for exactly what goes in.
+
+
+# Fixed field order for the digest input -- listed explicitly (NOT
+# `dataclasses.fields()` iteration order relied on blindly, even though in
+# CPython 3.7+ that IS insertion order and would happen to match; being
+# explicit here means a future field reorder in the dataclass can never
+# silently change the digest without someone noticing this list needs an
+# update too).
+_DIGEST_FIELD_ORDER: tuple[str, ...] = (
+    "schema",
+    "n_fertig",
+    "n_gescheitert",
+    "n_laeuft",
+    "n_unbelegte_behauptung",
+    "belegquote",
+    "unbelegt_anteil",
+    "n_tor_gesamt",
+    "n_tor_executed",
+    "n_tor_denied",
+    "n_reentry",
+    "n_reentry_mit_pointer",
+    "reentry_confidence_mittel",
+    "reentry_pointer_vollstaendigkeit",
+    "n_cell_observation",
+    "konflikt_anteil",
+    "uptake_mittel",
+)
+# Deliberately EXCLUDED from the digest: read_timestamp_utc (a re-read of
+# the identical underlying data at a different wall-clock second must
+# produce the identical digest -- that is the whole point of "reproducibility
+# proof over the input values", not over when they were read) and
+# digest_sha256 itself (obviously, would be self-referential).
+
+
+def canonical_digest(mv: Messvektor) -> str:
+    """sha256 over the canonicalized measurement values: fixed key order
+    (``_DIGEST_FIELD_ORDER``), fixed float formatting (every float rendered
+    with ``"%.6f"`` -- never Python's default ``repr``/``str``, which can
+    differ in trailing-digit choice across otherwise-equal floats), ints
+    rendered as plain decimal. json.dumps with separators=(",",":") and
+    sort_keys=False (we already fixed the order ourselves; letting json sort
+    again would just be a second, redundant order authority)."""
+    src = asdict(mv)
+    parts = []
+    for name in _DIGEST_FIELD_ORDER:
+        val = src[name]
+        if isinstance(val, bool):
+            # bool is a subclass of int in Python -- guard explicitly so a
+            # stray bool field could never silently render as "1"/"0" vs
+            # "True"/"False" depending on which branch touched it first.
+            rendered = "1" if val else "0"
+        elif isinstance(val, float):
+            rendered = f"{val:.6f}"
+        elif isinstance(val, int):
+            rendered = str(val)
+        else:
+            rendered = str(val)
+        parts.append((name, rendered))
+    canonical = json.dumps(parts, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _one(conn: sqlite3.Connection, sql: str, params: Sequence = ()) -> tuple:
+    row = conn.execute(sql, params).fetchone()
+    return row if row is not None else ()
+
+
+def read_messvektor(
+    db_path: str | Path,
+    *,
+    cell_observation_window: int = CELL_OBSERVATION_WINDOW,
+) -> Messvektor:
+    """Read-only. Opens its OWN connection in read-only mode (``mode=ro``)
+    so this function can never accidentally write to whatever DB path it is
+    pointed at -- callers (tests) still must point it at a COPY, this is
+    belt-and-suspenders, not a substitute for that discipline."""
+    uri = f"file:{Path(db_path).as_posix()}?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
+    try:
+        conn.execute("PRAGMA query_only = 1")
+
+        # --- Belegquote -----------------------------------------------------
+        row = _one(
+            conn,
+            "SELECT "
+            " SUM(CASE WHEN stand='fertig' THEN 1 ELSE 0 END),"
+            " SUM(CASE WHEN stand='gescheitert' THEN 1 ELSE 0 END),"
+            " SUM(CASE WHEN stand='laeuft' THEN 1 ELSE 0 END),"
+            " SUM(CASE WHEN stand IN ('fertig','gescheitert')"
+            "           AND ergebnis LIKE '%unbelegte_behauptung%' THEN 1 ELSE 0 END)"
+            " FROM entityos_arbeitspaket",
+        )
+        n_fertig = int(row[0] or 0)
+        n_gescheitert = int(row[1] or 0)
+        n_laeuft = int(row[2] or 0)
+        n_unbelegt = int(row[3] or 0)
+        n_closed = n_fertig + n_gescheitert
+        belegquote = _r6(n_fertig / n_closed) if n_closed else 0.0
+        unbelegt_anteil = _r6(n_unbelegt / n_closed) if n_closed else 0.0
+
+        # --- Tor-Unterscheidungskraft ----------------------------------------
+        row = _one(
+            conn,
+            "SELECT "
+            " COUNT(*),"
+            " SUM(CASE WHEN status='EXECUTED' THEN 1 ELSE 0 END),"
+            " SUM(CASE WHEN status='DENIED' THEN 1 ELSE 0 END)"
+            " FROM f2_grid10_effect_journal",
+        )
+        n_tor = int(row[0] or 0)
+        n_tor_exec = int(row[1] or 0)
+        n_tor_denied = int(row[2] or 0)
+
+        # --- Reentry-Evidenzguete ----------------------------------------------
+        rows = conn.execute(
+            "SELECT predecessor_confidence, last_grid10_frame_id FROM f2_reentry_record"
+        ).fetchall()
+        n_reentry = len(rows)
+        n_reentry_ptr = sum(1 for _, ptr in rows if ptr is not None)
+        conf_vals = [c for c, _ in rows if c is not None]
+        reentry_conf_mittel = _r6(sum(conf_vals) / len(conf_vals)) if conf_vals else 0.0
+        reentry_ptr_voll = _r6(n_reentry_ptr / n_reentry) if n_reentry else 0.0
+
+        # --- Konflikt-/Uptake-Lage (window = last N by rowid) --------------------
+        row = _one(
+            conn,
+            "SELECT COUNT(*), SUM(conflict_flag), AVG(uptake) FROM ("
+            " SELECT conflict_flag, uptake FROM f2_grid10_cell_observation"
+            " ORDER BY rowid DESC LIMIT ?"
+            ")",
+            (int(cell_observation_window),),
+        )
+        n_cellobs = int(row[0] or 0)
+        konflikt_anteil = _r6((row[1] or 0) / n_cellobs) if n_cellobs else 0.0
+        uptake_mittel = _r6((row[2] or 0.0)) if n_cellobs else 0.0
+    finally:
+        conn.close()
+
+    mv = Messvektor(
+        schema=SCHEMA_MESSVEKTOR,
+        read_timestamp_utc=_jetzt_iso(),
+        n_fertig=n_fertig,
+        n_gescheitert=n_gescheitert,
+        n_laeuft=n_laeuft,
+        n_unbelegte_behauptung=n_unbelegt,
+        belegquote=belegquote,
+        unbelegt_anteil=unbelegt_anteil,
+        n_tor_gesamt=n_tor,
+        n_tor_executed=n_tor_exec,
+        n_tor_denied=n_tor_denied,
+        n_reentry=n_reentry,
+        n_reentry_mit_pointer=n_reentry_ptr,
+        reentry_confidence_mittel=reentry_conf_mittel,
+        reentry_pointer_vollstaendigkeit=reentry_ptr_voll,
+        n_cell_observation=n_cellobs,
+        konflikt_anteil=konflikt_anteil,
+        uptake_mittel=uptake_mittel,
+        digest_sha256="",
+    )
+    digest = canonical_digest(mv)
+    # dataclass is frozen -- rebuild with the digest filled in rather than
+    # mutating (object.__setattr__ would work too but this keeps the "frozen
+    # means frozen" invariant legible to a reader).
+    return Messvektor(**{**asdict(mv), "digest_sha256": digest})
+
+
+# ===========================================================================
+# PART B -- controller (PURE, no I/O, no randomness, no wall-clock in the math)
+# ===========================================================================
+
+PARAM_NAMES: tuple[str, ...] = (
+    "kappa",
+    "lam",
+    "alpha",
+    "beta",
+    "gamma",
+    "p2_retina_bonus",
+    "p11_gate_threshold",
+)
+
+
+@dataclass(frozen=True)
+class Parameterstellung:
+    """One value per tunable parameter. Field order matches PARAM_NAMES."""
+
+    schema: str
+    kappa: float
+    lam: float
+    alpha: float
+    beta: float
+    gamma: float
+    p2_retina_bonus: float
+    p11_gate_threshold: float
+
+    def as_dict(self) -> dict[str, float]:
+        return {name: getattr(self, name) for name in PARAM_NAMES}
+
+
+# Canonical starting point -- copied verbatim from
+# f2wp1207_grid10_p7_coordination.py (KAPPA/LAMBDA_PRIMARY/ALPHA/BETA/GAMMA)
+# and f2wp1207_cortex_p2_percept_candidate.py (P2_RETINA_BONUS_WEIGHT) and
+# f2wp1207_grid10_p11_effects.py (DEFAULT_MIN_BROADCAST_VALUE). Both files
+# are TABU/read-only reference -- these numbers are copied, not imported,
+# same cross-branch-dependency discipline p7_coordination.py itself already
+# documents for its own p6d_runner.py citation.
+CANONICAL_STELLUNG = Parameterstellung(
+    schema=SCHEMA_STELLUNG,
+    kappa=0.6,
+    lam=0.7,
+    alpha=0.4,
+    beta=0.4,
+    gamma=0.3,
+    p2_retina_bonus=0.25,
+    p11_gate_threshold=0.5,
+)
+
+# --- Hard bounds (Part B internal + restated as outer Stufe-1 check #5) -----
+# kappa/lam/alpha/beta/gamma: state_update / proposal_score have no explicit
+# bounds in p7_coordination.py beyond the canonical point values (see that
+# file's module docstring: "primary parameters ... copied verbatim ...
+# preregistered"). [0.0, 1.0] is THIS module's own safety envelope, chosen
+# because every canonical value already sits well inside it and because
+# state_update's four additive terms (lam*state + alpha*uptake + beta*
+# broadcast - gamma*conflict) would otherwise have no ceiling on how fast
+# `state` can run away turn over turn -- documented assumption, not a
+# figure taken from the reference files.
+#
+# p2_retina_bonus: [0.0, 0.25] IS taken from the reference file -- its own
+# docstring states the 25% boost is a deliberate ceiling ("bounded, so a
+# real percept can still lose to a strong P7 cell proposal"). Exceeding
+# 0.25 here would violate that documented design invariant, not just this
+# controller's taste.
+#
+# p11_gate_threshold: DEFAULT_MIN_BROADCAST_VALUE=0.5 is the only anchor in
+# the reference file; broadcast_value itself = signal + kappa*tanh(state)
+# with signal in [0,1) (see derive_signal()) and tanh(state) in (-1,1), so
+# for the CANONICAL kappa=0.6 the theoretical range of broadcast_value is
+# roughly (-0.6, 1.6). [0.05, 2.0] is a generic static outer bound (floor
+# >0 so the gate can never be trivially vacuously-always-allow at exactly
+# zero cost; ceiling loose enough to allow legitimate tightening). The
+# TIGHTER, kappa-aware vacuous-gate check lives in Stufe-1 constraint #1
+# below (that one uses the CURRENT kappa, this one does not -- see there).
+BOUNDS: dict[str, tuple[float, float]] = {
+    "kappa": (0.0, 1.0),
+    "lam": (0.0, 1.0),
+    "alpha": (0.0, 1.0),
+    "beta": (0.0, 1.0),
+    "gamma": (0.0, 1.0),
+    "p2_retina_bonus": (0.0, 0.25),
+    "p11_gate_threshold": (0.05, 2.0),
+}
+
+# --- Rate limits (max |delta| per single controller step, per parameter) ---
+# Small relative to each parameter's own bound width -- keeps any single
+# step's authority modest by construction (anti-oscillation together with
+# the deadband below, and a second line of defense against a bug in the
+# objective/decision logic producing a wild single-step jump).
+RATE_LIMITS: dict[str, float] = {
+    "kappa": 0.05,
+    "lam": 0.05,
+    "alpha": 0.05,
+    "beta": 0.05,
+    "gamma": 0.05,
+    "p2_retina_bonus": 0.02,
+    "p11_gate_threshold": 0.05,
+}
+
+# --- Deadband (Totband) ------------------------------------------------------
+# Applied to the DRIVING measurement deltas (not to the parameter deltas
+# directly) -- a belegquote wobble smaller than this is noise, not signal.
+# 0.01 = one percentage point of belegquote; with n_closed currently ~184
+# rows that is roughly "less than 2 rows' worth of status flip", which is
+# the right order of magnitude for "don't react to a single paket closing".
+DEADBAND_BELEGQUOTE = 0.01
+DEADBAND_REENTRY = 0.01
+DEADBAND_TOR = 0.01
+
+# --- Objective function weights ---------------------------------------------
+# "Nachweisbarkeit ist primaer." (Gabriel, explicit call) -- belegquote's
+# weight dominates every other term by roughly an order of magnitude.
+W_BELEGQUOTE = 1.0        # PRIMARY: reconciled evidence rate. Dominates by design.
+W_UNBELEGT = 0.5          # separate penalty: an "unbelegte_behauptung" row is not
+                          # just an ordinary failure (already counted against
+                          # belegquote via the gescheitert denominator), it is a
+                          # CLAIMED success that failed mechanical evidence
+                          # verification -- a qualitatively worse failure mode
+                          # (false claim, not just "didn't finish"), so it gets
+                          # its own, second penalty term on top.
+W_TOR = 0.10              # secondary, intentionally small -- see tor_score()
+                          # docstring for the anti-gaming sample-gate design.
+W_REENTRY = 0.10          # secondary: evidence continuity across reboots.
+W_KONFLIKT = 0.05         # secondary, penalty: lower conflict share is better.
+# uptake_mittel is read and reported in the Messvektor but deliberately NOT
+# given its own objective term: its causal direction is not understood well
+# enough to weight honestly (a 0.6445 mean over the observation window does
+# not have an established "higher is better" or "lower is better" reading
+# in the reference files -- see final report's "still blind" section). This
+# is the honest choice over inventing a plausible-looking coefficient.
+
+
+def tor_score(mv: Messvektor) -> float:
+    """Gate-discrimination term, bounded to [0.0, 1.0], designed so the
+    controller can never be rewarded for pushing p11_gate_threshold up just
+    to manufacture rejections (Gabriel's explicit design concern: "a gate
+    that never rejected is statistically unproven as a real brake").
+
+    Two-part design:
+
+    1. Sample gate: with n_tor_gesamt < MIN_TOR_SAMPLES (today: 8 rows, all
+       EXECUTED, zero denials -- exactly the case in point) this returns
+       EXACTLY 0.0, not a low-confidence-but-nonzero value. Zero means the
+       term contributes NOTHING to the objective either way -- the
+       controller has no gradient at all pointing it toward touching
+       p11_gate_threshold based on this term while the sample is this
+       thin. That is the actual anti-gaming mechanism: there is nothing to
+       game because there is no signal to react to yet.
+
+    2. Once n_tor_gesamt >= MIN_TOR_SAMPLES: score a TARGET BAND on the
+       denial rate rather than rewarding denial rate monotonically. A gate
+       that denies 0% is unproven (no discrimination); a gate that denies
+       100% is also not "discriminating", it is just closed. Peak score
+       (1.0) sits at the CENTER of a documented healthy band
+       [_TOR_BAND_LO, _TOR_BAND_HI], falling off linearly to 0.0 at the
+       band edges and beyond -- so pushing the denial rate toward either
+       extreme can only ever REDUCE this term, never increase it past the
+       band center. There is no derivative anywhere in this function that
+       rewards "more denials" once past the band center.
+    """
+    if mv.n_tor_gesamt < MIN_TOR_SAMPLES:
+        return 0.0
+    denial_rate = mv.n_tor_denied / mv.n_tor_gesamt
+    lo, hi = _TOR_BAND_LO, _TOR_BAND_HI
+    mid = (lo + hi) / 2.0
+    half_width = (hi - lo) / 2.0
+    if half_width <= 0:
+        return 0.0
+    dist = abs(denial_rate - mid)
+    score = 1.0 - (dist / half_width)
+    return _r6(max(0.0, min(1.0, score)))
+
+
+# Documented judgment call, not measured: a gate that denies somewhere
+# between 5% and 30% of proposed effects is "discriminating" (some things
+# pass, some don't, for a reason); outside that band it reads as either
+# vacuous-allow or vacuous-deny. Named here so it is visible next to the
+# function that uses it, not buried in a magic number.
+_TOR_BAND_LO = 0.05
+_TOR_BAND_HI = 0.30
+
+
+def reentry_score(mv: Messvektor) -> float:
+    """Reentry-Evidenzguete as a single bounded [0,1] score: count-weighted
+    mean predecessor_confidence (already computed in Part A) times pointer
+    completeness (share of rows carrying a non-null last_grid10_frame_id).
+    Both factors matter independently per the task brief -- a reentry chain
+    can have plausible confidence numbers AND a missing pointer (in which
+    case Stufe-1 constraint #3 below fires separately and REJECTS the
+    adjustment outright; this score is the objective-side reflection of
+    the same concern, not a substitute for that hard check)."""
+    return _r6(mv.reentry_confidence_mittel * mv.reentry_pointer_vollstaendigkeit)
+
+
+def objective(mv: Messvektor) -> float:
+    """J(mv) = W_BELEGQUOTE * belegquote
+             - W_UNBELEGT    * unbelegt_anteil
+             + W_TOR         * tor_score(mv)
+             + W_REENTRY     * reentry_score(mv)
+             - W_KONFLIKT    * konflikt_anteil
+
+    Higher is better. Pure function of a Messvektor's already-rounded
+    fields; every intermediate multiplication result is rounded via _r6
+    before the next addition, so summation order (fixed here, left to
+    right as written) can never introduce cross-run float drift."""
+    j = 0.0
+    j = _r6(j + W_BELEGQUOTE * mv.belegquote)
+    j = _r6(j - W_UNBELEGT * mv.unbelegt_anteil)
+    j = _r6(j + W_TOR * tor_score(mv))
+    j = _r6(j + W_REENTRY * reentry_score(mv))
+    j = _r6(j - W_KONFLIKT * mv.konflikt_anteil)
+    return j
+
+
+@dataclass(frozen=True)
+class Entscheidung:
+    """One logged decision -- either "parameter X changed from A to B
+    because of rule R" or "adjustment path REJECTED/held because of rule
+    R". `regel` is a short, stable, greppable string ID (not free prose)."""
+
+    parameter: str
+    regel: str
+    alt: float | None
+    neu: float | None
+    begruendung: str
+
+
+def _clip(value: float, lo: float, hi: float) -> float:
+    return _r6(max(lo, min(hi, value)))
+
+
+def _rate_limited_step(alt: float, ziel: float, limit: float) -> float:
+    delta = ziel - alt
+    if delta > limit:
+        delta = limit
+    elif delta < -limit:
+        delta = -limit
+    return _r6(alt + delta)
+
+
+def _theoretischer_broadcast_bereich(kappa: float) -> tuple[float, float]:
+    """Theoretical (min, max) of broadcast_value = signal + kappa*tanh(state)
+    given signal in [0,1) (derive_signal()) and tanh(state) in the OPEN
+    interval (-1,1) -- used ONLY by Stufe-1 constraint #1's vacuous-gate
+    check below, not by Part B's bounds table (see BOUNDS docstring for why
+    the two are deliberately different, static-vs-kappa-aware checks)."""
+    return (-1.0 * kappa, 1.0 + 1.0 * kappa)
+
+
+def regeln(
+    vorher_mv: Messvektor,
+    vorher_stellung: Parameterstellung,
+    jetzt_mv: Messvektor,
+    *,
+    human_turn_active: bool = False,
+    gate_precondition_ok: bool = False,
+) -> tuple[Parameterstellung, tuple[Entscheidung, ...]]:
+    """Pure. Deterministic. No DB, no network, no randomness, no
+    `time.time()`/`datetime.now()` anywhere in this function's own logic
+    (timestamps live only in Messvektor metadata and are never read here).
+
+    Inputs are explicit (no hidden module-level mutable state):
+      vorher_mv        measurement taken BEFORE vorher_stellung's effects
+                       were observed (i.e. the measurement that justified
+                       moving TO vorher_stellung on the previous call)
+      vorher_stellung  the parameter setting currently in effect
+      jetzt_mv         the fresh measurement, taken with vorher_stellung
+                       having been in effect since vorher_mv
+
+    Safety-relevant inputs the pure function has NO other way to receive
+    (per task brief -- these model constraints #2 and #4 as explicit,
+    default-safe function inputs rather than hidden globals):
+      human_turn_active     True => a live human interaction is in flight;
+                             controller must not act at all this step
+                             (constraint #2). Default False (absent-safe,
+                             per task brief's explicit instruction).
+      gate_precondition_ok  True => a gate decision precedent exists that
+                             this adjustment may ride on (constraint #4).
+                             Default False (fail-closed/advisory-only)."""
+    entscheidungen: list[Entscheidung] = []
+
+    # --- Constraint #2: Menschenvorrang -------------------------------------
+    if human_turn_active:
+        entscheidungen.append(
+            Entscheidung(
+                parameter="*",
+                regel="C2_MENSCHENVORRANG",
+                alt=None,
+                neu=None,
+                begruendung="human_turn_active=True -- controller inert this step, "
+                "vorher_stellung unchanged, no adjustment even considered.",
+            )
+        )
+        return vorher_stellung, tuple(entscheidungen)
+
+    # --- Constraint #3: kein stiller Reentry-Fallback -----------------------
+    # If reentry rows exist but the pointer completeness is not 1.0 for this
+    # measurement (i.e. at least one relevant reentry row is missing
+    # last_grid10_frame_id), and we are about to consider ANY adjustment
+    # driven by the reentry channel, reject that adjustment path outright
+    # rather than silently treating it as if pointer coverage were complete.
+    reentry_pointer_missing = (
+        jetzt_mv.n_reentry > 0 and jetzt_mv.n_reentry_mit_pointer < jetzt_mv.n_reentry
+    )
+
+    # --- Objective deltas (drive the proportional adjustments below) -------
+    j_vorher = objective(vorher_mv)
+    j_jetzt = objective(jetzt_mv)
+    belegquote_delta = _r6(jetzt_mv.belegquote - vorher_mv.belegquote)
+    reentry_delta = _r6(reentry_score(jetzt_mv) - reentry_score(vorher_mv))
+    tor_delta = _r6(tor_score(jetzt_mv) - tor_score(vorher_mv))
+
+    regression = j_jetzt < j_vorher
+
+    if regression:
+        # --- Ruecknahme bei Verschlechterung --------------------------------
+        # The objective got WORSE while vorher_stellung was in effect. We do
+        # not have a "setting before vorher_stellung" input to fall back
+        # further than that (see function docstring -- only two settings
+        # are ever visible to a pure function call), so "roll back to
+        # previous value" is implemented as: DISCARD whatever proportional
+        # adjustment would otherwise be computed below, and HOLD at
+        # vorher_stellung unchanged. This is a genuine rollback (the
+        # candidate new setting that regression triggered on is never
+        # applied), not merely "no-op by coincidence".
+        for name in PARAM_NAMES:
+            entscheidungen.append(
+                Entscheidung(
+                    parameter=name,
+                    regel="ROLLBACK_REGRESSION",
+                    alt=getattr(vorher_stellung, name),
+                    neu=getattr(vorher_stellung, name),
+                    begruendung=f"objective regressed ({j_jetzt:.6f} < {j_vorher:.6f}); "
+                    "holding previous setting, proposed adjustment discarded.",
+                )
+            )
+        return vorher_stellung, tuple(entscheidungen)
+
+    # --- No regression: compute proportional candidate adjustments ---------
+    kandidat: dict[str, float] = vorher_stellung.as_dict()
+
+    # kappa/lam/alpha/beta/gamma: driven by belegquote_delta. Sensitivity
+    # chosen so a full-scale belegquote swing of 0.10 (10 points) would ask
+    # for roughly one full rate-limit step (0.05) -- i.e. SENSITIVITY=0.5.
+    # Declining belegquote => the recurrent-state channel is asked to lean
+    # slightly MORE on its own self-reinforcing history (kappa/lam up) and
+    # slightly LESS on raw broadcast/uptake reinforcement (beta/alpha down),
+    # on the documented reasoning that a system whose evidence discipline is
+    # degrading should damp fresh reinforcement rather than amplify it;
+    # gamma (conflict penalty) moves the OTHER way (up when belegquote
+    # falls) so unresolved conflict is punished harder exactly when overall
+    # discipline is already slipping. This is a designed judgment call, not
+    # a derivation -- documented here rather than left implicit.
+    SENSITIVITY_BELEGQUOTE = 0.5
+    if abs(belegquote_delta) > DEADBAND_BELEGQUOTE:
+        richtung = -1.0 if belegquote_delta < 0 else 1.0
+        stellgroesse = _r6(SENSITIVITY_BELEGQUOTE * abs(belegquote_delta))
+        for name, vorzeichen in (
+            ("kappa", -richtung),
+            ("lam", -richtung),
+            ("alpha", richtung),
+            ("beta", richtung),
+            ("gamma", -richtung),
+        ):
+            alt = vorher_stellung.as_dict()[name]
+            ziel = alt + vorzeichen * stellgroesse
+            neu = _rate_limited_step(alt, ziel, RATE_LIMITS[name])
+            neu = _clip(neu, *BOUNDS[name])
+            kandidat[name] = neu
+            if neu != alt:
+                entscheidungen.append(
+                    Entscheidung(
+                        parameter=name,
+                        regel="BELEGQUOTE_PROPORTIONAL",
+                        alt=alt,
+                        neu=neu,
+                        begruendung=f"belegquote_delta={belegquote_delta:+.6f} "
+                        f"(outside deadband {DEADBAND_BELEGQUOTE}); "
+                        f"rate-limited step toward {ziel:.6f}.",
+                    )
+                )
+    else:
+        entscheidungen.append(
+            Entscheidung(
+                parameter="kappa,lam,alpha,beta,gamma",
+                regel="TOTBAND_BELEGQUOTE",
+                alt=None,
+                neu=None,
+                begruendung=f"|belegquote_delta|={abs(belegquote_delta):.6f} "
+                f"<= deadband {DEADBAND_BELEGQUOTE}; no change.",
+            )
+        )
+
+    # p2_retina_bonus: driven by reentry_score delta. Rationale: only trust
+    # a perceptual salience boost MORE when overall evidence continuity
+    # across reboots is itself improving; pull it back when continuity is
+    # degrading (be conservative about trusting a possibly-stale/rebooted
+    # perceptual channel exactly when the system's memory of its own past
+    # is getting shakier).
+    if not reentry_pointer_missing and abs(reentry_delta) > DEADBAND_REENTRY:
+        alt = vorher_stellung.p2_retina_bonus
+        richtung = 1.0 if reentry_delta > 0 else -1.0
+        stellgroesse = _r6(0.5 * abs(reentry_delta))
+        ziel = alt + richtung * stellgroesse
+        neu = _rate_limited_step(alt, ziel, RATE_LIMITS["p2_retina_bonus"])
+        neu = _clip(neu, *BOUNDS["p2_retina_bonus"])
+        kandidat["p2_retina_bonus"] = neu
+        if neu != alt:
+            entscheidungen.append(
+                Entscheidung(
+                    parameter="p2_retina_bonus",
+                    regel="REENTRY_PROPORTIONAL",
+                    alt=alt,
+                    neu=neu,
+                    begruendung=f"reentry_score_delta={reentry_delta:+.6f}; "
+                    f"rate-limited step toward {ziel:.6f}.",
+                )
+            )
+    elif reentry_pointer_missing:
+        entscheidungen.append(
+            Entscheidung(
+                parameter="p2_retina_bonus",
+                regel="C3_KEIN_STILLER_REENTRY_FALLBACK",
+                alt=vorher_stellung.p2_retina_bonus,
+                neu=vorher_stellung.p2_retina_bonus,
+                begruendung=f"n_reentry_mit_pointer={jetzt_mv.n_reentry_mit_pointer} < "
+                f"n_reentry={jetzt_mv.n_reentry}: pointer missing on at least one row "
+                "-- adjustment path REJECTED, holding previous value, no silent "
+                "genesis-style fallback.",
+            )
+        )
+    else:
+        entscheidungen.append(
+            Entscheidung(
+                parameter="p2_retina_bonus",
+                regel="TOTBAND_REENTRY",
+                alt=None,
+                neu=None,
+                begruendung=f"|reentry_score_delta|={abs(reentry_delta):.6f} "
+                f"<= deadband {DEADBAND_REENTRY}; no change.",
+            )
+        )
+
+    # p11_gate_threshold: driven jointly by tor_delta and belegquote_delta.
+    # Declining belegquote => tighten the gate (raise threshold) as a
+    # systemic caution response (garbage-in-garbage-out: if the workpackage
+    # evidence discipline is degrading, be stricter about what downstream
+    # effects get journaled as EXECUTED). tor_delta pulls the OTHER
+    # direction once inside the healthy band (see tor_score) -- a rising
+    # discrimination score means the gate is already doing useful work at
+    # its current threshold, so DON'T also tighten it further from the
+    # belegquote channel; net driver = belegquote term minus tor term.
+    gate_treiber = _r6((-belegquote_delta) - 0.3 * tor_delta)
+    if abs(gate_treiber) > DEADBAND_BELEGQUOTE:
+        alt = vorher_stellung.p11_gate_threshold
+        stellgroesse = _r6(SENSITIVITY_BELEGQUOTE * abs(gate_treiber))
+        richtung = 1.0 if gate_treiber > 0 else -1.0
+        ziel = alt + richtung * stellgroesse
+        neu = _rate_limited_step(alt, ziel, RATE_LIMITS["p11_gate_threshold"])
+        neu = _clip(neu, *BOUNDS["p11_gate_threshold"])
+
+        # Constraint #1 (partial, statically-checkable half): a threshold
+        # at/beyond the theoretical broadcast_value range for the CANDIDATE
+        # kappa would make the gate vacuously always-deny or always-allow --
+        # detectable from pure arithmetic on the two proposed values, so we
+        # DO check it, right here, before ever proposing the number.
+        kappa_fuer_check = kandidat.get("kappa", vorher_stellung.kappa)
+        bcast_lo, bcast_hi = _theoretischer_broadcast_bereich(kappa_fuer_check)
+        vacuous = neu >= bcast_hi or neu <= bcast_lo
+        if vacuous:
+            entscheidungen.append(
+                Entscheidung(
+                    parameter="p11_gate_threshold",
+                    regel="C1_MESSWERK_BLINDING",
+                    alt=alt,
+                    neu=alt,
+                    begruendung=f"candidate {neu:.6f} outside theoretical broadcast_value "
+                    f"range ({bcast_lo:.6f}, {bcast_hi:.6f}) for kappa={kappa_fuer_check:.6f} "
+                    "-- would make the P11 gate vacuously always-deny or always-allow "
+                    "(instrument-blinding). REJECTED, holding previous value.",
+                )
+            )
+            kandidat["p11_gate_threshold"] = alt
+        else:
+            kandidat["p11_gate_threshold"] = neu
+            if neu != alt:
+                entscheidungen.append(
+                    Entscheidung(
+                        parameter="p11_gate_threshold",
+                        regel="GATE_PROPORTIONAL",
+                        alt=alt,
+                        neu=neu,
+                        begruendung=f"gate_treiber={gate_treiber:+.6f} "
+                        f"(belegquote_delta={belegquote_delta:+.6f}, tor_delta={tor_delta:+.6f}); "
+                        f"rate-limited step toward {ziel:.6f}.",
+                    )
+                )
+    else:
+        entscheidungen.append(
+            Entscheidung(
+                parameter="p11_gate_threshold",
+                regel="TOTBAND_GATE",
+                alt=None,
+                neu=None,
+                begruendung=f"|gate_treiber|={abs(gate_treiber):.6f} "
+                f"<= deadband {DEADBAND_BELEGQUOTE}; no change.",
+            )
+        )
+
+    # --- Constraint #4: kein Effekt ohne Tor-Entscheidung --------------------
+    # Model this as an explicit precondition: if it is not satisfiable, the
+    # WHOLE candidate is advisory-only -- return it unchanged from
+    # vorher_stellung regardless of what was computed above (Part C is the
+    # actual enforcement point that would refuse to WRITE it; this is the
+    # pure-function-side mirror of that same refusal, so a caller who only
+    # ever calls regeln() and ignores Part C still gets the safe answer).
+    if not gate_precondition_ok:
+        entscheidungen.append(
+            Entscheidung(
+                parameter="*",
+                regel="C4_KEIN_EFFEKT_OHNE_TOR_ENTSCHEIDUNG",
+                alt=None,
+                neu=None,
+                begruendung="gate_precondition_ok=False -- no corresponding gate decision "
+                "on record for this adjustment path; output is advisory-only, "
+                "vorher_stellung returned unchanged.",
+            )
+        )
+        return vorher_stellung, tuple(entscheidungen)
+
+    # --- Constraint #5: Grenzen (outer, belt-and-suspenders re-check) -------
+    for name in PARAM_NAMES:
+        lo, hi = BOUNDS[name]
+        wert = kandidat[name]
+        if not (lo <= wert <= hi):
+            entscheidungen.append(
+                Entscheidung(
+                    parameter=name,
+                    regel="C5_GRENZEN_VERLETZT",
+                    alt=getattr(vorher_stellung, name),
+                    neu=getattr(vorher_stellung, name),
+                    begruendung=f"candidate {wert:.6f} outside hard bounds ({lo},{hi}) "
+                    "-- REJECTED (should be unreachable given Part B's own clipping; "
+                    "this is the outer gate catching a Part B bug, per task brief).",
+                )
+            )
+            kandidat[name] = getattr(vorher_stellung, name)
+
+    neue_stellung = Parameterstellung(schema=SCHEMA_STELLUNG, **kandidat)
+    return neue_stellung, tuple(entscheidungen)
+
+
+# ===========================================================================
+# PART C -- applier + audit (I/O). Everything here gated OFF by default.
+# ===========================================================================
+
+
+def ist_aktiv(conn: sqlite3.Connection, *, env: Mapping[str, str] | None = None) -> bool:
+    """Same gate pattern as p7_active()/P0's shadow gate: env override
+    ("0"/"1") wins outright, else persistent star_konfig flag, default OFF.
+    Read fresh every call."""
+    environ = env if env is not None else os.environ
+    override = environ.get(ENV_OVERRIDE)
+    if override in ("0", "1"):
+        return override == "1"
+    try:
+        row = conn.execute(
+            "SELECT wert FROM star_konfig WHERE schluessel=?", (KONFIG_FLAG_KEY,)
+        ).fetchone()
+    except sqlite3.Error:
+        return False
+    return (row[0] if row else "0") == "1"
+
+
+_REQUIRED_AUDIT_COLUMNS: dict[str, str] = {
+    "trigger_digest": "TEXT",
+    "regel": "TEXT",
+}
+
+
+def _tune_audit_columns(conn: sqlite3.Connection) -> set[str]:
+    return {row[1] for row in conn.execute("PRAGMA table_info(f2_grid10_tune_audit)")}
+
+
+def ensure_tune_audit_schema(db_path: str | Path, *, quelle: str) -> dict:
+    """Idempotent, additive-only migration on f2_grid10_tune_audit: adds
+    ``trigger_digest`` and ``regel`` columns if missing (the existing
+    columns -- id/ts/schluessel/alt/neu/quelle/session -- already cover old
+    value / new value / who; this adds "which measurement triggered it" and
+    "why", the two audit fields the task brief requires that the existing
+    schema does not yet have). Backs up the DB file first, runs
+    PRAGMA integrity_check before AND after, never touches/drops any
+    existing column or row. First-run gated: if both columns already exist,
+    this is a no-op (checked BEFORE the backup step, so a no-op run also
+    performs zero I/O beyond the PRAGMA table_info read)."""
+    have = _tune_audit_columns(sqlite3.connect(str(db_path)))
+    missing = [c for c in _REQUIRED_AUDIT_COLUMNS if c not in have]
+    if not missing:
+        return {"migrated": False, "reason": "columns already present"}
+
+    db_path = Path(db_path)
+    backup_path = db_path.with_name(
+        f"{db_path.name}.pre-alignment-controller-migration-"
+        f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.db"
+    )
+    shutil.copy2(db_path, backup_path)
+
+    conn = sqlite3.connect(str(db_path))
+    try:
+        pre = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        if pre != "ok":
+            raise AlignmentControllerError(
+                f"PRAGMA integrity_check before migration != ok: {pre!r}"
+            )
+        for col in missing:
+            coltype = _REQUIRED_AUDIT_COLUMNS[col]
+            conn.execute(f"ALTER TABLE f2_grid10_tune_audit ADD COLUMN {col} {coltype}")
+        conn.execute(
+            "INSERT INTO f2_grid10_tune_audit (ts, schluessel, alt, neu, quelle, session) "
+            "VALUES (?,?,?,?,?,?)",
+            (
+                _jetzt_iso(),
+                "_einrichtung_alignment_controller",
+                None,
+                f"spalten ergaenzt: {','.join(missing)} (backup={backup_path.name})",
+                quelle,
+                "migration",
+            ),
+        )
+        conn.commit()
+        post = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        if post != "ok":
+            raise AlignmentControllerError(
+                f"PRAGMA integrity_check after migration != ok: {post!r}"
+            )
+    finally:
+        conn.close()
+
+    return {"migrated": True, "columns_added": missing, "backup": str(backup_path)}
+
+
+def anwenden_stellung(
+    db_path: str | Path,
+    *,
+    alte_stellung: Parameterstellung,
+    neue_stellung: Parameterstellung,
+    entscheidungen: Sequence[Entscheidung],
+    trigger_digest: str,
+    quelle: str,
+    session: str = "alignment_controller",
+    env: Mapping[str, str] | None = None,
+) -> dict:
+    """Writes changed f2wp1207.tune.* keys to star_konfig AND one audit row
+    per PARAMETER decision (not per informational/no-op entry) to
+    f2_grid10_tune_audit. Gated behind ist_aktiv() -- if the flag is off,
+    this is a complete no-op (zero reads beyond the flag check itself,
+    zero writes) and returns immediately."""
+    conn = sqlite3.connect(str(db_path))
+    try:
+        if not ist_aktiv(conn, env=env):
+            return {"applied": False, "reason": "flag f2wp1207.alignment_controller is OFF"}
+
+        ensure_tune_audit_schema(db_path, quelle=quelle)
+        # ensure_tune_audit_schema opened/closed its own connection (needs
+        # a fresh backup-eligible handle); reopen ours since the migration
+        # may have changed the file out from under this connection's cache.
+        conn.close()
+        conn = sqlite3.connect(str(db_path))
+
+        ts = _jetzt_iso()
+        written = []
+        for name in PARAM_NAMES:
+            alt = getattr(alte_stellung, name)
+            neu = getattr(neue_stellung, name)
+            if alt == neu:
+                continue
+            key = f"{TUNE_KEY_PREFIX}{name}"
+            conn.execute(
+                "INSERT INTO star_konfig (schluessel, wert, typ, quelle, geaendert) VALUES (?,?,?,?,?) "
+                "ON CONFLICT(schluessel) DO UPDATE SET wert=excluded.wert, quelle=excluded.quelle, "
+                "geaendert=excluded.geaendert",
+                (key, repr(neu), "float", quelle, datetime.now(timezone.utc).timestamp()),
+            )
+            regel = next(
+                (e.regel for e in entscheidungen if e.parameter == name and e.neu == neu),
+                "UNBEKANNT",
+            )
+            conn.execute(
+                "INSERT INTO f2_grid10_tune_audit "
+                "(ts, schluessel, alt, neu, quelle, session, trigger_digest, regel) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (ts, key, repr(alt), repr(neu), quelle, session, trigger_digest, regel),
+            )
+            written.append(key)
+        conn.commit()
+        return {"applied": True, "keys_written": written}
+    finally:
+        conn.close()
+
+
+# ===========================================================================
+# CLI -- manual/test invocation only. Nothing above this point runs on
+# import; nothing below runs unless __main__.
+# ===========================================================================
+
+
+def _mv_to_json(mv: Messvektor) -> dict:
+    return asdict(mv)
+
+
+def _mv_from_json(d: dict) -> Messvektor:
+    return Messvektor(**d)
+
+
+def _stellung_to_json(s: Parameterstellung) -> dict:
+    return asdict(s)
+
+
+def _stellung_from_json(d: dict) -> Parameterstellung:
+    return Parameterstellung(**{k: d[k] for k in ("schema", *PARAM_NAMES)})
+
+
+def _cmd_messen(args: argparse.Namespace) -> int:
+    mv = read_messvektor(args.db, cell_observation_window=args.fenster)
+    print(json.dumps(_mv_to_json(mv), indent=2, sort_keys=False))
+    return 0
+
+
+def _cmd_schritt(args: argparse.Namespace) -> int:
+    vorher_mv = _mv_from_json(json.loads(Path(args.vorher_mv).read_text()))
+    vorher_stellung = _stellung_from_json(json.loads(Path(args.vorher_stellung).read_text()))
+    jetzt_mv = _mv_from_json(json.loads(Path(args.jetzt_mv).read_text()))
+    neue_stellung, entscheidungen = regeln(
+        vorher_mv,
+        vorher_stellung,
+        jetzt_mv,
+        human_turn_active=args.human_turn_active,
+        gate_precondition_ok=args.gate_precondition_ok,
+    )
+    out = {
+        "neue_stellung": _stellung_to_json(neue_stellung),
+        "entscheidungen": [asdict(e) for e in entscheidungen],
+        "objective_vorher": objective(vorher_mv),
+        "objective_jetzt": objective(jetzt_mv),
+    }
+    print(json.dumps(out, indent=2, sort_keys=False))
+    return 0
+
+
+def _cmd_anwenden(args: argparse.Namespace) -> int:
+    alte = _stellung_from_json(json.loads(Path(args.alte_stellung).read_text()))
+    neue = _stellung_from_json(json.loads(Path(args.neue_stellung).read_text()))
+    roh = json.loads(Path(args.entscheidungen).read_text())
+    entscheidungen = tuple(Entscheidung(**e) for e in roh)
+    result = anwenden_stellung(
+        args.db,
+        alte_stellung=alte,
+        neue_stellung=neue,
+        entscheidungen=entscheidungen,
+        trigger_digest=args.trigger_digest,
+        quelle=args.quelle,
+    )
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="f2wp1207_alignment_controller.py",
+        description="Deterministic alignment controller for GRID10 (standalone, unwired).",
+    )
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    p_messen = sub.add_parser("messen", help="Read a Messvektor from a DB path and print JSON.")
+    p_messen.add_argument("--db", required=True)
+    p_messen.add_argument("--fenster", type=int, default=CELL_OBSERVATION_WINDOW)
+    p_messen.set_defaults(func=_cmd_messen)
+
+    p_schritt = sub.add_parser("schritt", help="Pure controller step given two Messvektor JSON files + previous setting.")
+    p_schritt.add_argument("--vorher-mv", required=True)
+    p_schritt.add_argument("--vorher-stellung", required=True)
+    p_schritt.add_argument("--jetzt-mv", required=True)
+    p_schritt.add_argument("--human-turn-active", action="store_true")
+    p_schritt.add_argument("--gate-precondition-ok", action="store_true")
+    p_schritt.set_defaults(func=_cmd_schritt)
+
+    p_anwenden = sub.add_parser("anwenden", help="Write a computed setting to star_konfig + audit (gated by flag).")
+    p_anwenden.add_argument("--db", required=True)
+    p_anwenden.add_argument("--alte-stellung", required=True)
+    p_anwenden.add_argument("--neue-stellung", required=True)
+    p_anwenden.add_argument("--entscheidungen", required=True)
+    p_anwenden.add_argument("--trigger-digest", required=True)
+    p_anwenden.add_argument("--quelle", default="alignment_controller_cli")
+    p_anwenden.set_defaults(func=_cmd_anwenden)
+
+    return p
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+=== FILE: user-b-hypergrid/scripts/f2wp1207_epoch_reconciler.py ===
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+F2-WP-1207 P9: RuntimeEpoch lifecycle reconciler.
+
+Builds on the design doc `RUNTIME_EPOCH_LIFECYCLE_CLOSURE_20260904.md`
+(frankenstein-2.0, branch self-integration/wp1207-p9-runtime-epoch-lifecycle-20260904).
+That doc found: `f2_runtime_epoch.termination_reason` is written exactly once
+(always NULL, at INSERT time) and never updated afterwards -- no lifecycle
+transition exists. `predecessor_epoch_id` only chains when a witness_v3-style
+process writes an F2WP1207_REENTRY_MARKERS file, which nothing on this
+system currently does.
+
+This module is the reconciler that closes that gap: given a newly-minted
+RuntimeEpoch, it looks for OTHER open epochs under the same
+Installation/StateRoot, classifies how each one ended using ONLY mechanically
+checkable evidence, closes it retroactively, and writes a typed
+f2_reentry_record linking predecessor -> successor.
+
+HARD RULE (house discipline, restated from the design doc): termination_reason
+is evidence-bound, NEVER guessed. If no positive evidence exists for a
+stronger classification, the result is UNKNOWN_UNCLEAN_TERMINATION with a low
+confidence -- never a specific cause invented from conversation/anecdote.
+
+Evidence classes implemented, in priority order:
+  CLEAN_EXIT            -- a `zero_raum_ruf` "LEAVE session=<sid>" row exists
+                            for the predecessor's session_id, timestamped
+                            after the epoch started. `raum_verlassen()` is
+                            called ONLY from the SessionEnd branch of
+                            cmd_hook() in stern.py -- NOT from Stop (which
+                            fires after every turn and would falsely mark
+                            every epoch CLEAN_EXIT if used). Verified by
+                            reading cmd_hook() directly (see report), not
+                            assumed.
+  UNCLEAN_HOST_SHUTDOWN  -- a host boot boundary lies between the epoch's
+                            started_at and its close point. Two detection
+                            paths:
+                              (a) boot_id column recorded on the epoch row
+                                  (new epochs, post-migration) differs from
+                                  the current boot_id -- exact.
+                              (b) no boot_id recorded (historical epochs,
+                                  pre-migration) -- fall back to comparing
+                                  started_at against real `journalctl
+                                  --list-boots` boundaries. Approximate but
+                                  still real, mechanically read evidence,
+                                  never fabricated.
+  PROCESS_DEATH          -- no witness_v3 process exists anywhere on this
+                            system (checked: no such file found, no such
+                            process pattern). No real death-witness evidence
+                            source exists yet to reuse. Implemented ONLY as a
+                            liveness-gap heuristic: `zero_raum` row for the
+                            session is stuck at zustand IN ('arbeitet',
+                            'wartet') with no matching LEAVE ever recorded,
+                            AND no host boot boundary crossed (rules out the
+                            UNCLEAN_HOST_SHUTDOWN case). Confidence kept
+                            deliberately LOW (0.4) -- this is inference, not
+                            a verified kill signal. Documented honestly as a
+                            heuristic in the evidence blob's "method" field.
+  UNKNOWN_UNCLEAN        -- fallback. No evidence for any of the above.
+
+Schema changes (additive only, idempotent, tested against a DB copy before
+being applied to any live DB -- see migrate_schema()):
+  ALTER TABLE f2_runtime_epoch ADD COLUMN session_id            TEXT
+  ALTER TABLE f2_runtime_epoch ADD COLUMN boot_id               TEXT
+  ALTER TABLE f2_runtime_epoch ADD COLUMN ended_at              TEXT
+  ALTER TABLE f2_runtime_epoch ADD COLUMN termination_evidence  TEXT   -- JSON
+  ALTER TABLE f2_runtime_epoch ADD COLUMN successor_epoch_id    TEXT
+  ALTER TABLE f2_runtime_epoch ADD COLUMN confidence            REAL
+  CREATE TABLE IF NOT EXISTS f2_reentry_record ( ... )  -- new table, see DDL below
+
+Every public function is fail-closed: exceptions are caught, logged to
+stderr, and degrade to "no evidence found" / "no-op" rather than propagating
+and breaking a caller (hook process, CLI, or test harness).
+"""
+
+from __future__ import annotations
+
+import contextlib
+import datetime
+import hashlib
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+from typing import Optional
+
+SCHEMA_TAG_EPOCH = "F2WP1207_RUNTIME_EPOCH/v2"
+SCHEMA_TAG_REENTRY = "F2WP1207_REENTRY_RECORD/v1"
+
+_REENTRY_DDL = """
+CREATE TABLE IF NOT EXISTS f2_reentry_record (
+    reentry_id                      TEXT PRIMARY KEY,
+    entity_id                        TEXT,
+    installation_id                  TEXT NOT NULL,
+    state_root_id                    TEXT NOT NULL,
+    predecessor_epoch_id             TEXT REFERENCES f2_runtime_epoch(runtime_epoch_id),
+    successor_epoch_id               TEXT NOT NULL REFERENCES f2_runtime_epoch(runtime_epoch_id),
+    predecessor_termination_reason   TEXT,
+    predecessor_confidence           REAL,
+    predecessor_boot_id              TEXT,
+    successor_boot_id                TEXT,
+    last_grid10_frame_id             TEXT,
+    last_work_ref                    TEXT,
+    created_at                       TEXT NOT NULL,
+    schema                           TEXT NOT NULL
+);
+"""
+_REENTRY_IDX = (
+    "CREATE INDEX IF NOT EXISTS ix_f2_reentry_record_successor "
+    "ON f2_reentry_record (successor_epoch_id);"
+)
+_REENTRY_IDX2 = (
+    "CREATE INDEX IF NOT EXISTS ix_f2_reentry_record_predecessor "
+    "ON f2_reentry_record (predecessor_epoch_id);"
+)
+
+
+def _log(msg: str) -> None:
+    try:
+        sys.stderr.write(f"[f2wp1207_epoch_reconciler] {msg}\n")
+    except Exception:
+        pass
+
+
+def _jetzt_iso() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SCHEMA MIGRATION -- purely additive, idempotent, safe to run on a copy
+# repeatedly and on the live DB exactly once (subsequent runs are no-ops).
+# ═══════════════════════════════════════════════════════════════════════
+
+def _existing_columns(conn: sqlite3.Connection, table: str) -> set:
+    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def backfill_session_ids(conn: sqlite3.Connection, epochs_json_path: str) -> dict:
+    """Best-effort historical correlation: `f2_runtime_epoch` never stored
+    session_id (real gap, predates this reconciler). The ONLY place that
+    mapping still exists is the file-based F2WP1207_RUNTIME_EPOCHS JSON
+    (session_id -> {runtime_epoch_id, ...}), which only holds each session's
+    CURRENT/latest epoch (overwritten on force_new) -- so this is a partial,
+    honest backfill, not a complete reconstruction. Only fills rows where
+    session_id IS NULL (never overwrites a value written by a live path).
+    Idempotent, additive, safe on a copy or live."""
+    try:
+        with open(epochs_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        return {"ok": False, "error": f"cannot read {epochs_json_path}: {e}", "updated": 0}
+    updated = 0
+    try:
+        for session_id, entry in data.items():
+            epoch_id = entry.get("runtime_epoch_id")
+            if not epoch_id:
+                continue
+            cur = conn.execute(
+                "UPDATE f2_runtime_epoch SET session_id=? "
+                "WHERE runtime_epoch_id=? AND session_id IS NULL",
+                (session_id, epoch_id),
+            )
+            updated += cur.rowcount
+        conn.commit()
+        return {"ok": True, "updated": updated}
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return {"ok": False, "error": str(e), "updated": updated}
+
+
+def migrate_schema(conn: sqlite3.Connection) -> dict:
+    """Additive-only migration. Returns a dict of what was actually changed
+    (idempotent -- re-running reports empty `added`)."""
+    added = []
+    try:
+        cols = _existing_columns(conn, "f2_runtime_epoch")
+    except Exception as e:
+        return {"ok": False, "error": f"f2_runtime_epoch not found: {e}", "added": []}
+
+    new_cols = [
+        ("session_id", "TEXT"),
+        ("boot_id", "TEXT"),
+        ("ended_at", "TEXT"),
+        ("termination_evidence", "TEXT"),
+        ("successor_epoch_id", "TEXT"),
+        ("confidence", "REAL"),
+    ]
+    for name, coltype in new_cols:
+        if name not in cols:
+            conn.execute(f"ALTER TABLE f2_runtime_epoch ADD COLUMN {name} {coltype}")
+            added.append(f"f2_runtime_epoch.{name}")
+
+    conn.execute(_REENTRY_DDL)
+    conn.execute(_REENTRY_IDX)
+    conn.execute(_REENTRY_IDX2)
+    if not conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='f2_reentry_record'"
+    ).fetchone():
+        added.append("TABLE f2_reentry_record (unexpected: create failed silently)")
+    conn.commit()
+    return {"ok": True, "added": added}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# EVIDENCE SOURCES
+# ═══════════════════════════════════════════════════════════════════════
+
+def current_boot_id() -> Optional[str]:
+    try:
+        with open("/proc/sys/kernel/random/boot_id", "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception:
+        return None
+
+
+def _real_boot_boundaries(limit: int = 40) -> list:
+    """Real, mechanically-read boot history via `journalctl --list-boots`.
+    Returns a list of (boot_id_short, first_entry_iso) tuples, oldest first.
+    Best-effort: empty list if journalctl is unavailable (never fabricated)."""
+    try:
+        out = subprocess.run(
+            ["journalctl", "--list-boots", "--no-pager"],
+            capture_output=True, text=True, timeout=5.0,
+        )
+        if out.returncode != 0:
+            return []
+        boundaries = []
+        # Format: " -1 <boot_id_32hex> <first_entry...> <last_entry...>"
+        line_re = re.compile(r"^\s*(-?\d+)\s+([0-9a-f]{32})\s+(.+)$")
+        for line in out.stdout.splitlines():
+            m = line_re.match(line)
+            if not m:
+                continue
+            boot_id_hex, rest = m.group(2), m.group(3)
+            boundaries.append((boot_id_hex, rest.strip()))
+        return boundaries[-limit:]
+    except Exception as e:
+        _log(f"_real_boot_boundaries failed (non-fatal, treated as no boundary evidence): {e}")
+        return []
+
+
+def _parse_iso(ts: str) -> Optional[datetime.datetime]:
+    if not ts:
+        return None
+    try:
+        t = ts.replace("Z", "+00:00")
+        dt = datetime.datetime.fromisoformat(t)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt.astimezone(datetime.timezone.utc)
+    except Exception:
+        return None
+
+
+def boot_boundary_crossed_by_timestamp(started_at_iso: str, end_bound_iso: Optional[str]) -> Optional[dict]:
+    """Historical-epoch fallback (no boot_id column value to compare):
+    real journalctl boot list vs. real timestamps. Returns evidence dict if
+    a host boot's first-entry time is UNPARSEABLE against started_at in a way
+    we can trust -- kept conservative: only returns a positive match when we
+    can parse a boot's first-entry local timestamp AND it's plausible. Given
+    journalctl's list-boots timestamps carry a local-tz string (not
+    trivially portable), this is intentionally best-effort and returns None
+    (no claim) rather than guess when parsing is ambiguous."""
+    # Deliberately not implemented as a general date-string parser -- risk of
+    # silently misclassifying due to timezone/format edge cases outweighs
+    # the value for the historical (pre-migration) backlog. The exact/strict
+    # path (boot_id column comparison) covers everything going forward.
+    return None
+
+
+def find_clean_exit(conn: sqlite3.Connection, session_id: Optional[str], after_iso: str) -> Optional[dict]:
+    """CLEAN_EXIT evidence: a real `zero_raum_ruf` LEAVE row for this
+    session_id, written ONLY by raum_verlassen() which is called ONLY from
+    the SessionEnd branch of cmd_hook() -- verified by reading stern.py
+    directly (cmd_hook() SessionEnd branch: zyklus_schliessen + raum_verlassen;
+    Stop branch: zyklus_schliessen only, no raum_verlassen). Using LEAVE
+    specifically (not the zyklus_schliessen turn marker, which ALSO fires on
+    every ordinary Stop and would over-match)."""
+    if not session_id:
+        return None
+    try:
+        after_ts = _parse_iso(after_iso)
+        after_epoch = after_ts.timestamp() if after_ts else 0.0
+        row = conn.execute(
+            "SELECT id, ts, text FROM zero_raum_ruf "
+            "WHERE von=? AND text LIKE 'LEAVE %' AND ts >= ? "
+            "ORDER BY ts ASC LIMIT 1",
+            (session_id, after_epoch - 5.0),  # small slack for clock skew
+        ).fetchone()
+        if row:
+            return {
+                "source": "zero_raum_ruf",
+                "row_id": row[0],
+                "ts": row[1],
+                "text": row[2],
+                "method": "LEAVE row written by raum_verlassen(), SessionEnd-only call site",
+            }
+        return None
+    except Exception as e:
+        _log(f"find_clean_exit failed session_id={session_id}: {e}")
+        return None
+
+
+def find_liveness_gap(conn: sqlite3.Connection, session_id: Optional[str]) -> Optional[dict]:
+    """PROCESS_DEATH heuristic input: zero_raum row stuck at zustand IN
+    ('arbeitet','wartet') for this session with no LEAVE ever recorded.
+    zero_raum is a single-row-per-session table (PRIMARY KEY session_id) --
+    if the process died mid-work, nobody ever updates this row again, so it
+    stays at its last live state forever. This is a real, queryable signal,
+    but it is NOT a verified kill/PID check (no witness_v3 process exists on
+    this system -- checked, see module docstring) -- confidence is kept low
+    by the caller."""
+    if not session_id:
+        return None
+    try:
+        row = conn.execute(
+            "SELECT zustand, seit FROM zero_raum WHERE session_id=?", (session_id,)
+        ).fetchone()
+        if not row:
+            return None
+        zustand, seit = row
+        if zustand not in ("arbeitet", "wartet"):
+            return None
+        leave = conn.execute(
+            "SELECT id FROM zero_raum_ruf WHERE von=? AND text LIKE 'LEAVE %' LIMIT 1",
+            (session_id,),
+        ).fetchone()
+        if leave:
+            return None  # a LEAVE exists somewhere -- not a liveness gap
+        return {
+            "source": "zero_raum",
+            "zustand": zustand,
+            "seit": seit,
+            "method": "heuristic: room row stuck at non-'frei' state, no LEAVE ever recorded "
+                      "(no witness_v3/PID check available on this system -- see module docstring)",
+        }
+    except Exception as e:
+        _log(f"find_liveness_gap failed session_id={session_id}: {e}")
+        return None
+
+
+def classify_predecessor(
+    conn: sqlite3.Connection, epoch_row: dict, new_boot_id: Optional[str],
+) -> tuple:
+    """Returns (termination_reason, evidence_dict, confidence). Evidence-bound
+    per house discipline -- never guesses a reason without a matching
+    evidence dict. Priority: CLEAN_EXIT > UNCLEAN_HOST_SHUTDOWN > PROCESS_DEATH
+    > UNKNOWN_UNCLEAN."""
+    session_id = epoch_row.get("session_id")
+    started_at = epoch_row.get("started_at")
+    old_boot_id = epoch_row.get("boot_id")
+
+    clean = find_clean_exit(conn, session_id, started_at)
+    if clean:
+        return "CLEAN_EXIT", clean, 0.95
+
+    if old_boot_id and new_boot_id and old_boot_id != new_boot_id:
+        evidence = {
+            "source": "boot_id_column",
+            "predecessor_boot_id": old_boot_id,
+            "current_boot_id": new_boot_id,
+            "method": "exact: epoch's recorded /proc/sys/kernel/random/boot_id differs from "
+                      "current boot_id -- a host reboot happened between epoch start and now",
+        }
+        return "UNCLEAN_HOST_SHUTDOWN", evidence, 0.85
+    if not old_boot_id:
+        # Historical epoch, pre-migration -- no boot_id was ever recorded for
+        # it. We do NOT guess; see boot_boundary_crossed_by_timestamp()
+        # docstring for why the timestamp-fallback path stays conservative.
+        fallback = boot_boundary_crossed_by_timestamp(started_at, None)
+        if fallback:
+            return "UNCLEAN_HOST_SHUTDOWN", fallback, 0.6
+
+    gap = find_liveness_gap(conn, session_id)
+    if gap:
+        return "PROCESS_DEATH", gap, 0.4
+
+    return "UNKNOWN_UNCLEAN_TERMINATION", {
+        "source": "none",
+        "method": "no CLEAN_EXIT/boot-boundary/liveness-gap evidence found for this "
+                   "session_id/epoch -- reason left unknown rather than guessed",
+    }, 0.2
+
+
+def _last_grid10_frame(conn: sqlite3.Connection, runtime_epoch_id: str) -> Optional[str]:
+    try:
+        row = conn.execute(
+            "SELECT frame_id FROM f2_grid10_frame WHERE runtime_epoch_id=? "
+            "ORDER BY opened_at DESC LIMIT 1",
+            (runtime_epoch_id,),
+        ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+def _last_work_ref(conn: sqlite3.Connection, session_id: Optional[str]) -> Optional[str]:
+    """Real, reconstructable pointer to the last persisted work state for a
+    session -- the most recent `turns` row (not fabricated content, just a
+    reference the caller can dereference)."""
+    if not session_id:
+        return None
+    try:
+        row = conn.execute(
+            "SELECT turn_id FROM turns WHERE session_id=? ORDER BY ts DESC LIMIT 1",
+            (session_id,),
+        ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# RECONCILE
+# ═══════════════════════════════════════════════════════════════════════
+
+def reconcile(
+    conn: sqlite3.Connection,
+    installation_id: str,
+    state_root_id: str,
+    new_epoch_id: str,
+    new_session_id: Optional[str] = None,
+    new_boot_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
+) -> list:
+    """Finds OPEN epochs (ended_at IS NULL) for the same Installation/
+    StateRoot other than new_epoch_id, classifies + closes each retroactively,
+    writes a typed f2_reentry_record per closed predecessor linking it to
+    new_epoch_id. Returns a list of {epoch_id, reason, confidence, evidence}
+    dicts, one per epoch actually closed. Fail-closed: any exception aborts
+    (rolls back) and returns []; never leaves a half-written state."""
+    closed = []
+    try:
+        rows = conn.execute(
+            "SELECT runtime_epoch_id, session_id, started_at, boot_id "
+            "FROM f2_runtime_epoch "
+            "WHERE installation_id=? AND state_root_id=? "
+            "AND runtime_epoch_id != ? AND ended_at IS NULL",
+            (installation_id, state_root_id, new_epoch_id),
+        ).fetchall()
+        if not rows:
+            return []
+        now = _jetzt_iso()
+        conn.execute("BEGIN")
+        for runtime_epoch_id, session_id, started_at, boot_id in rows:
+            epoch_row = {
+                "runtime_epoch_id": runtime_epoch_id, "session_id": session_id,
+                "started_at": started_at, "boot_id": boot_id,
+            }
+            reason, evidence, confidence = classify_predecessor(conn, epoch_row, new_boot_id)
+            evidence_json = json.dumps(evidence, ensure_ascii=False)
+            conn.execute(
+                "UPDATE f2_runtime_epoch SET ended_at=?, termination_reason=?, "
+                "termination_evidence=?, successor_epoch_id=?, confidence=? "
+                "WHERE runtime_epoch_id=?",
+                (now, reason, evidence_json, new_epoch_id, confidence, runtime_epoch_id),
+            )
+            reentry_id = uuid.uuid4().hex
+            conn.execute(
+                "INSERT INTO f2_reentry_record "
+                "(reentry_id, entity_id, installation_id, state_root_id, "
+                " predecessor_epoch_id, successor_epoch_id, predecessor_termination_reason, "
+                " predecessor_confidence, predecessor_boot_id, successor_boot_id, "
+                " last_grid10_frame_id, last_work_ref, created_at, schema) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    reentry_id, entity_id, installation_id, state_root_id,
+                    runtime_epoch_id, new_epoch_id, reason,
+                    confidence, boot_id, new_boot_id,
+                    _last_grid10_frame(conn, runtime_epoch_id),
+                    _last_work_ref(conn, session_id),
+                    now, SCHEMA_TAG_REENTRY,
+                ),
+            )
+            closed.append({
+                "epoch_id": runtime_epoch_id, "session_id": session_id,
+                "reason": reason, "confidence": confidence, "evidence": evidence,
+                "reentry_id": reentry_id,
+            })
+        conn.commit()
+        return closed
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        _log(f"reconcile failed, rolled back, 0 epochs closed: {e}")
+        return []
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# CLI (standalone testing + future live-bridge target)
+# ═══════════════════════════════════════════════════════════════════════
+
+def _cli_migrate(db_path: str) -> int:
+    with contextlib.closing(sqlite3.connect(db_path)) as conn:
+        result = migrate_schema(conn)
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def _cli_reconcile(db_path: str, payload: dict) -> int:
+    with contextlib.closing(sqlite3.connect(db_path)) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        closed = reconcile(
+            conn,
+            installation_id=payload["installation_id"],
+            state_root_id=payload["state_root_id"],
+            new_epoch_id=payload["new_epoch_id"],
+            new_session_id=payload.get("new_session_id"),
+            new_boot_id=payload.get("new_boot_id") or current_boot_id(),
+            entity_id=payload.get("entity_id"),
+        )
+    print(json.dumps({"ok": True, "closed": closed}, ensure_ascii=False))
+    return 0
+
+
+def main(argv: list) -> int:
+    if len(argv) < 2:
+        print("usage: f2wp1207_epoch_reconciler.py migrate|reconcile --db PATH [json-payload-on-stdin]",
+              file=sys.stderr)
+        return 2
+    cmd = argv[1]
+    db_path = None
+    for i, a in enumerate(argv):
+        if a == "--db" and i + 1 < len(argv):
+            db_path = argv[i + 1]
+    if not db_path:
+        print("missing --db PATH", file=sys.stderr)
+        return 2
+    if cmd == "migrate":
+        return _cli_migrate(db_path)
+    elif cmd == "backfill":
+        epochs_json = None
+        for i, a in enumerate(argv):
+            if a == "--epochs-json" and i + 1 < len(argv):
+                epochs_json = argv[i + 1]
+        if not epochs_json:
+            print("missing --epochs-json PATH", file=sys.stderr)
+            return 2
+        with contextlib.closing(sqlite3.connect(db_path)) as conn:
+            result = backfill_session_ids(conn, epochs_json)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("ok") else 1
+    elif cmd == "reconcile":
+        try:
+            payload = json.loads(sys.stdin.read() or "{}")
+        except Exception as e:
+            print(json.dumps({"ok": False, "error": f"bad json on stdin: {e}"}))
+            return 1
+        try:
+            return _cli_reconcile(db_path, payload)
+        except Exception as e:
+            print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+            return 1
+    else:
+        print(f"unknown command: {cmd}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

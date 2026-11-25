@@ -1,0 +1,517 @@
+=== DOC: OMEGA_GRID_GRF_Hyperposition_ClayCode_Gesamtdossier_2026.pdf, pages 34-44 of 64 ===
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ OMEGA / FRANKENSTEIN
+
+ EXTERNALIZED COGNITION
+ Das Gehirn außerhalb des LLM
+Ein detailliertes Gesamtkonzept für Mikro-Kognition, persistenten Zustand,
+modulare Spezialisten, GRID-Selektion, dynamische Kontextkompilation und
+ Reentry
+
+KANONISCHE KERNFORMEL
+
+Mikro-Kognition + persistenter Zustand + modulare Spezialisten + GRID-Selektion + dynamische Kontextkompilation
++ Reentry
+
+ Die Einheit der Kognition ist nicht der Prompt, nicht der Turn und nicht das einzelne Modell.
+ Die Einheit ist die rekurrente Zustandsbahn des Gesamtsystems.
+ Gesamtkonzept aus dem Gesprächsverlauf und der bisherigen TITAN / GRID / UnifiedDB / GRF / OMEGA-Linie.
+
+ Stand: 13. September 2026
+
+ OMEGA / Frankenstein | 1
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+Inhalt und Leselogik
+Dieses Whitepaper beschreibt nicht lediglich ein Agentensystem. Es zerlegt die
+heute im Tokenstrom vermischten kognitiven Funktionen in explizite Zustandsräume
+und Operatoren und setzt sie als geschlossenen, rekurrenten Prozess wieder
+zusammen.
+• 1. Executive Thesis - vom LLM-zentrierten Agenten zur externalisierten Kognition
+• 2. Das Ausgangsproblem - im Tokenstrom ist heute fast alles vermischt
+• 3. Die sechs Bausteine der kanonischen OMEGA-Kognitionsschleife
+• 4. Architekturherkunft - TITAN, UnifiedDB, GRID10, GWT/HCU, GRF und OMEGA
+• 5. Epistemic Operational Kernel - Intelligenz als messbare Mikrooperation
+• 6. Persistenter kognitiver Zustand - das eigentliche Langzeitgedächtnis
+• 7. Mikro-Kognition - kleine Zustandsoperationen statt langer Monologe
+• 8. Modulare Spezialisten - kognitive Population statt Agentenfarm
+• 9. GRID als Selektions-, Regulations- und Credit-Schicht
+• 10. Dynamische Kontextkompilation - der Systemprompt verschwindet als Wissensspeicher
+• 11. Das LLM-Organ - schlanke Schnittstelle für semantische Transformation
+• 12. Reentry - kausale Kontinuität zwischen Denkakten
+• 13. Memory ohne Retrieval als Primärmechanismus
+• 14. TITAN neu gefasst - persistente Operatoren, Relationen und Konsolidierung
+• 15. Weltmodelle, Hypothesen, Falsifikation und alternative Welten
+• 16. Experimentieren, Informationsgewinn und aktive Kausalitätsbildung
+• 17. Ziele, Planung, Risiko und dynamischer Planungshorizont
+• 18. Konzeptdemografie und endogene Ontologieentwicklung
+• 19. Identität, Persönlichkeit und temporäre Selbste als Attraktoren
+• 20. Effect Gate, Root of Trust und plastische Freiheit
+• 21. Multi-Timescale Learning - GRID, TITAN/LCME und LoRA
+• 22. Cognitive Efficiency Vector - Zielmetrik direkt in GRID
+• 23. Deterministische Dynamik bei emergenter Organisation
+• 24. Datenobjekte, Receipts und Provenance
+• 25. Vollständiger Runtime-Zyklus
+• 26. Experimentelle Falsifikation der Architekturthese
+• 27. Implementierungsroadmap
+• 28. Anti-Patterns und Nicht-Ziele
+• 29. Schlussdefinition - was Frankenstein / OMEGA dann ist
+• Anhang A-C. Formales Modell, Modulverträge und Beispielturn
+
+ STATUSDISZIPLIN
+
+ Das Dokument unterscheidet bewusst zwischen bereits vorhandenen Mechanismen der aktuellen Architektur und der
+ hier beschriebenen Zielarchitektur. Tausende Module, der vollständige Context Compiler, der Epistemic Operational
+ Kernel, der Cognitive Efficiency Vector und langsame LoRA-Konsolidierung sind Zielbausteine und dürfen nicht als
+ bereits live bewiesen verstanden werden.
+
+ OMEGA / Frankenstein | 2
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ TEIL I - ARCHITEKTURTHESE
+
+1. Executive Thesis - vom LLM-zentrierten Agenten zur
+externalisierten Kognition
+Heute muss ein LLM in einem einzigen Tokenstrom gleichzeitig Wissen, Sprache,
+Logik, Persona, momentanes Ziel, Memory, Safety, Kontext, Strategie, Hypothesen,
+Unsicherheit und Handlungsplanung repräsentieren. Selbst moderne
+Agentenschichten ändern daran häufig wenig: Sie suchen Text, hängen ihn an einen
+Prompt und hoffen, dass der nächste Forward Pass den richtigen internen Zustand
+rekonstruiert.
+Die OMEGA-Zielarchitektur zieht diese Funktionen auseinander. Langfristiger Zustand, aktive Hypothesen, offene
+Widersprüche, Zielhierarchie, Vertrauenswerte, gescheiterte Strategien, kausale Modelle, Effect Authority und Reentry-
+Kontinuität werden außerhalb des LLM persistent und maschinenlesbar gehalten. Das Modell übernimmt vor allem die
+Operationen, in denen große Transformer besonders stark sind: semantische Transformation, Abstraktion, Simulation,
+Analogiebildung, Schlussfolgerung und Sprache.
+
+ HEUTE
+ Tokenstrom = Wissen + Memory + Persona + Regeln + Ziel + Kontext + Strategie + Safety + Sprache
+
+ ZIEL
+ Persistent Cognitive State + GRID + Module + Context Compiler
+ |
+ v
+ LLM semantic organ
+ |
+ v
+ candidate cognition
+ |
+ v
+ GRID
+
+ KERNVERSCHIEBUNG
+
+ Das LLM muss den langfristigen kognitiven Zustand nicht mehr selbst tragen. Es bekommt für jeden Denkakt genau
+ diejenige Projektion des bereits vorhandenen Systemzustands, die für diesen Denkakt kausal relevant ist.
+
+1.1 Intelligenz wird zur Eigenschaft eines geschlossenen Prozesses
+Die Zielgröße ist nicht die Qualität eines einzelnen Outputs. Intelligenz wird als Qualität einer fortlaufenden Zustandsbahn
+operationalisiert:
+
+ Perception -> Hypothesis -> Prediction -> Intervention -> Error
+ -> Learning -> Abstraction -> Transfer -> Reentry -> ...
+
+Jede Kante ist messbar. Beobachtung kann von Interpretation getrennt werden. Hypothesen können Evidenz und
+Gegenbelege besitzen. Aktionen können nach erwartetem Informationsgewinn gewählt werden. Vorhersagen können
+gegen reale Folgen geprüft werden. Abstraktionen können auf neue Situationen getestet werden. Reentry kann zeigen, ob
+Lernen den nächsten Turn tatsächlich verändert.
+
+ OMEGA / Frankenstein | 3
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+2. Das Ausgangsproblem - im Tokenstrom ist heute fast alles
+vermischt
+Funktion Heute häufig Externalisierte Zielarchitektur
+
+Langzeitwissen Gewichte, Prompt, RAG-Fragmente strukturierter persistent state + konsolidierte
+ Mechanismen
+
+Momentanes Ziel Textinstruktion Goal-State mit Evidenz, Priorität,
+ Abhängigkeiten
+
+Hypothesen implizite Tokenfolge typisierte Hypothesenobjekte mit Scope,
+ Confidence, Evidenz +/-
+
+Memory-Vertrauen vom Modell geschätzt Provenance, Source Trust, Verification State
+
+Widersprüche müssen im Kontext erinnert werden persistenter contradiction graph
+
+Strategieversagen wird leicht vergessen negative evidence + strategy inhibition
+
+Unsicherheit sprachlich oder latent expliziter Zustand; UNKNOWN != 0 !=
+ ERROR
+
+Persona Systemprompt dynamischer Attraktor aus Identität,
+ Geschichte, Beziehungen, Zielen
+
+Safety / Effects Textregeln plus Toolpolicy separate Effect Authority und Root-Gates
+
+Kontext retrieved text kompilierte Projektion aus aktuellem
+ Systemzustand
+
+Reasoning LLM intern LLM plus externe Mikrooperatoren und GRID-
+ Regulation
+
+Die Entkopplung macht Fehler lokalisierbar. Wenn eine Handlung scheitert, kann geprüft werden, ob Wahrnehmung,
+Objektzuordnung, Kausalregel, Zielannahme, Planung oder Ausführung falsch war. Es muss nicht der gesamte Prompt
+oder das gesamte Weltmodell verworfen werden.
+
+ OMEGA / Frankenstein | 4
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+3. Die sechs Bausteine der kanonischen OMEGA-
+Kognitionsschleife
+ KANONISCHE FORMEL
+
+ Mikro-Kognition + persistenter Zustand + modulare Spezialisten + GRID-Selektion + dynamische Kontextkompilation
+ + Reentry
+
+ Baustein Funktion Ohne ihn passiert...
+
+ Mikro-Kognition kleine, typisierte Zustandsoperationen das System fällt wieder auf monolithisches
+ LLM-Thinking zurück
+
+ Persistenter Zustand Wissen, Unsicherheit, Ziele, Regeln und jede Anfrage muss die Welt aus Text
+ Verlauf überleben Turns rekonstruieren
+
+ Modulare Spezialisten parallele, verschiedenartige Kandidaten und zu wenig epistemische Vielfalt und schlechte
+ Messungen Fehlerspezialisierung
+
+ GRID-Selektion Competition, Broadcast, Uptake, Regulation Module besitzen keine globale
+ und Credit Relevanzordnung
+
+ Dynamische Kontextkompilation minimal relevante Projektion in das jeweilige das LLM wird mit globalem Zustand überladen
+ Denkorgan
+
+ Reentry akzeptierte Änderung wird Startzustand des Lernen bleibt Dokumentation statt Kausalität
+ nächsten Zyklus
+
+3.1 Die vollständige Schleife
+ S_t persistent cognitive state
+ |
+ +--> micro-operations m_1...m_n
+ | |
+ | +--> modular specialists -> proposals P_t
+ | |
+ | v
+ | GRID / GWT / HCU
+ | compete -> select -> broadcast
+ | |
+ | v
+ | Context Compiler
+ | |
+ | v
+ | LLM organ
+ | |
+ | candidate cognition
+ | |
+ +<------------------------- GRID admission
+ |
+ v
+ S_(t+1) -> mandatory REENTRY
+
+Die Schleife ist wichtiger als jedes einzelne Organ. Ein stärkeres LLM verbessert nur einen Operator. Erst die
+geschlossene Zustandsdynamik erzeugt Kontinuität, Lernen und systematische Selbstkorrektur.
+
+4. Architekturherkunft - TITAN, UnifiedDB, GRID10,
+GWT/HCU, GRF und OMEGA
+Die Zielarchitektur entsteht nicht aus dem Nichts. Die bisherige Linie enthält bereits mehrere notwendige Bausteine:
+persistente UnifiedDB-Zustände, GRID10 als integrierten Turn-Lifecycle, Competition / Selection / Broadcast / Uptake /
+Reentry, GRF als explizite epistemische Projektion mit alternativen Welten und TITAN-Mechanismen für langlebige
+Kontinuität und assoziative Verdichtung. Die Zielarchitektur zieht diese Linien zu einem einheitlichen kognitiven
+Betriebssystem zusammen.
+
+ OMEGA / Frankenstein | 5
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+Linie Bereits vorhandene Idee Zielerweiterung
+
+UnifiedDB eine gemeinsame persistente Zustandsbasis Cognitive State Store mit typisierter
+ Epistemik, Provenance und Receipts
+
+GRID10 recurrent turn lifecycle und pointer Regulationskern für Mikrooperationen, Credit
+ und CEV
+
+GWT/HCU Competition, Selection, Broadcast knapper globaler Arbeitsraum über großer
+ Modulpopulation
+
+GRF Evidenz, Hypothese, Unsicherheit, alternative allgemeiner Epistemic Operational Kernel
+ worlds
+
+TITAN assoziative Langzeitkontinuität und persistente Mechanismen, Operatoren,
+ Verdichtung Konzeptökologie und Konsolidierung
+
+OMEGA Assembly über bestehende Organe rekurrenter Gesamtorganismus; LLM ist
+ austauschbares Organ
+
+ WICHTIG
+
+ Die Zielarchitektur baut keinen zweiten Turn-Loop, keine zweite Wahrheit und keine zweite Effect Authority. Sie
+ erweitert die bestehende Rekurrenz um strukturierte Mikrooperationen, Zustandsverträge, Credit und
+ Kontextkompilation.
+
+ OMEGA / Frankenstein | 6
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ TEIL II - EPISTEMISCHE MIKRO-KOGNITION
+
+5. Epistemic Operational Kernel - Intelligenz als messbare
+Mikrooperation
+Der lange Zieltext lässt sich auf eine kleine Zahl wiederverwendbarer Operatoren
+reduzieren. Diese Operatoren sind keine Philosophie, sondern Maschinenzustände
+plus Übergangsregeln.
+
+ Operator Maschinenbedeutung
+
+ OBSERVE erfasst, was tatsächlich messbar oder sichtbar ist; Interpretation
+ bleibt getrennt
+
+ SEGMENT bildet vorläufige Objekte, Regionen, Gruppen und Grenzen
+
+ DIFFERENCE vergleicht vorher/nachher und unverändert/verändert
+
+ HYPOTHESIZE erzeugt testbare Erklärungen mit Scope und Unsicherheit
+
+ PREDICT bindet Hypothese an erwartbaren Folgezustand
+
+ FALSIFY sucht aktiv nach Beobachtungen, die eine Hypothese
+ unterscheiden oder widerlegen
+
+ INTERVENE wählt eine minimale Handlung als Messung oder Zielaktion
+
+ MEASURE_ERROR bestimmt Prediction Error und strukturelle Relevanz
+
+ LOCAL_UPDATE ändert nur betroffene Modellstruktur
+
+ COMPRESS fasst Episoden zu Regeln und Regeln zu Mechanismen
+
+ TRANSFER prüft Mechanismen in neuer Situation ohne blindes Kopieren
+
+ PLAN erzeugt horizonabhängige Kandidaten auf Basis des aktuellen
+ Modells
+
+ REENTER macht akzeptierte Änderung kausal wirksam im nächsten Turn
+
+5.1 Typisierte Hypothese
+ H_i = {
+ hypothesis,
+ confidence,
+ scope,
+ evidence_positive[],
+ evidence_negative[],
+ prediction,
+ falsifier,
+ dependencies[],
+ status
+ }
+
+Die Beobachtung bleibt unverändert, wenn die Hypothese scheitert. Aktualisiert wird das Modell. Diese Invariante
+verhindert, dass das System Evidenz nachträglich an seine Erklärung anpasst.
+
+5.2 Aktive Experimente
+ prediction_t = H_i(S_t, a_t)
+ O_(t+1) = observe(world after a_t)
+ epsilon_t = D(prediction_t, O_(t+1))
+ H_i^(t+1) = U(H_i^t, epsilon_t, evidence_t)
+
+Die Auswahl einer Aktion kann operationalisiert werden als:
+
+ OMEGA / Frankenstein | 7
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ a* = argmax_a [ ExpectedInformationGain(a)
+ + ExpectedGoalProgress(a)
+ - Risk(a)
+ - Cost(a) ]
+
+ FOLGE
+
+ "Das System probiert gezielt aus" ist damit kein narrativer Anspruch mehr. Es ist eine überprüfbare Auswahlregel
+ über einen expliziten Zustandsraum.
+
+6. Persistenter kognitiver Zustand - das eigentliche
+Langzeitgedächtnis
+Der wichtigste Schritt der Externalisierung ist ein State Store, der nicht nur Dokumente hält, sondern den aktuellen
+kognitiven Zustand selbst. Der nächste Denkakt beginnt nicht bei einem Prompt, sondern bei diesem Zustand.
+
+ State-Domäne Beispiele Zeitskala
+
+ Observation State Messwerte, sichtbare Objekte, Deltas, Millisekunden bis Sekunden
+ unveränderte Strukturen
+
+ Epistemic State Hypothesen, Evidenz, Gegenbelege, Sekunden bis Tage
+ Unsicherheit, offene Fragen
+
+ Causal State Interventionen, Vorhersagen, Wirkungen, Sekunden bis Wochen
+ Bedingungen, Gültigkeitsbereiche
+
+ Goal State Zielhypothesen, Progress, Abhängigkeiten, Sekunden bis Projekte
+ Prioritäten
+
+ Strategy State aktive/gescheiterte Strategien, Inhibition, Turns bis Tage
+ Sackgassen
+
+ Self/Social State Identitätskontinuität, Beziehungen, Rollen, Tage bis Jahre
+ Erwartungen
+
+ Mechanism State abstrahierte Regeln und übertragbare Tage bis langfristig
+ Mechanismen
+
+ Audit State Provenance, Receipts, Versionen, Authority, dauerhaft nach Policy
+ Effects
+
+6.1 Drei Wahrheitsklassen reichen nicht - Zustände müssen sauber getrennt bleiben
+Mindestens folgende Differenzen sind semantisch hart zu codieren:
+
+ OBSERVATION != INTERPRETATION
+ EVIDENCE != HYPOTHESIS
+ UNKNOWN != ZERO
+ UNKNOWN != ERROR
+ CORRELATION != CAUSAL CLAIM
+ MODEL != WORLD
+ GOAL CANDIDATE != ADMITTED GOAL
+ ADMITTED GOAL != EFFECT AUTHORITY
+
+Diese Trennungen sind wichtiger als eine besonders eloquente Erklärung. Sie entscheiden, ob das System seine eigenen
+Vermutungen später noch falsifizieren kann.
+
+ OMEGA / Frankenstein | 8
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+7. Mikro-Kognition - kleine Zustandsoperationen statt langer
+Monologe
+Ein großer Teil der kognitiven Arbeit sollte niemals als Sprache entstehen. Ein Modul muss keine Begründung in 300
+Tokens formulieren, wenn sein Beitrag ein einzelner strukturierter Delta-Wert ist.
+
+ example micro-outputs:
+
+ movement_detected = true
+ object_id = o_381
+ delta_position = (+1, 0)
+ prediction_error = 0.81
+ affected_rule = rule_482
+ scope = local
+ contradiction_id = c_19
+ new_option = action_7
+
+Die Mikrooperation ist die eigentliche elementare Recheneinheit. Sprache wird erst dort eingesetzt, wo Semantik,
+Abstraktion, Simulation oder Kommunikation von einem LLM wirklich Mehrwert erzeugen.
+
+7.1 Lokalität der Reparatur
+Fehlerkorrektur folgt einer Hierarchie. Ein falsches Ziel darf nicht automatisch die Wahrnehmung destabilisieren. Ein
+Ausführungsfehler darf nicht sofort das kausale Weltmodell löschen. Jede Abweichung wird auf der niedrigsten plausiblen
+Ebene lokalisiert: Wahrnehmung -> Objektbindung -> Kausalregel -> Ziel -> Plan -> Execution.
+
+7.2 Überraschung als Lernsignal
+Prediction Error ist Aufmerksamkeit, aber nicht jeder Fehler ist gleich wichtig. Ein kosmetischer visueller Unterschied kann
+gering gewichtet werden. Ein Fehler in einer zentralen Regel invalidiert abhängige Pläne und erhält hohe strukturelle
+Priorität.
+
+ StructuralErrorPriority(e) = magnitude(e)
+ * causal_centrality(affected_model)
+ * plan_dependency_count
+ * uncertainty_reduction_potential
+
+ OMEGA / Frankenstein | 9
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+8. Modulare Spezialisten - kognitive Population statt
+Agentenfarm
+"Tausend Module" bedeutet nicht tausend Chatbots. Die Mehrzahl der Module kann klein, deterministisch und sprachlos
+sein. Nur wenige brauchen neuronale Inferenz oder LLM-Aufrufe.
+
+ Modulfamilie Typische Inputs Typische Outputs
+
+ Perception raw/structured observations features, objects, boundaries, invariants
+
+ Delta S_t, O_(t+1) changed, unchanged, local delta
+
+ Hypothesis observations, contradictions testable models, confidence, scope
+
+ Falsifier active hypotheses discriminating observation/action
+
+ Causal interventions + deltas candidate cause/effect relation
+
+ Prediction world model + candidate action expected next state
+
+ Goal progress signals + affordances goal candidates
+
+ Planner admitted goals + model plans and dependency graph
+
+ Risk state + plan + effect surface risk estimates and stop conditions
+
+ Transfer mechanism + new context transfer candidate and boundary conditions
+
+ Compression episodes/rules mechanism abstraction
+
+ Meta module history + CEV specialize, merge, suppress, reactivate
+ proposals
+
+ NICHT STARRE ROLLEN
+
+ Die Familien beschreiben Verträge, nicht unveränderliche Identitäten. Ein konkreter Operator darf entstehen, sich
+ spezialisieren, mit einem anderen verschmelzen, inaktiv werden oder sterben. Stabil bleiben Datentypen, Authority-
+ Grenzen und Auditierbarkeit.
+
+ OMEGA / Frankenstein | 10
+ OMEGA / FRANKENSTEIN - EXTERNALIZED COGNITION
+
+ TEIL III - REGULATION UND KONTEXT
+
+9. GRID als Selektions-, Regulations- und Credit-Schicht
+GRID ist weder ein weiterer Agent noch eine narrative Persona. Es ist die Schicht, die
+aus vielen lokalen Beiträgen einen begrenzten globalen kognitiven Zustand erzeugt.
+Die vorhandene Linie Proposal -> Competition -> Selection -> Broadcast -> Uptake ->
+Reentry wird zum Regulationskern der gesamten Mikro-Kognition.
+
+ modules -> typed proposals -> competition -> selected broadcast
+ ^ |
+ | v
+ credit <----- measured downstream effect
+
+9.1 Vorschlag ist niemals Autorität
+Jeder Spezialist darf extreme Hypothesen oder alternative Ontologien vorschlagen. Solange seine Ausgabe ein Proposal
+bleibt, kann epistemische Freiheit hoch sein. Authority entsteht erst durch zugelassene Zustandsänderung; reale Effects
+liegen hinter einer weiteren Grenze.
+
+9.2 Credit ist kausal, nicht kosmetisch
+Ein Modul soll nicht Kredit erhalten, weil es oft ausgewählt wird oder überzeugend schreibt. Kredit entsteht, wenn sein
+Beitrag die zukünftige Zustandsbahn nachweisbar verbessert.
+
+ credit(module_i) <- Delta(
+ prediction_accuracy,
+ information_gain_per_action,
+ falsification_efficiency,
+ transfer_success,
+ goal_progress,
+ recovery_time,
+ unnecessary_action_rate,
+ risk_adjusted_effectiveness
+ )
+
+Für belastbare Credit-Zuordnung sind Counterfactuals und Ablationen wichtig: Wie hätte sich derselbe Zustand entwickelt,
+wenn der betreffende Operator nicht verfügbar gewesen wäre?
+
+9.3 Global Workspace bleibt schmal
+Die Hintergrundstruktur kann sehr groß sein. Der Broadcast muss klein bleiben. Genau diese Asymmetrie ermöglicht
+tausende Spezialisten ohne tausend Stimmen im LLM-Kontext. Nur wenige Zustandsänderungen werden global relevant.
+
+10. Dynamische Kontextkompilation - der Systemprompt
+verschwindet als Wissensspeicher
+Der radikalste Architekturwechsel ist die Umdefinition des Prompts. Er ist nicht
+länger Persönlichkeit, Memory, Regelwerk und Weltmodell. Er wird zu einem
+flüchtigen Transportformat zwischen EntityOS und einem Transformer.
+
+ C_t = ContextCompiler(
+ current_state = S_t,
+ current_observation = O_t,
+ active_goal = G_t,
+ uncertainty = U_t,
+ active_dependencies,
+ selected_broadcast,
+ requested_semantic_operation,
+ effect_constraints
+ )
+
+ OMEGA / Frankenstein | 11

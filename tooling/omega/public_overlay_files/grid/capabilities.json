@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "_comment": "Honest defaults for what Machine God can reach THROUGH each AI as connected by `machine-god ais` (API key, CLI or bridge). Edit your copy in the config dir (machine-god grid caps edit shows the path); anything you set there wins. true = Machine God has a working path to it, false = it does not (even if the vendor product can do it elsewhere). skills are 0-3 and only break ties.",
+  "priority": ["claude", "chatgpt", "gemini", "copilot", "perplexity", "grok", "local"],
+  "ais": {
+    "chatgpt": {
+      "label": "ChatGPT (your account, through the browser bridge)",
+      "capabilities": { "web_search": true, "images": true, "code_exec": true, "long_context": false, "local_private": false, "connectors": true },
+      "skills": { "general": 3, "code": 3, "writing": 3, "reasoning": 3 },
+      "notes": "Its own web search, image generation, code interpreter and the connectors you enabled in ChatGPT run inside ChatGPT. Machine God cannot call them itself: it hands the whole task to ChatGPT. Slow (a browser page), may violate OpenAI's terms."
+    },
+    "claude": {
+      "label": "Claude (your claude login, `claude -p`)",
+      "capabilities": { "web_search": false, "images": false, "code_exec": false, "long_context": true, "local_private": false, "connectors": true },
+      "skills": { "general": 3, "code": 3, "writing": 3, "reasoning": 3 },
+      "notes": "Your Claude Code setup (MCP servers, plugins, skills) lives in Machine God itself. Through `claude -p` from here it answers as text: no tool approvals are possible, so web search and code execution are marked false."
+    },
+    "gemini": {
+      "label": "Gemini (API key)",
+      "capabilities": { "web_search": false, "images": false, "code_exec": false, "long_context": true, "local_private": false, "connectors": false },
+      "skills": { "general": 2, "code": 2, "writing": 2, "reasoning": 2 },
+      "notes": "Plain generateContent call: no search grounding, no tools. Very large context window."
+    },
+    "local": {
+      "label": "Local model (Ollama / LM Studio)",
+      "capabilities": { "web_search": false, "images": false, "code_exec": false, "long_context": false, "local_private": true, "connectors": false },
+      "skills": { "general": 1, "code": 1, "writing": 1, "reasoning": 1 },
+      "notes": "Runs on this computer; nothing leaves it. Quality depends on the model you installed."
+    },
+    "copilot": {
+      "label": "Copilot (GitHub Models, token)",
+      "capabilities": { "web_search": false, "images": false, "code_exec": false, "long_context": false, "local_private": false, "connectors": false },
+      "skills": { "general": 2, "code": 2, "writing": 2, "reasoning": 2 },
+      "notes": "Chat completions from GitHub Models (default openai/gpt-4.1-mini): text only, rate limited."
+    },
+    "grok": {
+      "label": "Grok (xAI API key)",
+      "capabilities": { "web_search": false, "images": false, "code_exec": false, "long_context": false, "local_private": false, "connectors": false },
+      "skills": { "general": 2, "code": 2, "writing": 2, "reasoning": 2 },
+      "notes": "Chat completions only. xAI's live search is not enabled by Machine God."
+    },
+    "perplexity": {
+      "label": "Perplexity (API key)",
+      "capabilities": { "web_search": true, "images": false, "code_exec": false, "long_context": false, "local_private": false, "connectors": false },
+      "skills": { "general": 2, "code": 1, "writing": 1, "reasoning": 1 },
+      "notes": "Sonar models search the web for every answer."
+    }
+  }
+}

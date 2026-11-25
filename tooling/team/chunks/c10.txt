@@ -1,0 +1,281 @@
+=== FILE: ~/omega-app-wt/claycode/frankenstein/entityos/bind.py ===
+"""Step 3: the canonical state/runtime ABI of this app, read from the one unified.db.
+
+`identity(udb)` answers with the five identifiers a J-Space packet carries (entity, installation, state root, runtime epoch, host binding), read from the f2_* tables that
+continuity.py keeps. It writes nothing and creates nothing: no table, no row, no file. A store that has no continuity rows yet (no epoch open) answers with `bound: False`
+and the reason, never with made-up identifiers.
+
+Host binding, honestly: the app records no machine name and no address (continuity.py). The binding row says host_id 'app-installation', so that is what a packet has to carry
+as machine_id; `host_attested` is False and stays False: nothing here proves which computer this is, and the package's manifest says its machine id is not attested either.
+A packet that names another host is not ours."""
+OWNER = "local-installation"                 # the packet schema wants an owner string; the app knows no person, only its installation
+
+
+def _row(udb, sql, args=()):
+    try:
+        return udb.one(sql, args)
+    except Exception:                        # noqa: BLE001 - a missing table is 'not bound', not a crash
+        return None
+
+
+def identity(udb):
+    ent = _row(udb, "SELECT entity_id FROM f2_entity_identity ORDER BY created_at, rowid LIMIT 1")
+    if ent is None:
+        return {"bound": False, "reason": "no entity identity row: continuity has not started on this store"}
+    inst = _row(udb, "SELECT installation_id FROM f2_installation_identity WHERE entity_id=? ORDER BY rowid LIMIT 1", (ent[0],))
+    if inst is None:
+        return {"bound": False, "reason": "no installation identity row for the entity"}
+    root = _row(udb, "SELECT state_root_id FROM f2_state_root_identity WHERE installation_id=? ORDER BY rowid LIMIT 1", (inst[0],))
+    host = _row(udb, "SELECT host_id,status FROM f2_host_binding WHERE installation_id=? ORDER BY rowid LIMIT 1", (inst[0],))
+    if root is None or host is None:
+        return {"bound": False, "reason": "no state root or host binding row for the installation"}
+    ep = _row(udb, "SELECT runtime_epoch_id,boot_id,started_at FROM f2_runtime_epoch WHERE installation_id=? AND state_root_id=? AND ended_at IS NULL "
+                   "ORDER BY started_at DESC, rowid DESC LIMIT 1", (inst[0], root[0]))
+    if ep is None:
+        return {"bound": False, "reason": "no open runtime epoch: this store is not running (a closed epoch is not a live runtime)"}
+    return {"bound": True, "entity_id": ent[0], "installation_id": inst[0], "state_root_id": root[0], "runtime_epoch": ep[0],
+            "epoch_started_at": ep[2], "host_binding": {"owner": OWNER, "machine_id": host[0]}, "host_status": host[1], "host_attested": False}
+
+
+FIELDS = ("entity_id", "installation_id", "state_root_id", "runtime_epoch")
+
+
+def mismatches(packet, ident):
+    """The names of the identity fields in which the packet is not this app's. Empty = bound to this entity, installation, state root, runtime epoch and host."""
+    if not ident.get("bound"):
+        return ["unbound"]
+    bad = [k for k in FIELDS if packet.get(k) != ident[k]]
+    hb = packet.get("host_binding")
+    if not isinstance(hb, dict) or hb.get("machine_id") != ident["host_binding"]["machine_id"] or hb.get("owner") != ident["host_binding"]["owner"]:
+        bad.append("host_binding")
+    return bad
+
+
+def public(ident):
+    """What the status route may say about the binding: the identifiers are the app's own pseudonymous ids (random / hashed), no name, no address."""
+    return {k: ident[k] for k in ("bound", "reason", "entity_id", "installation_id", "state_root_id", "runtime_epoch", "host_binding", "host_status", "host_attested") if k in ident}
+=== FILE: ~/omega-app-wt/claycode/frankenstein/entityos/jspace.py ===
+"""Step 4: J-Space packets in both directions, SHADOW.
+
+  inbound(udb, packet)    a packet from J-Space (direction jspace_to_entityos): validated by src/entityos_v1 (shape, endpoints, state_write false, credit not_admitted), then bound
+                          to this app's identity (bind.py: entity, installation, state root, runtime epoch, host). A bound packet becomes a HYPOTHESIS record `jspace.inbound` on
+                          the ClayBus: a candidate that is kept as a candidate (it can never turn into Measured by arriving, and credit stays not_admitted). A packet that fails is
+                          an Error record `jspace.rejected` (reason only). The same message id is recorded once.
+  outbound(udb, ...)      the app's own request to J-Space (direction entityos_to_jspace), built from bind.identity, validated by the same validator before it is returned, and
+                          recorded as Hypothesis `jspace.outbound`. It is RETURNED, not sent: no transport exists in this build (no socket, no file, no queue).
+
+What a packet may write: one append-only row in fk_clay_record (authority NONE by constraint), and nothing else. Of the payload only the first 24 hex characters of its sha256 (the bus's redaction replaces anything longer that looks like a secret), its size and its top-level key names are kept.
+Mode `app.entityos.jspace.mode` off (default) | shadow. Off: the packet is judged but nothing is written, no table is created."""
+import hashlib
+import json
+
+from . import JSPACE_MODE_KEY, mode_of, bind
+from ..claybus import records as R
+from ..claybus.bus import ClayBus
+from ..continuity import iso_now
+
+PRODUCER = "entityos.jspace"
+MAX_PAYLOAD = 65536
+DIRECTION_IN, DIRECTION_OUT = "jspace_to_entityos", "entityos_to_jspace"
+
+
+def _validate():
+    from entityos_v1.jspace_packet import validate_packet
+    return validate_packet
+
+
+def _digest(payload):
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8", "replace")
+    return hashlib.sha256(raw).hexdigest(), len(raw)
+
+
+def _candidate(packet):
+    """The part of a packet that is kept: ids, kinds, flags, counts; of the payload only a digest."""
+    dg, size = _digest(packet.get("payload"))
+    return {"message_id": packet["message_id"], "decision_id": packet["decision_id"], "direction": packet["direction"], "payload_type": packet["payload_type"],
+            "measurement_scope": packet["measurement_scope"], "instrumentation_status": packet["instrumentation_status"], "evidence_refs": len(packet["evidence_refs"]),
+            "runtime_epoch": packet["runtime_epoch"], "payload_sha256_24": dg[:24], "payload_bytes": size,
+            "payload_keys": sorted(str(k) for k in packet["payload"])[:20], "state_write": False, "credit_status": "not_admitted"}
+
+
+def _seen(udb, topic, message_id):
+    try:
+        return udb.scalar("SELECT id FROM fk_clay_record WHERE topic=? AND json_extract(body_json,'$.id')=? LIMIT 1", (topic, message_id)) is not None
+    except Exception:                      # noqa: BLE001 - no table yet = not seen
+        return False
+
+
+def _judge(packet, direction):
+    """-> (reasons). Empty = the packet is valid and this app's."""
+    if not isinstance(packet, dict):
+        return ["not_a_mapping"]
+    try:
+        _validate()(packet)
+    except (TypeError, ValueError) as e:
+        return ["invalid:%s" % str(e)[:100]]
+    if packet["direction"] != direction:
+        return ["wrong_direction:%s" % packet["direction"]]
+    try:
+        if len(json.dumps(packet["payload"], default=str)) > MAX_PAYLOAD:
+            return ["payload_too_large"]
+    except (TypeError, ValueError):
+        return ["payload_not_plain"]
+    return []
+
+
+def inbound(udb, packet):
+    """-> {"status": validated_only | recorded | duplicate | rejected, "reasons": [...], "record_id": id | None, "mode": ...}"""
+    mode = mode_of(udb, JSPACE_MODE_KEY)
+    reasons = _judge(packet, DIRECTION_IN)
+    if not reasons:
+        bad = bind.mismatches(packet, bind.identity(udb))
+        if bad:
+            reasons = ["not_bound_to_this_runtime:" + ",".join(bad)]
+    mid = packet.get("message_id") if isinstance(packet, dict) and isinstance(packet.get("message_id"), str) else None
+    if reasons:
+        rid = None
+        if mode == "shadow":
+            what = "J-Space packet refused: %s" % "; ".join(reasons)
+            if mid:
+                what += " (message %s)" % mid[:64]
+            rid = ClayBus(udb).publish(R.error("jspace.rejected", PRODUCER, what[:300], None, None))
+        return {"status": "rejected", "reasons": reasons, "record_id": rid, "mode": mode}
+    if mode != "shadow":
+        return {"status": "validated_only", "reasons": [], "record_id": None, "mode": mode}
+    if _seen(udb, "jspace.inbound", mid):
+        return {"status": "duplicate", "reasons": [], "record_id": None, "mode": mode}
+    rid = ClayBus(udb).publish(R.hypothesis("jspace.inbound", PRODUCER, mid, _candidate(packet), None, None))
+    return {"status": "recorded", "reasons": [], "record_id": rid, "mode": mode}
+
+
+def outbound(udb, decision_id, payload_type, payload, measurement_scope="none", instrumentation_status="unverified", evidence_refs=()):
+    """The app's request to J-Space as a validated packet (returned, never sent). Raises ValueError when there is no identity to bind to or the packet is not valid."""
+    ident = bind.identity(udb)
+    if not ident.get("bound"):
+        raise ValueError("cannot build a packet: %s" % ident.get("reason"))
+    dg, _ = _digest({"d": decision_id, "t": payload_type, "p": payload})
+    packet = {"schema": "ENTITYOS_JSPACE_PACKET/v1", "message_id": "m-" + hashlib.sha256((ident["runtime_epoch"] + ":" + dg).encode()).hexdigest()[:32],
+              "direction": DIRECTION_OUT, "decision_id": decision_id, "entity_id": ident["entity_id"], "installation_id": ident["installation_id"],
+              "state_root_id": ident["state_root_id"], "runtime_epoch": ident["runtime_epoch"], "host_binding": dict(ident["host_binding"]),
+              "source_component": "entityos", "target_component": "jspace", "created_at": iso_now(), "payload_type": payload_type,
+              "measurement_scope": measurement_scope, "instrumentation_status": instrumentation_status, "evidence_refs": list(evidence_refs),
+              "payload": payload, "state_write": False, "credit_status": "not_admitted"}
+    reasons = _judge(packet, DIRECTION_OUT)
+    if reasons:
+        raise ValueError("; ".join(reasons))
+    if mode_of(udb, JSPACE_MODE_KEY) == "shadow" and not _seen(udb, "jspace.outbound", packet["message_id"]):
+        ClayBus(udb).publish(R.hypothesis("jspace.outbound", PRODUCER, packet["message_id"], _candidate(packet), None, None))
+    return packet
+
+
+def status(udb):
+    n = {}
+    try:
+        n = {r[0]: r[1] for r in udb.query("SELECT topic,count(*) FROM fk_clay_record WHERE topic LIKE 'jspace.%' GROUP BY topic")}
+    except Exception:                      # noqa: BLE001
+        pass
+    return {"mode": mode_of(udb, JSPACE_MODE_KEY), "transport": "not_connected", "records": n, "state_write": False, "credit_status": "not_admitted"}
+=== FILE: ~/omega-app-wt/claycode/src/entityos_v1/jspace_packet.py ===
+"""Fail-closed validation for the proposed bidirectional J-Space packet."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+
+_REQUIRED = {
+    "schema",
+    "message_id",
+    "direction",
+    "decision_id",
+    "entity_id",
+    "installation_id",
+    "state_root_id",
+    "runtime_epoch",
+    "host_binding",
+    "source_component",
+    "target_component",
+    "created_at",
+    "payload_type",
+    "measurement_scope",
+    "instrumentation_status",
+    "evidence_refs",
+    "payload",
+    "state_write",
+    "credit_status",
+}
+
+
+def validate_packet(packet: Mapping[str, Any]) -> None:
+    """Validate packet shape and reject any state write or self-admitted credit."""
+    if not isinstance(packet, Mapping):
+        raise ValueError("packet must be a mapping")
+
+    missing = _REQUIRED - set(packet)
+    unexpected = set(packet) - _REQUIRED
+    if missing:
+        raise ValueError(f"missing fields: {', '.join(sorted(missing))}")
+    if unexpected:
+        raise ValueError(f"unexpected fields: {', '.join(sorted(unexpected))}")
+
+    if packet["schema"] != "ENTITYOS_JSPACE_PACKET/v1":
+        raise ValueError("unsupported packet schema")
+
+    direction = packet["direction"]
+    endpoints = {
+        "entityos_to_jspace": ("entityos", "jspace"),
+        "jspace_to_entityos": ("jspace", "entityos"),
+    }
+    if direction not in endpoints:
+        raise ValueError("unsupported direction")
+    if (packet["source_component"], packet["target_component"]) != endpoints[direction]:
+        raise ValueError("direction and component endpoints disagree")
+
+    for key in (
+        "message_id",
+        "decision_id",
+        "entity_id",
+        "installation_id",
+        "state_root_id",
+        "runtime_epoch",
+        "created_at",
+    ):
+        if not isinstance(packet[key], str) or not packet[key].strip():
+            raise ValueError(f"{key} must be a non-empty string")
+
+    host_binding = packet["host_binding"]
+    if not isinstance(host_binding, Mapping):
+        raise ValueError("host_binding must be a mapping")
+    if set(host_binding) != {"owner", "machine_id"}:
+        raise ValueError("host_binding must contain exactly owner and machine_id")
+    if any(
+        not isinstance(host_binding[key], str) or not host_binding[key].strip()
+        for key in ("owner", "machine_id")
+    ):
+        raise ValueError("host_binding values must be non-empty strings")
+
+    if packet["payload_type"] not in {
+        "measurement_request",
+        "measurement_result",
+        "counterevidence",
+        "ack",
+    }:
+        raise ValueError("unsupported payload_type")
+    if packet["measurement_scope"] not in {"none", "behavioral", "representation"}:
+        raise ValueError("unsupported measurement_scope")
+    if packet["instrumentation_status"] not in {"unverified", "passed", "failed"}:
+        raise ValueError("unsupported instrumentation_status")
+
+    evidence_refs = packet["evidence_refs"]
+    if not isinstance(evidence_refs, list) or any(
+        not isinstance(item, str) or not item.strip() for item in evidence_refs
+    ):
+        raise ValueError("evidence_refs must be a list of non-empty strings")
+    if not isinstance(packet["payload"], Mapping):
+        raise ValueError("payload must be a mapping")
+
+    if packet["state_write"] is not False:
+        raise ValueError("J-Space packets cannot write canonical state")
+    if packet["credit_status"] != "not_admitted":
+        raise ValueError("J-Space packets cannot admit their own evidence credit")

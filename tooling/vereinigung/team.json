@@ -1,0 +1,113 @@
+[
+ {
+  "name": "chef-nemotron-ultra",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "chunk": "c07",
+  "chief": true
+ },
+ {
+  "name": "kimi-k3.1-pro",
+  "model": "moonshotai/kimi-k3.1-pro",
+  "chunk": "c01"
+ },
+ {
+  "name": "mistral-large-4",
+  "model": "mistralai/mistral-large-4-1t-a52b",
+  "chunk": "c02"
+ },
+ {
+  "name": "step-5",
+  "model": "stepfun-ai/step-5-preview",
+  "chunk": "c09"
+ },
+ {
+  "name": "minimax-m3.1",
+  "model": "minimaxai/minimax-m3.1-flash",
+  "chunk": "c04"
+ },
+ {
+  "name": "nemotron-super-vl",
+  "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+  "chunk": "c06"
+ },
+ {
+  "name": "gemma-4-31b",
+  "model": "google/gemma-4-31b-it",
+  "chunk": "c05"
+ },
+ {
+  "name": "laguna-xs",
+  "model": "poolside/laguna-xs-2.1",
+  "chunk": "c03"
+ },
+ {
+  "name": "nemotron-lightning",
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "chunk": "c08"
+ },
+ {
+  "name": "nemotron-nano-omni",
+  "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+  "chunk": "c10"
+ },
+ {
+  "name": "chef-kimi-k3.1-pro",
+  "model": "moonshotai/kimi-k3.1-pro",
+  "chunk": "g1",
+  "chief": false
+ },
+ {
+  "name": "nemotron-ultra",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "chunk": "d3",
+  "chief": false
+ },
+ {
+  "name": "mistral-large-4",
+  "model": "mistralai/mistral-large-4-1t-a52b",
+  "chunk": "d1",
+  "chief": false
+ },
+ {
+  "name": "step-5",
+  "model": "stepfun-ai/step-5-preview",
+  "chunk": "d2",
+  "chief": false
+ },
+ {
+  "name": "minimax-m3.1",
+  "model": "minimaxai/minimax-m3.1-flash",
+  "chunk": "d4",
+  "chief": false
+ },
+ {
+  "name": "nemotron-super-vl",
+  "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+  "chunk": "g2",
+  "chief": false
+ },
+ {
+  "name": "gemma-4-31b",
+  "model": "google/gemma-4-31b-it",
+  "chunk": "g3",
+  "chief": false
+ },
+ {
+  "name": "muse-glimmer",
+  "model": "meta/muse-glimmer-30b",
+  "chunk": "g4",
+  "chief": false
+ },
+ {
+  "name": "nemotron-lightning",
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "chunk": "g5",
+  "chief": false
+ },
+ {
+  "name": "nemotron-nano-omni",
+  "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+  "chunk": "g6",
+  "chief": false
+ }
+]

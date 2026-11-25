@@ -1,0 +1,375 @@
+=== FILE: entityos/schema/schema.sql ===
+-- EntityOS / GRID10 core schema — STRUCTURE ONLY, NO DATA.
+--
+-- This is the schema for the "F2 GRID10" cognition-runtime core tables plus
+-- the two coordination/config tables named alongside them. It does NOT
+-- include the full private `unified.db` (which on the reference
+-- installation also carries ~150 additional tables belonging to unrelated
+-- private projects — knowledge-base articles, a specific website's content,
+-- mail indexing, etc.). Shipping that whole schema would leak the shape of
+-- private, unrelated data even though it carries zero rows. This file is
+-- scoped deliberately to the tables that are part of the EntityOS/GRID10
+-- cognition-runtime architecture itself.
+--
+-- Provenance: extracted read-only via `sqlite3 <path> ".schema <table>"`
+-- against a live reference installation on 2026-09-06. Column shape may
+-- still change before a first tagged release — this is a scaffold, not a
+-- frozen wire format. See STATUS.md and ARCHITECTURE.md.
+--
+-- Whoever holds this file can create a structurally correct, completely
+-- empty EntityOS state database. It does not, on its own, run anything.
+
+PRAGMA foreign_keys=OFF;
+BEGIN;
+
+-- ── Identity chain ──────────────────────────────────────────────────────
+-- entity -> installation -> state_root -> host_binding -> runtime_epoch.
+-- Each level exists so that "which entity, on which install, on which
+-- machine, in which boot" is always answerable from stored rows instead of
+-- assumed from context. See ARCHITECTURE.md "Identity chain".
+
+CREATE TABLE f2_entity_identity (
+    entity_id       TEXT PRIMARY KEY,
+    schema          TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    generated_by    TEXT NOT NULL,
+    entropy_bytes   INTEGER NOT NULL
+);
+
+CREATE TABLE f2_installation_identity (
+    installation_id TEXT PRIMARY KEY,
+    entity_id       TEXT NOT NULL REFERENCES f2_entity_identity(entity_id),
+    schema          TEXT NOT NULL
+);
+
+CREATE TABLE f2_state_root_identity (
+    state_root_id       TEXT PRIMARY KEY,
+    installation_id     TEXT NOT NULL REFERENCES f2_installation_identity(installation_id),
+    state_digest_sha256  TEXT NOT NULL,
+    schema               TEXT NOT NULL
+);
+
+CREATE TABLE f2_host_binding (
+    binding_id      TEXT PRIMARY KEY,
+    installation_id TEXT NOT NULL REFERENCES f2_installation_identity(installation_id),
+    host_id         TEXT NOT NULL,
+    bound_at        TEXT NOT NULL,
+    attestation     TEXT NOT NULL,
+    status          TEXT NOT NULL
+        CHECK (status IN ('ACTIVE', 'SUPERSEDED', 'REVOKED')),
+    schema          TEXT NOT NULL
+);
+CREATE UNIQUE INDEX ux_f2_host_binding_one_active_per_installation
+    ON f2_host_binding (installation_id)
+    WHERE status = 'ACTIVE';
+CREATE INDEX ix_f2_host_binding_installation_status
+    ON f2_host_binding (installation_id, status);
+
+CREATE TABLE f2_runtime_epoch (
+    runtime_epoch_id     TEXT PRIMARY KEY,
+    state_root_id        TEXT NOT NULL REFERENCES f2_state_root_identity(state_root_id),
+    installation_id      TEXT NOT NULL REFERENCES f2_installation_identity(installation_id),
+    host_binding_id      TEXT NOT NULL REFERENCES f2_host_binding(binding_id),
+    started_at           TEXT NOT NULL,
+    predecessor_epoch_id TEXT REFERENCES f2_runtime_epoch(runtime_epoch_id),
+    termination_reason   TEXT,
+    schema               TEXT NOT NULL,
+    session_id           TEXT,
+    boot_id              TEXT,
+    ended_at             TEXT,
+    termination_evidence TEXT,
+    successor_epoch_id   TEXT,
+    confidence           REAL
+);
+CREATE INDEX ix_f2_runtime_epoch_state_root
+    ON f2_runtime_epoch (state_root_id);
+CREATE INDEX ix_f2_runtime_epoch_predecessor
+    ON f2_runtime_epoch (predecessor_epoch_id);
+
+-- Every new epoch must record what happened to its predecessor. This is
+-- the "mandatory re-entry" invariant: a fresh epoch may not start cold: it
+-- must point at the last frame/epoch it continues from, or explicitly
+-- record that none exists (first boot).
+CREATE TABLE f2_reentry_record (
+    reentry_id                      TEXT PRIMARY KEY,
+    entity_id                        TEXT,
+    installation_id                  TEXT NOT NULL,
+    state_root_id                    TEXT NOT NULL,
+    predecessor_epoch_id             TEXT REFERENCES f2_runtime_epoch(runtime_epoch_id),
+    successor_epoch_id               TEXT NOT NULL REFERENCES f2_runtime_epoch(runtime_epoch_id),
+    predecessor_termination_reason   TEXT,
+    predecessor_confidence           REAL,
+    predecessor_boot_id              TEXT,
+    successor_boot_id                TEXT,
+    last_grid10_frame_id             TEXT,
+    last_work_ref                    TEXT,
+    created_at                       TEXT NOT NULL,
+    schema                           TEXT NOT NULL
+);
+CREATE INDEX ix_f2_reentry_record_successor ON f2_reentry_record (successor_epoch_id);
+CREATE INDEX ix_f2_reentry_record_predecessor ON f2_reentry_record (predecessor_epoch_id);
+
+-- ── GRID10 cognition cycle ──────────────────────────────────────────────
+-- One `f2_grid10_frame` = one open-to-close cognition turn. Ten logical
+-- cells (G1..G10) each produce one observation per frame. A winning cell's
+-- broadcast value can be persisted into cell_state (per installation) and/or
+-- p6d_state (per named condition), and can result in a gated effect.
+
+CREATE TABLE f2_grid10_frame (
+    frame_id            TEXT PRIMARY KEY,
+    entity_id           TEXT NOT NULL REFERENCES f2_entity_identity(entity_id),
+    installation_id     TEXT NOT NULL REFERENCES f2_installation_identity(installation_id),
+    state_root_id        TEXT NOT NULL REFERENCES f2_state_root_identity(state_root_id),
+    runtime_epoch_id     TEXT NOT NULL REFERENCES f2_runtime_epoch(runtime_epoch_id),
+    session_id            TEXT NOT NULL,
+    turn_event_id          TEXT NOT NULL,
+    opened_at              TEXT NOT NULL,
+    closed_at               TEXT,
+    status                  TEXT NOT NULL CHECK (status IN ('OPEN','CLOSED','FAILED')),
+    schema                  TEXT NOT NULL,
+    cohort                  TEXT NOT NULL DEFAULT 'ORGANIC',
+    broadcast_winner_cell    TEXT,
+    broadcast_value          REAL,
+    experiment_condition      TEXT,
+    state_weight               REAL,
+    UNIQUE (runtime_epoch_id, turn_event_id)
+);
+CREATE INDEX ix_f2_grid10_frame_epoch ON f2_grid10_frame (runtime_epoch_id);
+CREATE INDEX ix_f2_grid10_frame_installation ON f2_grid10_frame (installation_id);
+CREATE INDEX ix_f2_grid10_frame_cohort ON f2_grid10_frame (cohort);
+
+CREATE TABLE f2_grid10_cell_observation (
+    observation_id             TEXT PRIMARY KEY,
+    frame_id                    TEXT NOT NULL REFERENCES f2_grid10_frame(frame_id),
+    logical_cell_id               TEXT NOT NULL
+        CHECK (logical_cell_id IN ('G1','G2','G3','G4','G5','G6','G7','G8','G9','G10')),
+    input_digest_sha256            TEXT,
+    output_digest_sha256           TEXT,
+    uptake                          INTEGER NOT NULL DEFAULT 0,
+    reentry_flag                    INTEGER NOT NULL DEFAULT 0,
+    conflict_flag                   INTEGER NOT NULL DEFAULT 0,
+    timing_ms                       REAL,
+    cpu_ru_utime_delta_s             REAL,
+    rss_delta_kb                      INTEGER,
+    predecessor_observation_id        TEXT REFERENCES f2_grid10_cell_observation(observation_id),
+    schema                            TEXT NOT NULL,
+    execution_position                 INTEGER,
+    UNIQUE (frame_id, logical_cell_id)
+);
+CREATE INDEX ix_f2_grid10_cell_obs_frame ON f2_grid10_cell_observation (frame_id);
+CREATE INDEX ix_f2_grid10_cell_obs_cell ON f2_grid10_cell_observation (logical_cell_id);
+
+-- Per-installation running state per cell (unconditional).
+CREATE TABLE f2_grid10_cell_state (
+    installation_id     TEXT NOT NULL,
+    logical_cell_id      TEXT NOT NULL
+        CHECK (logical_cell_id IN ('G1','G2','G3','G4','G5','G6','G7','G8','G9','G10')),
+    state_value            REAL NOT NULL DEFAULT 0.0,
+    updated_at                TEXT NOT NULL,
+    updated_by_frame_id        TEXT,
+    won_broadcast_count          INTEGER NOT NULL DEFAULT 0,
+    schema                         TEXT NOT NULL,
+    PRIMARY KEY (installation_id, logical_cell_id)
+);
+
+-- Per-named-condition variant of the same state (P6D experiment axis).
+CREATE TABLE f2_grid10_p6d_state (
+    condition_key TEXT NOT NULL,
+    logical_cell_id TEXT NOT NULL CHECK (logical_cell_id IN ('G1','G2','G3','G4','G5','G6','G7','G8','G9','G10')),
+    state_value REAL NOT NULL DEFAULT 0.0,
+    updated_at TEXT NOT NULL,
+    updated_by_frame_id TEXT,
+    won_broadcast_count INTEGER NOT NULL DEFAULT 0,
+    schema TEXT NOT NULL,
+    PRIMARY KEY (condition_key, logical_cell_id)
+);
+
+-- Every parameter change to the running GRID10 state gets an audit row —
+-- who/what changed a tuning value and why, never a silent overwrite.
+CREATE TABLE f2_grid10_tune_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    schluessel TEXT NOT NULL,
+    alt TEXT,
+    neu TEXT,
+    quelle TEXT,
+    session TEXT
+);
+
+-- ── Effect gate + journal ───────────────────────────────────────────────
+-- A winning cell's broadcast does not act on the world directly. It becomes
+-- a typed effect *request*, passed through a gate policy (minimum broadcast
+-- value threshold + allow/deny reason), and every decision — executed or
+-- denied — is journaled with a readback check. This is the "one door"
+-- principle: no code path writes an effect except through this table.
+CREATE TABLE f2_grid10_effect_journal (
+    journal_id                  TEXT PRIMARY KEY,
+    request_id                  TEXT NOT NULL,
+    effect_type                 TEXT NOT NULL,
+    schema                      TEXT NOT NULL,
+    frame_id                    TEXT,
+    turn_event_id                TEXT NOT NULL,
+    runtime_epoch_id              TEXT NOT NULL,
+    session_id                    TEXT,
+    condition_key                  TEXT,
+    winner_cell_id                  TEXT NOT NULL,
+    broadcast_value                  REAL NOT NULL,
+    payload_json                      TEXT,
+    gate_policy_id                     TEXT NOT NULL,
+    gate_min_broadcast_value            REAL NOT NULL,
+    gate_allowed                         INTEGER NOT NULL CHECK (gate_allowed IN (0,1)),
+    gate_reason                           TEXT NOT NULL,
+    gate_decided_at                        TEXT NOT NULL,
+    status                                  TEXT NOT NULL CHECK (status IN ('EXECUTED','DENIED')),
+    executed_marker_text                     TEXT,
+    executed_at                               TEXT,
+    readback_ok                                INTEGER CHECK (readback_ok IN (0,1) OR readback_ok IS NULL),
+    readback_row_hash                            TEXT,
+    created_at                                    TEXT NOT NULL
+);
+CREATE INDEX ix_f2_grid10_effect_journal_turn ON f2_grid10_effect_journal (turn_event_id);
+CREATE INDEX ix_f2_grid10_effect_journal_epoch ON f2_grid10_effect_journal (runtime_epoch_id);
+CREATE INDEX ix_f2_grid10_effect_journal_status ON f2_grid10_effect_journal (status);
+
+-- ── Coordination / config ───────────────────────────────────────────────
+
+-- Generic key/value runtime configuration, typed and sourced (so a value
+-- can always be traced back to who/what set it, not just what it is now).
+CREATE TABLE star_konfig (
+    schluessel TEXT PRIMARY KEY,
+    wert TEXT NOT NULL,
+    typ TEXT NOT NULL,
+    quelle TEXT,
+    geaendert REAL NOT NULL
+);
+
+-- Work-order handoff ledger between a coordinating agent and a build agent
+-- it delegates to. `beleg` (evidence) is mandatory before a package may be
+-- marked done — an unproven claim is recorded as such, never silently
+-- treated as success. See AGENT_SETUP.md.
+CREATE TABLE entityos_arbeitspaket (
+    paket_id   TEXT PRIMARY KEY,
+    besteller  TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    auftrag    TEXT NOT NULL,
+    womit      TEXT,
+    warum      TEXT,
+    stand      TEXT NOT NULL,
+    ergebnis   TEXT,
+    beleg      TEXT,
+    erstellt   REAL NOT NULL,
+    geaendert  REAL NOT NULL
+);
+CREATE INDEX idx_arbeitspaket_stand ON entityos_arbeitspaket(stand, erstellt);
+
+COMMIT;
+=== FILE: entityos/ARCHITECTURE.md ===
+# ARCHITECTURE
+
+This is a condensed pointer, not the full design document. The full target
+architecture lives in the private repo `frank-ink/frankenstein-2.0`,
+file `ENTITYOS_VM_ZIELARCHITEKTUR.md`, branch
+`self-integration/entityos-vm-zielarchitektur-20260906`, commit `325c89e`.
+That document is the source of truth; this file only summarizes the parts
+that this scaffold repo actually touches (the VM/install layer and the empty
+schema), so a reader doesn't need repo access just to understand what
+`install.sh` and `vm/` are doing.
+
+## What EntityOS is, in one paragraph
+
+EntityOS is a self-contained runtime environment ("the VM," in practice a
+systemd-nspawn container) that hosts a cognition-loop process internally
+called FranKenstein/GRID10, plus a dashboard for observing and controlling
+it, plus a single SQLite database (`unified.db`) that is the sole persistent
+state store. The VM, the dashboard, and the cognition loop are three
+separate, independently switchable layers — that separation is the main
+thing worth understanding before touching any of the code.
+
+## The GRID10 cognition loop (design target — not shipped in this repo)
+
+Per turn, in order: a typed entry opens a GRID10 "frame" → the loop performs
+a mandatory reentry step, reading the previous frame/epoch/genesis pointer
+(a missing pointer is a hard `ReentryError`, never silently ignored) → a
+working-memory ("J-Space") fill step → ten parallel cells generate candidate
+responses → a competition/selection step picks a winner → the winner is
+broadcast (a Global-Workspace-Theory-style broadcast) → other components
+take up the broadcast and update their own state → the new recurrent state,
+plus every intermediate step, is persisted atomically → the next turn
+re-enters exactly at the stored pointer, never at an assumed default.
+
+"LLM as mouth/contractor, not as the seat of cognition" is the guiding
+principle: language models are used to phrase output or to act as workers
+on typed sub-tasks, not treated as the thing that decides. See
+`AGENT_SETUP.md` for how an agent (Claude Code or otherwise) is meant to
+plug in under that principle.
+
+**None of this loop's code is in this repository.** `schema/schema.sql`
+defines the tables it would read and write (frames, cell observations, cell
+state, effect journal, etc.), all currently empty. The loop itself lives in
+the private `frankenstein-2.0` / `frankenstein-repo` repos. See `STATUS.md`.
+
+## "One door" data authority
+
+Every write to `unified.db` for a given table family goes through exactly
+one typed interface — never arbitrary, ad-hoc `sqlite3.connect()` calls
+scattered across the codebase. This scaffold does not yet ship that
+interface layer (there is nothing here that writes to the DB at all besides
+the one-time seed copy in `install.sh`); it is called out here because any
+future dashboard or agent code that touches `unified.db` should follow this
+rule from its first line, not retrofit it later.
+
+## The three-stage lifecycle (Sections 13.6/13.7 of the target-architecture
+## document)
+
+```
+Stage 0                Stage 1                    Stage 2
+--------                --------                    --------
+socket listening   -->  dashboard + VM running  --> cognition runtime ON
+nothing else runs       (first connection to        (explicit typed
+                         the dashboard port           request TO the
+                         starts everything)            running dashboard,
+                                                        not a systemd unit)
+```
+
+- **Stage 0 -> Stage 1** is implemented here as ordinary systemd socket
+  activation: `entityos-dashboard@<port>.socket` listens; the paired
+  `entityos-dashboard@<port>.service` requires/binds to/orders after
+  `entityos-vm.service`, so the first inbound connection pulls the whole
+  stack up. This part is real (unit files exist, dry-run tested at the
+  `install.sh` level) — see `STATUS.md` for exactly what "tested" means
+  here.
+- **Stage 1 -> Stage 2** ("switch FranKenstein on") is deliberately **not**
+  a systemd concept in this design. It's an explicit, typed request made to
+  the already-running dashboard from inside the VM. "Soft-off" (cognition
+  runtime stopped, VM/dashboard still up) and "hard-off" (whole VM stopped,
+  back to Stage 0) are two distinct, independently reachable states — a
+  soft-off should be cheap and fast; a hard-off tears down the whole
+  container. The dashboard process itself is real and wired into this repo
+  (`vm/dashboard/`, see `STATUS.md`) and has been smoke-tested locally and
+  on the real target host; the Stage 2 toggle and everything behind it
+  (turn-loop, alignment controller, effect gate) is not — no such process
+  runs anywhere today, including in the reference VM. Reaching the live
+  dashboard does not mean reaching a live cognition loop.
+
+## Data persistence boundary
+
+Exactly one directory is meant to survive VM restarts, rootfs rebuilds, and
+reinstalls: `ENTITYOS_DATA_DIR` (default `/var/lib/entityos/data`), bind
+mounted into the container at `/var/lib/entityos`. It holds `unified.db` and
+nothing else is expected to need to survive. Everything else — the
+container's writable root filesystem — is recreated from the base rootfs on
+every start and deleted on every stop (`vm/entityos-vm.service`). This
+split is the reason `vm/build-rootfs.sh` (builds the reusable base once) and
+`install.sh`'s data-seeding step (creates the persistent data dir once) are
+separate, idempotent, independently-safe-to-rerun operations.
+
+## Further reading
+
+- `vm/README.md` — the container technology choice (systemd-nspawn / "S2"
+  sandbox tier) and exactly what has and hasn't been tested about it.
+- `AGENT_SETUP.md` — how an agent joins as a worker, and the gap between the
+  lab-only join protocol referenced there and anything production-ready.
+- `STATUS.md` — full per-component DONE/SCAFFOLD/OPEN table with provenance.
+- The private `ENTITYOS_VM_ZIELARCHITEKTUR.md` document itself, for anyone
+  with access to `frank-ink/frankenstein-2.0` — this file is a
+  summary of a subset of it, not a replacement.

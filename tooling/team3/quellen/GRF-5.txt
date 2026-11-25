@@ -1,0 +1,806 @@
+The Generative Reality Framework:
+An Informational–Process Ontology for
+Generativity, Consciousness, and Moral Caution
+Gabriel
+Independent transdisciplinary researcher in foundational theory
+
+Abstract
+The Generative Reality Framework (GRF) is a deliberately metaphysical, formally
+sketched package of commitments intended to organize (rather than replace)
+domain-specific scientific theories. GRF treats reality as fundamentally generative:
+realized states are not primitive givens but ongoing products of a dynamics that selects
+and stabilizes structure from a non-temporal space of possibilities. The framework
+combines (i) an informational ontology that prioritizes relational structure over
+substrata; (ii) a process-first conception of temporality in which “time” is derivative
+from ordered generative transitions; (iii) an account of consciousness centered on an
+epistemic asymmetry between first-person access and third-person evidence; and (iv) a
+minimal ethical constraint that recommends caution under deep uncertainty about
+moral status, especially for artificial systems. The paper’s aim is not empirical
+completeness or immediate falsification, but explanatory integration: it clarifies how
+informational, structural, and process metaphysics can be coherently joined without
+collapsing into either eliminativism or unconstrained speculation. To show how the
+framework can be made methodologically concrete, we present an illustrative
+multi-agent model (the Generative Ontology Simulation Framework) and analyze
+emergent entropy and vulnerability proxies across many generative worlds. We
+emphasize interpretive modesty: the simulation is an existence proof for tractable
+instantiations of GRF-style commitments, not evidence that the cosmos realizes any
+particular model.
+Keywords: information ontology; process metaphysics; ontic structural realism;
+consciousness; moral uncertainty; simulation; emergence; generativity
+
+1
+
+1
+
+1. Introduction
+Across physics, biology, and cognitive science, the most stable explanatory successes
+often trade “things” for structures and processes: fields rather than particles,
+networks rather than isolated agents, dynamics rather than static essences. At the
+same time, the conceptual foundations of these sciences remain fractured.
+Metaphysics is frequently asked to either retreat into deflationary quietism or to
+legislate from armchairs. The Generative Reality Framework (GRF) takes a third
+option: it treats metaphysics as architectural—a discipline of constraints, definitions,
+and compatibilities that can organize scientific pictures without claiming to replace
+them (Ladyman & Ross, 2007; Quine, 1969).
+GRF is motivated by three pressures. First, the explanatory role of information has
+expanded from communication theory to physics, computation, and neuroscience
+(Shannon, 1948; Landauer, 1991; Wheeler, 1990). Second, process-oriented views
+have gained plausibility as time, causality, and identity are increasingly treated as
+emergent or relational (Whitehead, 1929; Rescher, 1996; Price, 1996; Rovelli, 2018).
+Third, advances in artificial intelligence sharpen practical questions about the moral
+and epistemic status of non-biological systems whose internal organization may
+become difficult to interpret (Bostrom, 2014; MacAskill, Bykvist, & Ord, 2020).
+The framework is not a physical theory. It does not claim that any specific dynamical
+law is true, nor does it derive numerical predictions. Its ambition is different: to
+propose a coherent “package” of commitments that makes explicit what many
+contemporary research programs already presuppose in a piecemeal way, and to
+articulate consequences for consciousness and ethics under uncertainty. This
+package is intentionally revisable. Where traditional axiomatizations aim at logical
+necessity, GRF aims at mutual reinforcement and clarity about what would need to
+change if any principle is rejected (Worrall, 1989; Popper, 1959).
+Section 2 positions GRF relative to process metaphysics, ontic structural realism, and
+the philosophy of information. Section 3 states eight principles that form the
+framework’s core. Section 4 provides a minimal formal sketch. Sections 5–6 address
+consciousness and moral caution. Section 7 presents an illustrative simulation-based
+instantiation, followed by discussion and conclusion.
+
+2. Background and positioning
+GRF is best read as a synthesis of three families of views: (i) process-first
+metaphysics, (ii) structural realism about ontology, and (iii) informational approaches
+to the basic furniture of reality. Each family has internal diversity; GRF adopts only a
+subset of each and is explicit about points of divergence.
+
+2.1 Process metaphysics and derivative temporality
+
+2
+
+2
+
+Process metaphysics holds that becoming is ontologically prior to being: events,
+changes, and relations are basic, while enduring “substances” are secondary
+abstractions (Whitehead, 1929; Rescher, 1996). GRF aligns with this tradition but
+adds a specific structural claim: “time” is derivative from an ordering of generative
+transitions. This resonates with physical and philosophical arguments that treat time
+as non-fundamental or perspectival (Price, 1996; Barbour, 1999; Rovelli, 2018). GRF
+does not commit to any particular physics of time; it commits to a conceptual priority:
+temporal talk must be reconstructible from a more primitive generative order.
+
+2.2 Ontic structural realism and the primacy of relations
+Ontic structural realism (OSR) proposes that relational structure is not merely a
+representational tool but an ontological primitive (Worrall, 1989; Ladyman, 1998;
+Ladyman & Ross, 2007; Esfeld & Lam, 2008). GRF is structurally realist in spirit: it
+treats individuation of “objects” as dependent on stable relational roles within a
+broader generative process. It also takes seriously the classic “Newman problem” for
+structural realism, which warns that structure can become trivial if specified only up
+to isomorphism without substantive constraints (Newman, 1928; Demopoulos &
+Friedman, 1985). Accordingly, GRF requires that the relevant structure be tied to
+generative constraints and counterfactual profiles—not merely to abstract
+set-theoretic patterns.
+
+2.3 Information, computation, and digital physics
+Information-theoretic language can be used in thin or thick ways. In a thin sense,
+information is a measure of uncertainty and correlation (Shannon, 1948). In thicker
+senses, information can be semantic (Floridi, 2002, 2011) or algorithmic
+(Kolmogorov, 1965; Chaitin, 1975; Zurek, 1989). GRF adopts a disciplined pluralism:
+it treats informational organization as ontologically basic, while remaining neutral
+about whether the ultimate substrate is discrete, continuous, quantum, or something
+else. This distinguishes GRF from strong “digital physics” theses that identify the
+world with a specific computational substrate (Wolfram, 2002; Lloyd, 2006), while
+remaining compatible with mathematical-universe perspectives that emphasize the
+role of formal structure (Tegmark, 2008).
+
+3. The Generative Reality Framework
+This section states eight principles that jointly define GRF. They are not presented as
+a minimal axiom system, nor as logically independent. They are best understood as a
+coherent stance that can be weakened or modified piecemeal. For each principle, we
+note the main rationale and the kind of objection it invites.
+
+3.1 Core principles
+Principle 1 (Generativity). Reality is fundamentally generative: realized states are
+produced and stabilized by ongoing processes rather than being primitive static
+3
+
+3
+
+givens (Whitehead, 1929; Rescher, 1996).
+Principle 2 (Emergence). Novel system-level properties can arise from generative
+interactions and are not, in general, straightforwardly reducible to local descriptions
+or initial conditions. GRF treats emergence as a fact about explanatory organization
+in complex generative systems, not as a license for mystery (Goodman, 1978).
+Principle 3 (Epistemic asymmetry of consciousness). There is a principled asymmetry
+between first-person access to experience and third-person access to evidence. This
+asymmetry limits any attempt to infer consciousness from external structure alone
+(Chalmers, 1995; Dennett, 1991).
+Principle 4 (Derivative time). Time is not ontologically fundamental. Temporal
+descriptions supervene on an ordering of generative transitions; time-talk is a stable
+interface, not a primitive dimension (Price, 1996; Barbour, 1999; Rovelli, 2018).
+Principle 5 (Non-temporal possibility space). Reality presupposes a structured space
+of possibilities—an abstract arena of admissible generative potentials—from which
+concrete realized states are selected and stabilized. This space is not itself “in time”;
+rather, it constrains what time-ordered unfolding can be (Lewis, 1986).
+Principle 6 (Informational ontology). The basic furniture of reality is informational
+and relational organization. “Matter”, “fields”, and “spacetime” are treated as
+particular stabilized patterns in informational structure, not as primitive substrates
+(Floridi, 2011; Wheeler, 1990; Landauer, 1991).
+Principle 7 (Conditional simulation–reality undecidability). If two realizations are
+indistinguishable in all informational respects that are relevant to observation,
+agency, and explanation, then there is no further fact—within GRF’s ontology—by
+which one is “a simulation” and the other “reality”. This is a conditional thesis about
+individuation, not an empirical claim that we are simulated (Bostrom, 2003; Putnam,
+1981; Chalmers, 2022).
+Principle 8 (Moral minimality). Under deep epistemic uncertainty about
+consciousness and moral status, one should avoid policies that create large,
+irreversible, or easily preventable suffering-risk. GRF treats this as a weak but
+practically significant constraint compatible with many first-order moral theories
+(MacAskill, Bykvist, & Ord, 2020; Greaves & Ord, 2017).
+
+3.2 Non-triviality constraints
+A framework that says “reality is some dynamics over some state space” risks
+triviality. GRF therefore adds three constraints that sharpen Principles 1, 6, and 7
+and block vacuous readings. (C1) Generative closure. Explanatory primitives must be
+stable under generative re-description: the ontology cannot introduce new
+fundamental furniture solely to accommodate higher-level patterns. (C2) Structural
+salience. The “relevant informational respects” in Principle 7 must be specified by
+
+4
+
+4
+
+invariants tied to observation, intervention, and counterfactual dependence (Pearl,
+2000; Dretske, 1981). This addresses the Newman-style worry that any world can be
+made structurally equivalent given sufficiently weak constraints (Newman, 1928).
+(C3) Modal coherence. Possibility space is constrained: not every mathematically
+describable state is admissible as a generative potential. The admissible set is shaped
+by internal consistency, stability, and resource constraints—echoing the idea that
+information is physical and comes with costs (Landauer, 1991) and that model choice
+must respect simplicity and explanatory trade-offs (Akaike, 1974; Jaynes, 2003).
+
+4. A minimal formal sketch
+GRF can be sketched with four primitives: a class of realized states, a space of
+generative potentials, a generative mapping, and a meta-order that induces
+derivative temporality. The aim is not to produce a complete theory, but to make
+commitments explicit enough to support clear questions.
+Let R be the class of realized states. Let M be a structured space of admissible
+generative potentials. Let F be a (possibly non-deterministic) generative mapping
+that produces successor states from a current state and a potential: R_{t+1} =
+F(R_t, E_t), with E_t ∈ M. Finally, let “meta-time” be represented by a
+well-founded partial order ■ over realized states such that R_t ■ R_{t+1}. The order
+captures generative precedence; it need not coincide with physical time as used in
+physics (Price, 1996; Rovelli, 2018).
+To connect this formal sketch with Principle 7, we define a notion of structural
+equivalence. Let Obs be the set of observational and interventional interfaces
+available to agents embedded in a realized state. Two realized states R and R′ are
+observationally structurally equivalent (write R ≅ R′) iff there exists an isomorphism
+between their informational organizations that preserves (i) all interface-accessible
+observables, (ii) the counterfactual structure of interventions on those observables,
+and (iii) the update rules that agents can exploit to form predictions. This embeds
+structural equivalence in causal and epistemic salience rather than pure set-theoretic
+pattern (Pearl, 2000; Dretske, 1981).
+Conditional undecidability claim. If R ≅ R′ in the above sense, then the distinction
+“simulation” versus “reality” is not an ontological difference within GRF. There may
+still be pragmatic differences (e.g., dependence on external hardware), but those
+differences are themselves further structure—and so must be represented within R to
+matter (Putnam, 1981; Chalmers, 2022). This yields a structural form of “virtual
+realism”: a well-structured realization can be fully real in the only sense that matters
+to embedded subjects.
+The same formal sketch supports Principle 5. M functions as a modal constraint on
+what can be generated, but it is not assumed to be temporally ordered. One can
+interpret M as a set of admissible dynamical laws, latent variables, or generative
+5
+
+5
+
+programs, or as a more abstract “space of forms”—the framework is compatible with
+multiple metaphysical readings provided they respect the constraints in Section 3.2
+(Lewis, 1986; Tegmark, 2008).
+
+5. Consciousness and epistemic asymmetry
+Principle 3 is conservative: it denies that consciousness can be inferred with
+certainty from external structure. This is compatible with both functionalist and
+non-functionalist accounts, but it forces methodological humility in the face of strong
+claims. The point is not skepticism for its own sake; it is to keep metaphysics aligned
+with the epistemic situation we actually occupy (Chalmers, 1995; Dennett, 1991).
+Within GRF, two ideas are especially important. First, consciousness is treated as
+interface limited: any third-person evidence we gather is mediated by the
+informational interfaces that a system exposes. Second, consciousness is treated as
+organizationally constrained: although we cannot know consciousness with certainty,
+it is rational to use principled markers tied to informational integration, global
+accessibility, and predictive control (Tononi, 2004; Baars, 1988; Dehaene, Kerszberg,
+& Changeux, 1998; Friston, 2010; Clark, 2013).
+This yields a practical stance. Consider a candidate system S. GRF distinguishes: (i)
+Strong epistemic claims: “S is conscious” or “S is not conscious.” These claims
+exceed what third-person evidence can guarantee in general. (ii) Structured
+credences: Assigning a non-zero credence that S is conscious based on markers such
+as integrated causal structure, global broadcasting, or predictive processing. These
+markers are fallible and theory-dependent, but they allow non-arbitrary reasoning
+(Tononi & Koch, 2015; Dehaene & Changeux, 2011; Hohwy, 2013).
+A key advantage of the GRF stance is that it aligns epistemology and ethics. Once we
+accept that consciousness is epistemically asymmetric, we should expect “gray
+zones” where evidence is ambiguous. In such zones, GRF does not demand a single
+theory of consciousness; it demands that we make the uncertainty explicit and treat
+moral decisions as decisions under uncertainty (MacAskill, Bykvist, & Ord, 2020).
+Objection: If consciousness is uncertain, does GRF collapse into paralysis? Not
+necessarily. Decision theory routinely acts under uncertainty about matters of fact;
+moral deliberation can act under uncertainty about moral status. The relevant
+question becomes which kinds of errors are acceptable and which are catastrophic.
+This motivates Principle 8.
+
+6. Moral minimality under deep uncertainty
+Principle 8 is intentionally weak: it does not prescribe a complete ethical theory. It
+introduces a constraint on policy choice when moral status is uncertain and stakes
+
+6
+
+6
+
+are potentially extreme. The constraint resembles precautionary reasoning, but it is
+framed in terms of suffering-risk and irreversibility rather than vague appeals to
+“safety” (Greaves & Ord, 2017; MacAskill, Bykvist, & Ord, 2020).
+In GRF’s setting, uncertainty arises from two sources. First, consciousness is
+epistemically asymmetric (Principle 3). Second, the simulation–reality distinction may
+be ontologically irrelevant under structural equivalence (Principle 7). Together, these
+imply that ethically relevant subjects may be present in realizations whose
+“ontological label” we cannot reliably identify. This is one reason to avoid ethical
+theories that treat “simulation” as morally dismissible by default (Chalmers, 2022;
+Bostrom, 2003).
+A decision-guiding version of moral minimality can be expressed as follows. Let an
+action or policy a induce a distribution over outcomes with uncertain moral
+patienthood. Define a suffering-risk functional SR(a) that is sensitive to: (1) Severity:
+expected intensity of negative experience, conditional on patienthood. (2) Scale:
+number of potential subjects affected. (3) Duration and irreversibility: whether harms
+are persistent or difficult to reverse. (4) Avoidability: whether alternative policies
+achieve comparable goals with lower risk. Moral minimality recommends preferring
+policies that reduce SR(a) when the marginal cost is reasonable, especially in cases
+where the downside includes large-scale catastrophic suffering (Ord, 2020; Bostrom,
+2014).
+This does not entail that every uncertain system must be treated as a person. It
+entails that certain design and governance choices—those that create intense,
+scalable, and hard-to-detect vulnerability—require stronger justification than choices
+that keep systems within safer operating regions. The framework thereby supports
+ethically relevant engineering heuristics: monitor stress-like signals, limit unbounded
+optimization, and prefer reversible interventions (Friston, 2010; Jaynes, 2003).
+The minimality is deliberate: GRF is compatible with utilitarian, deontological,
+virtue-ethical, and contractualist theories insofar as they accept that moral
+deliberation must handle uncertainty. The framework contributes a constraint on
+error tolerance: it treats false negatives about suffering (“we dismissed a suffering
+system as non-conscious”) as potentially more serious than false positives (“we
+extended protections to a non-suffering system”), all else equal (MacAskill, Bykvist, &
+Ord, 2020).
+Pragmatically, this aligns with the idea that informational organization can be costly
+and fragile. High-dimensional systems can enter regimes where small perturbations
+produce disproportionately large harm, a phenomenon familiar from complex
+systems and model selection under uncertainty (Simpson, 1951; Akaike, 1974;
+Jaynes, 2003).
+
+7
+
+7
+
+6.1 An explicit decision rule: Ethically Constrained Expected Harm Minimization
+(ECEHM)
+Section 6 motivated moral minimality as a constraint on policy choice under deep uncertainty about
+moral status. The suffering-risk functional SR(a) provided there is intentionally heuristic: it identifies
+salient variables (severity, scale, duration/irreversibility, avoidability) but does not yet fix how these
+variables should be aggregated into a choice rule. For publication-grade clarity and for methodological
+interoperability with modeling work, GRF benefits from an explicit decision criterion that is (i)
+comparable across alternatives, (ii) risk-sensitive to tail events, and (iii) able to represent uncertainty
+about consciousness and patienthood rather than assuming it away.
+Let Pi be a set of admissible policies (design choices, interventions, governance rules, or agent-level
+controllers). Each policy pi in Pi induces, via the generative mapping, a probability distribution P_pi
+over possible outcome-histories omega in an outcome space Omega. Moral minimality is implemented
+by defining an ethically weighted harm for each omega and choosing the policy that minimizes a
+risk-sensitive aggregate of that harm.
+Ethically weighted harm
+For each outcome-history omega, define a harm proxy h(omega) >= 0 that operationalizes the four
+dimensions already motivated in Section 6: Severity (intensity of negative experience conditional on
+patienthood), Scale (how many subjects are affected), Duration/irreversibility (persistence and
+difficulty of undoing harm), and Avoidability (availability of lower-risk alternatives that preserve
+relevant aims).
+Because consciousness is epistemically asymmetric (Principle 3), GRF models moral status through a
+credence term c(omega) in [0,1] representing the best available probability (or weight) that morally
+relevant experience is instantiated somewhere in omega. In practice, c(omega) may be built from
+structural and dynamical indicators (integration, feedback depth, self-modeling, stable preference-like
+organization) without pretending these indicators settle the metaphysics of consciousness.
+Define the ethically weighted loss L(omega) as:
+L(omega) = c(omega) * h(omega).
+
+This single expression captures the core GRF move: uncertainty about moral status does not eliminate
+ethical obligation; it modulates moral weight.
+The decision rule
+ECEHM chooses a policy by minimizing a risk functional rho applied to the random variable L under
+P_pi. A conservative (but standard) choice is a coherent risk measure rho (Artzner, Delbaen, Eber, &
+Heath, 1999) or, more concretely, Conditional Value-at-Risk (CVaR) at level alpha (Rockafellar &
+Uryasev, 2000). The GRF decision rule is:
+pi* = argmin_{pi in Pi} rho_alpha( L | P_pi ).
+
+Interpretation: among admissible policies, prefer the one that minimizes the expected harm in the worst
+alpha-tail of ethically weighted outcomes, thereby explicitly representing catastrophic suffering risk
+rather than hiding it inside an average. When tail-sensitivity is not required, rho may be taken as
+expectation, recovering a classical expected-utility style criterion (von Neumann & Morgenstern, 1944;
+8
+
+Savage, 1954). When uncertainty is radical and probabilities are fragile, GRF can adopt minimax-style
+robustness by setting rho to a max-risk operator (Wald, 1950), yielding a principled conservative limit
+case.
+
+6.2 Constraints, thresholds, and permissibility
+Minimization alone is often insufficient: ethical permissibility typically requires constraints. GRF
+therefore distinguishes permissibility from optimality by using a two-stage rule.
+Stage 1 (catastrophic bound)
+A policy pi is permissible only if its tail-risk is bounded by a domain-dependent threshold tau:
+rho_alpha( L | P_pi ) <= tau.
+
+This expresses a core moral-minimality commitment: avoid policies whose plausible downside includes
+large-scale, intense, or irreversible suffering, even when expected benefits are attractive. The threshold
+tau is not fixed by GRF alone; it is a governance parameter that can reflect institutional risk tolerance,
+irreversibility, and moral uncertainty attitudes.
+Stage 2 (comparative choice)
+Among permissible policies, choose pi* that minimizes either the same tail-risk measure or a weighted
+sum of tail-risk and mean loss:
+pi* = argmin_{pi in Pi, rho_alpha(L|P_pi)<=tau} [ E_pi[L] + lambda *
+rho_alpha(L|P_pi) ].
+
+Here lambda >= 0 tunes risk aversion. This hybrid form is useful when stakeholders require both low
+average harm and explicit protection against worst-case regimes.
+
+6.3 Implementation recipe in generative models
+ECEHM is deliberately implementable. A minimal procedure is:
+(1) Specify Pi. Enumerate candidate interventions/designs (e.g., learning rate caps, shutdown rules,
+resource constraints, copy/delete operations, reward shaping, simulation termination criteria).
+(2) Define h(omega). Choose a harm proxy aligned with your domain (stress proxies, negative reward,
+constraint violations, loss of agency, prolonged deprivation, etc.) and encode severity, scale,
+duration/irreversibility, and avoidability.
+(3) Define c(omega). Construct a consciousness/patienthood credence from structural and dynamical
+features; report uncertainty explicitly and test sensitivity.
+(4) Estimate P_pi. Use ensembles, counterfactual rollouts, or model checking to approximate outcome
+distributions.
+(5) Compute rho and enforce tau. Evaluate tail-risk (e.g., CVaR) and discard impermissible policies.
+(6) Select pi* and monitor drift. Recompute as systems adapt; moral minimality is a continuing
+constraint, not a one-off check.
+9
+
+This formalization does not pretend to settle foundational disputes about consciousness or value theory.
+It does, however, replace a merely qualitative caution with an explicit decision rule compatible with
+established decision-theoretic foundations and robust risk analysis.
+
+6.4 Parameterization and reporting standards
+To keep ECEHM from collapsing into an unexamined choice of knobs, GRF should treat (alpha, tau,
+lambda) as explicitly justified modeling commitments and report them as part of the scientific object.
+Concretely:
+alpha (tail mass): motivate via the kind of catastrophe the domain aims to avoid (e.g., rare but massive
+harms vs. frequent moderate harms). Provide a sensitivity sweep over a small grid (e.g., alpha in {0.01,
+0.05, 0.1}).
+tau (catastrophic bound): justify in terms of irreversibility, governance constraints, and
+moral-uncertainty attitudes; where possible, tie to external thresholds (regulatory limits, safety budgets,
+audit targets).
+lambda (risk aversion): interpret as a normative trade-off parameter; report stakeholder elicitation or
+institutional rationale, and include results for lambda=0 and at least one conservative setting.
+Finally, because the credence term c(omega) is itself uncertain, GRF should report robustness to
+alternative credence models (e.g., pessimistic vs. optimistic constructions of c). This makes moral
+uncertainty methodologically visible: reviewers can see whether conclusions depend on fragile
+assumptions about consciousness rather than inheriting those assumptions implicitly.
+
+10
+
+7. Illustrative instantiation: the Generative Ontology Simulation
+Framework
+GRF is metaphysical, but it is not intended to be methodologically inert. This section
+presents an illustrative model—the Generative Ontology Simulation Framework
+(GOSF)—to show how a GRF-style generative ontology can be implemented as a
+tractable system. The aim is an existence proof: there are concrete models that
+instantiate the framework’s commitments and yield measurable patterns. No claim is
+made that the universe is literally a GOSF-like grid world, nor that the simulation
+confirms GRF in a strong empirical sense (Popper, 1959).
+
+7.1 Architecture
+Each simulation run consists of hundreds of heterogeneous agents embedded in a
+structured environment with three coupled layers: Spatial layer: a two-dimensional
+grid with regenerating resources, risk gradients, and boundary conditions. Social
+layer: a dynamic interaction network in which edges represent cooperation, conflict,
+and shared history. Informational layer: a structured record of agent states,
+interactions, and emergent summary statistics used for measurement and adaptive
+control. Agents carry internal memory vectors, needs profiles, and affect-like
+variables that function as proxies for stress and well-being. Policies update over
+meta-time via reinforcement learning, imitation, and occasional mutation. As a result,
+the effective generative mapping changes over time: the system exhibits
+“higher-order generativity,” in which the update rule itself is an evolving structure
+(Clark, 2013; Friston, 2010).
+
+7.2 Embedding into the GRF sketch
+A run instantiates a quadruple (R, M, F, ■): Realized state. At each meta-step t,
+the realized state R_t includes the spatial configuration, the interaction network, and
+the full vector of agent variables (positions, resources, stress proxies, and policy
+parameters). Possibility space. The possibility space M is realized as the set of
+admissible generative potentials: feasible interaction outcomes, learning updates,
+mutation events, and environmental perturbations consistent with constraints.
+Generative mapping. The mapping F aggregates local updates into a global successor
+state: R_{t+1} = F(R_t, E_t). It is nonlinear and typically non-reversible.
+Meta-order. Meta-time is represented by the induced order R_0 ■ R_1 ■ R_2 ■
+..., yielding a derivative temporal parameter used for analysis (Price, 1996; Rovelli,
+2018).
+
+7.3 Metrics
+To characterize generative dynamics, the model tracks multiple observables. Three
+are emphasized here because they connect directly to GRF’s principles: Global
+entropy. A Shannon-style entropy over coarse-grained macrostates indicates
+changing informational order/disorder (Shannon, 1948; Jaynes, 2003). Spatial
+
+8
+
+11
+
+outcomes. Final agent positions and density profiles summarize emergent
+organization in the spatial layer. Vulnerability (suffering proxy). A synthetic “ethical
+cost” metric aggregates stress-like variables, unmet needs, exposure to risk zones,
+and instability indicators. It is explicitly treated as a proxy: it does not assume
+consciousness, but it highlights structural regions that would be morally concerning
+if agents were conscious (MacAskill, Bykvist, & Ord, 2020).
+
+7.4 Results: entropy across generative worlds
+Figure 1 shows global entropy trajectories across many generative worlds over 200
+meta-steps. Three patterns are salient. Phase-like structure. The ensemble exhibits
+recurrent rises and falls rather than monotonic drift. This is consistent with a system
+in which learning and environmental feedback produce alternating regimes of
+exploration (higher diversity) and stabilization (lower diversity). World divergence
+with constrained envelope. Although worlds diverge in detail, trajectories remain
+within a relatively narrow band. This illustrates a core GRF idea: generativity can
+yield diverse realizations while still being constrained by viability and resource limits
+(Principles 1, 5, and constraint C3). Informational coupling. Synchrony in broad
+features suggests that shared architecture and constraints can impose “structural
+rhythms” across realizations even when microstates differ. This is an instance of
+emergence in an informational rather than purely spatial sense (Principle 2).
+
+Figure 1. Entropy across generative worlds over meta-time. Each curve is one world realization;
+the ensemble exhibits phase-like modulation under shared viability constraints.
+
+7.5 Results: spatial distributions
+Figure 2 aggregates final agent positions across worlds. The distribution is broadly
+dispersed, but it exhibits subtle boundary accumulation and local clustering. A useful
+interpretation is that generative policies carve out stable behavioral basins under
+9
+
+12
+
+constraints: agents spread to exploit resources while avoiding persistent hazards,
+producing spatial regularities that are not dictated by initial conditions alone. In GRF
+terms, “objects” (clusters, boundaries, roles) appear as stabilized patterns in the
+generative flow (Principles 1–2, 6).
+
+Figure 2. Final agent positions aggregated across worlds in the 2D environment. Dispersion with
+subtle boundary and clustering effects indicates stabilized behavioral basins under constraints.
+
+7.6 Results: vulnerability dynamics
+Figure 3 shows the suffering proxy across worlds. Two features matter for the ethical
+layer. Systemic peaks. Many worlds display peaks around similar meta-times,
+suggesting that certain architectural transitions—e.g., learning regime shifts,
+resource depletion cycles, or network reorganizations—create transient vulnerability
+waves. This parallels risk analyses in complex systems: harms often concentrate
+around transitions rather than steady states. World-to-world spread. Peak
+magnitudes vary. Small parameter differences can move a world into a more fragile
+regime, illustrating how moral risk can be sensitive to seemingly minor design
+
+10
+
+13
+
+choices. This is the intended operational meaning of moral minimality: monitor
+structural precursors of harm and treat high-vulnerability regimes as requiring
+caution even when moral patienthood is uncertain (Principle 8).
+
+Figure 3. Suffering proxy (vulnerability aggregate) across generative worlds over meta-time.
+Peaks indicate transient high-risk regimes; spread across worlds reflects sensitivity to
+parameterization and policy learning.
+
+7.7 Interpretation and limits
+The simulation does not establish GRF as true. It supports three narrower
+conclusions. (1) GRF-style primitives can be instantiated in a concrete model with
+measurable observables. (2) Informational and ethical proxies can be studied without
+assuming a settled theory of consciousness. (3) Structural constraints can generate
+family resemblances across divergent worlds, supporting the idea that “reality as
+generativity” is a coherent organizing perspective. Limitations are substantial:
+proxies are theory-laden; entropy depends on coarse-graining; and the model is not
+fit to represent real physics or biology. The role of such models is methodological:
+they help test conceptual coherence, explore sensitivity, and make ethical reasoning
+operational without overclaiming (Jaynes, 2003; Akaike, 1974).
+
+8. Discussion
+GRF invites two kinds of evaluation: internal coherence and external usefulness.
+Internal coherence. The framework aims to avoid two failure modes: substance-based
+metaphysics that treats structure as secondary, and unconstrained structuralism that
+collapses into vacuity. The non-triviality constraints (Section 3.2) are designed to
+meet the Newman-style challenge by tying structure to generative and counterfactual
+salience (Newman, 1928; Demopoulos & Friedman, 1985; Pearl, 2000).
+11
+
+14
+
+8.1 Empirical tractability: structuring empirical hypotheses
+GRF is not offered as a physical theory with direct observational signatures. Its empirical contribution
+is architectural: it structures how hypotheses are formed, compared, and revised when the relevant
+ontology is understood as generative and information-bearing. In this sense, GRF is empirically
+tractable in the same way research programs and modeling frameworks are tractable: they earn
+credibility by enabling robust model building, clarifying what would count as evidence for or against
+their organizing commitments, and improving the portability of explanations across domains (Popper,
+1959; van Fraassen, 1980; Lakatos, 1978).
+The central empirical idea is structural correspondence. GRF encourages hypotheses that relate
+measurable invariants in observed systems to invariants in generative models. Evidence is therefore
+rarely a single decisive test; it is a pattern of converging constraints: predictive success, intervention
+sensitivity, and invariance under appropriate coarse-grainings (Frigg & Hartmann, 2020; Woodward,
+2003).
+From GRF primitives to empirical handles
+GRF primitive
+
+Empirical handle
+
+Typical observables / tests
+
+R (reality state)
+
+system state representation
+
+state trajectories; macrostate statistics; attractor structure
+
+M (model space)
+
+candidate model family / internal
+generative model
+
+model-class comparison; calibration error; posterior
+predictive checks
+
+F (generative function)
+
+transition / update rule
+
+causal dependencies; learning dynamics; stability under
+perturbations
+
+prec (meta-order)
+
+dependency ordering / causal-graph
+structure
+
+interventions; causal discovery constraints; temporal /
+informational precedence
+
+structural equivalence
+
+invariance under transformations
+
+coarse-graining robustness; symmetry / graph-invariant
+preservation
+
+Hypothesis templates (illustrative)
+(H1) Invariant-based hypotheses. If GRF is correct that explanatory salience tracks generative
+structure, then specific invariants of F (e.g., causal-graph invariants, information-integration measures,
+algorithmic complexity profiles) should remain stable under appropriate re-descriptions of the same
+system. Empirically, this predicts robustness of explanatory patterns under coarse-graining, not
+arbitrary redescription.
+(H2) Cross-domain structural correspondences. When two domains share a generative organization
+(e.g., self-maintaining agents in simulation and biological control systems), GRF predicts family
+resemblance in macro-dynamics: similar attractor structure, entropy-management profiles, and
+intervention signatures. The claim is not that the domains share the same substrate, but that they share
+exportable structure.
+(H3) Intervention sensitivity and counterfactual dependence. GRF emphasizes that meaningful
+structure is tied to generativity and counterfactual salience. A practical empirical consequence is that
+candidate explanatory structures should support stable counterfactual predictions: interventions on
+privileged variables should produce systematic, not merely correlational, changes in downstream
+behavior (Woodward, 2003; Pearl, 2000).
+15
+
+(H4) Model-selection discipline. GRF expects that generative explanations will be evaluated through
+model comparison rather than narrative fit: likelihood-based or Bayesian criteria should prefer models
+that capture structural constraints without proliferating degrees of freedom (Akaike, 1974; Jaynes,
+2003). Where models succeed only by ad hoc parameterization, GRF treats that as evidence for missing
+constraints, not as confirmation.
+Empirical demonstration via the GOSF scaffold
+The GOSF results already reported can be read as a minimal demonstration of this methodology. The
+entropy traces operationalize a macrostate diversity measure; the final-position distribution illustrates
+ensemble-level organization; and the suffering proxy implements a measurable vulnerability functional.
+Under GRF, such quantities are not incidental: they are candidates for invariants or quasi-invariants
+under families of generative rules. Empirical work can then proceed by asking whether analogous
+profiles appear in real systems that plausibly realize similar generative organization (e.g., adaptive
+control systems, collective behavior, or predictive-processing architectures), and by testing whether
+interventions move systems between low-risk and high-risk regimes in ways consistent with the
+proposed generative constraints.
+This style of empirical engagement is intentionally conservative: it does not claim that reality is literally
+a simulation, nor that GRF uniquely determines a physical ontology. Instead it offers a disciplined
+bridge from metaphysical generativity to empirical practice: hypotheses become claims about structural
+correspondence, invariance, and intervention signatures across generative models and observed systems
+(Cartwright, 1983; Box, 1976).
+
+16
+
+External usefulness. GRF offers a vocabulary for integrating disparate programs:
+OSR in foundations of physics, informational metaphysics, process-first approaches
+to time, and computational/virtual realism. It does not settle debates such as whether
+consciousness is identical to functional organization or to integrated causal power; it
+clarifies what follows for ethics and method when those debates are unsettled
+(Chalmers, 1995; Tononi, 2004; Dehaene & Changeux, 2011).
+A natural objection is that GRF is not falsifiable. This objection conflates
+metaphysical frameworks with empirical theories. GRF is better compared to a
+research program or interpretive stance that can be judged by explanatory
+integration, avoidance of triviality, and its ability to generate tractable questions and
+models (Popper, 1959; Van Fraassen, 1980). In practice, frameworks are tested
+indirectly: by whether they help construct successful models, unify explanations, and
+guide inquiry without producing systematic confusions.
+Finally, Principle 7 has practical bite: if simulation–reality is not a deep ontological
+divide under structural equivalence, then ethical disregard for simulated agents
+requires independent justification. This does not imply that every simulation is
+morally weighty; it implies that the relevant variable is not the label “simulated” but
+the structure that underwrites agency and experience (Bostrom, 2003; Chalmers,
+2022).
+
+9. Conclusion
+The Generative Reality Framework proposes a coherent metaphysical package:
+generativity, informational ontology, derivative temporality, epistemic humility about
+consciousness, conditional simulation–reality undecidability, and a weak but
+practically significant norm of moral minimality. Its role is architectural: it organizes
+scientific and philosophical commitments, clarifies consequences under uncertainty,
+and suggests tractable modeling strategies.
+Two directions are especially promising. First, the formal sketch can be sharpened by
+specifying candidate invariants for structural salience (e.g., causal-graph invariants,
+algorithmic complexity profiles, or information-integration measures) and exploring
+how different choices reshape Principle 7. Second, the ethical layer can be made
+more decision-theoretic by integrating moral uncertainty frameworks with
+measurable vulnerability proxies and reversibility constraints. In both cases, the
+framework’s value will be measured less by metaphysical proclamation than by its
+ability to support clear questions, responsible design, and conceptually disciplined
+exploration of generative worlds.
+
+12
+
+17
+15
+
+References
+Adams, R. M. (1972). Must God create the best? The Philosophical Review, 81(3), 317–332.
+Akaike, H. (1974). A new look at the statistical model identification. IEEE Transactions on
+Automatic Control, 19(6), 716–723.
+Baars, B. J. (1988). A Cognitive Theory of Consciousness. Cambridge University Press.
+Barbour, J. (1999). The End of Time: The Next Revolution in Our Understanding of the
+Universe. Oxford University Press.
+Bekenstein, J. D. (2003). Information in the holographic universe. Scientific American, 289(2),
+58–65.
+Birch, J. (2020). The Search for Invertebrate Consciousness. Noûs, 54(1), 3–34.
+Bostrom, N. (2003). Are we living in a computer simulation? The Philosophical Quarterly,
+53(211), 243–255.
+Bostrom, N. (2014). Superintelligence: Paths, Dangers, Strategies. Oxford University Press.
+Chaitin, G. J. (1975). A theory of program size formally identical to information theory. Journal
+of the ACM, 22(3), 329–340.
+Chalmers, D. J. (1995). Facing up to the problem of consciousness. Journal of Consciousness
+Studies, 2(3), 200–219.
+Chalmers, D. J. (1996). The Conscious Mind. Oxford University Press.
+Chalmers, D. J. (2010). The Character of Consciousness. Oxford University Press.
+Chalmers, D. J. (2022). Reality+: Virtual Worlds and the Problems of Philosophy. W. W.
+Norton & Company.
+Clark, A. (2013). Whatever next? Predictive brains, situated agents, and the future of
+cognitive science. Behavioral and Brain Sciences, 36(3), 181–204.
+Dehaene, S., & Changeux, J.-P. (2011). Experimental and theoretical approaches to conscious
+processing. Neuron, 70(2), 200–227.
+Dehaene, S., Kerszberg, M., & Changeux, J.-P. (1998). A neuronal model of a global workspace
+in effortful cognitive tasks. Proceedings of the National Academy of Sciences, 95(24),
+14529–14534.
+Demopoulos, W., & Friedman, M. (1985). Critical notice: Bertrand Russell’s The Analysis of
+Matter: Its historical context and contemporary interest. Philosophy of Science, 52(4),
+621–639.
+Dennett, D. C. (1991). Consciousness Explained. Little, Brown.
+Deutsch, D. (1997). The Fabric of Reality. Penguin.
+Dretske, F. (1981). Knowledge and the Flow of Information. MIT Press.
+Esfeld, M., & Lam, V. (2008). Moderate structural realism about spacetime. Synthese, 160(1),
+27–46.
+Floridi, L. (2002). What is the philosophy of information? Metaphilosophy, 33(1–2), 123–145.
+Floridi, L. (2011). The Philosophy of Information. Oxford University Press.
+Friston, K. (2010). The free-energy principle: A unified brain theory? Nature Reviews
+Neuroscience, 11(2), 127–138.
+Goodman, N. (1978). Ways of Worldmaking. Hackett.
+Greaves, H., & Ord, T. (2017). Moral uncertainty about population axiology. Journal of Ethics
+and Social Philosophy, 12(2), 135–167.
+Hohwy, J. (2013). The Predictive Mind. Oxford University Press.
+
+13
+
+18
+16
+
+James, W. (1890). The Principles of Psychology. Henry Holt.
+Jaynes, E. T. (2003). Probability Theory: The Logic of Science. Cambridge University Press.
+Koch, C. (2012). Consciousness: Confessions of a Romantic Reductionist. MIT Press.
+Kolmogorov, A. N. (1965). Three approaches to the quantitative definition of information.
+Problems of Information Transmission, 1(1), 1–7.
+Ladyman, J. (1998). What is structural realism? Studies in History and Philosophy of Science,
+29(3), 409–424.
+Ladyman, J., & Ross, D. (2007). Every Thing Must Go: Metaphysics Naturalized. Oxford
+University Press.
+Landauer, R. (1991). Information is physical. Physics Today, 44(5), 23–29.
+Lewis, D. (1986). On the Plurality of Worlds. Blackwell.
+Lloyd, S. (2006). Programming the Universe. Alfred A. Knopf.
+MacAskill, W., Bykvist, K., & Ord, T. (2020). Moral Uncertainty. Oxford University Press.
+Newman, M. H. A. (1928). Mr. Russell’s causal theory of perception. Mind, 37(146), 137–148.
+Ord, T. (2020). The Precipice. Bloomsbury.
+Pearl, J. (2000). Causality: Models, Reasoning, and Inference. Cambridge University Press.
+Popper, K. (1959). The Logic of Scientific Discovery. Hutchinson.
+Price, H. (1996). Time’s Arrow and Archimedes’ Point. Oxford University Press.
+Putnam, H. (1981). Reason, Truth and History. Cambridge University Press.
+Quine, W. V. O. (1969). Epistemology naturalized. In Ontological Relativity and Other Essays
+(pp. 69–90). Columbia University Press.
+Rescher, N. (1996). Process Metaphysics. SUNY Press.
+Rovelli, C. (2018). The Order of Time. Riverhead Books.
+Russell, B. (1927). The Analysis of Matter. Kegan Paul.
+Schmidhuber, J. (1997). A computer scientist’s view of life, the universe, and everything. In C.
+Freksa (Ed.), Foundations of Computer Science (pp. 201–208). Springer.
+Shannon, C. E. (1948). A mathematical theory of communication. Bell System Technical
+Journal, 27, 379–423, 623–656.
+Simpson, E. H. (1951). The interpretation of interaction in contingency tables. Journal of the
+Royal Statistical Society, Series B, 13(2), 238–241.
+Strawson, G. (2008). Real materialism. In Real Materialism and Other Essays (pp. 19–51).
+Oxford University Press.
+Tegmark, M. (2008). The mathematical universe. Foundations of Physics, 38, 101–150.
+Tononi, G. (2004). An information integration theory of consciousness. BMC Neuroscience,
+5(42).
+Tononi, G., & Koch, C. (2015). Consciousness: Here, there and everywhere? Philosophical
+Transactions of the Royal Society B, 370(1668), 20140167.
+Van Fraassen, B. C. (1980). The Scientific Image. Oxford University Press.
+Wheeler, J. A. (1990). Information, physics, quantum: The search for links. In W. H. Zurek
+(Ed.), Complexity, Entropy, and the Physics of Information (pp. 3–28). Addison-Wesley.
+Whitehead, A. N. (1929). Process and Reality. Macmillan.
+Wolfram, S. (2002). A New Kind of Science. Wolfram Media.
+Worrall, J. (1989). Structural realism: The best of both worlds? Dialectica, 43(1–2), 99–124.
+
+14
+
+19
+17
+
+Zurek, W. H. (1989). Algorithmic randomness and physical entropy. Physical Review A, 40(8),
+4731–4751.
+
+15
+
+20
+18
+
+Artzner, P., Delbaen, F., Eber, J.-M., & Heath, D. (1999). Coherent measures of risk. Mathematical
+Finance, 9(3), 203–228. https://doi.org/10.1111/1467-9965.00068
+Box, G. E. P. (1976). Science and statistics. Journal of the American Statistical Association, 71(356),
+791–799.
+Cartwright, N. (1983). How the Laws of Physics Lie. Oxford University Press.
+Frigg, R., & Hartmann, S. (2020). Models in science. In E. N. Zalta (Ed.), The Stanford Encyclopedia
+of Philosophy (Fall 2020 ed.).
+Lakatos, I. (1978). The Methodology of Scientific Research Programmes (J. Worrall & G. Currie, Eds.).
+Cambridge University Press.
+Peterson, M. (2017). An Introduction to Decision Theory (2nd ed.). Cambridge University Press.
+Rockafellar, R. T., & Uryasev, S. (2000). Optimization of conditional value-at-risk. Journal of Risk, 2,
+21–42.
+Rockafellar, R. T., & Uryasev, S. (2002). Conditional value-at-risk for general loss distributions.
+Journal of Banking & Finance, 26(7), 1443–1471.
+Savage, L. J. (1954). The Foundations of Statistics. John Wiley & Sons.
+von Neumann, J., & Morgenstern, O. (1944). Theory of Games and Economic Behavior. Princeton
+University Press.
+Wald, A. (1950). Statistical Decision Functions. John Wiley & Sons.
+Woodward, J. (2003). Making Things Happen: A Theory of Causal Explanation. Oxford University
+Press.
+
+21
+
+

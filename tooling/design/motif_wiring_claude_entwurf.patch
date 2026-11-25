@@ -1,0 +1,148 @@
+diff --git a/src/ui/welcome.rs b/src/ui/welcome.rs
+index d698d66..85bc183 100644
+--- a/src/ui/welcome.rs
++++ b/src/ui/welcome.rs
+@@ -4,12 +4,13 @@ use crate::app::{
+     App, AppStatus, ChatMessage, MessageBlock, SurfaceMode, TerminalLifecycleState, WelcomeBlock,
+ };
+ use crate::ui::host_tips::HOST_TIPS;
++use crate::ui::machine_god_art;
+ use crate::ui::theme;
+ use crate::ui::wrap::{
+     StyledChunk, display_width, join_column_lines, wrap_styled_chunks,
+     wrap_styled_chunks_with_hanging_prefix,
+ };
+-use ratatui::style::{Modifier, Style};
++use ratatui::style::{Color, Modifier, Style};
+ use ratatui::text::{Line, Span};
+ use std::time::{Duration, Instant};
+ 
+@@ -208,10 +209,12 @@ pub(crate) fn overview_lines(
+         Style::default().fg(theme::ACCENT).add_modifier(Modifier::BOLD)
+     };
+ 
+-    let ferris_width = ferris_column_width();
+-    let overview_width = width.saturating_sub(ferris_width.saturating_add(FERRIS_TEXT_GAP));
+-    let side_by_side = ferris_column_visible(width);
+-    let text_width = if side_by_side { overview_width } else { width };
++    let _ = ferris;
++    let motif = motif_size_for(width);
++    let motif_width = motif.map_or(0, motif_column_width);
++    let side_by_side = motif.is_some();
++    let text_width =
++        if side_by_side { width.saturating_sub(motif_width.saturating_add(FERRIS_TEXT_GAP)) } else { width };
+     let text_rows = overview_text_rows(
+         block,
+         &subscription_value,
+@@ -219,11 +222,15 @@ pub(crate) fn overview_lines(
+         &session_value,
+         text_width,
+     );
+-    let mut lines = crate::ui::sacred_banner::banner_lines(width);
+-    lines.extend(if side_by_side {
+-        join_column_lines(ferris_rows(ferris), text_rows, ferris_width, FERRIS_TEXT_GAP)
+-    } else {
+-        text_rows
++    let mut lines = Vec::new();
++    lines.extend(match motif {
++        Some(size) => join_column_lines(
++            motif_rows(size, motif_frame(motif_elapsed()), theme::colors_enabled()),
++            text_rows,
++            motif_width,
++            FERRIS_TEXT_GAP,
++        ),
++        None => text_rows,
+     });
+     lines.push(Line::default());
+     lines
+@@ -266,6 +273,90 @@ fn welcome_field_lines(
+     wrap_styled_chunks_with_hanging_prefix(&prefix, &body, width, Style::default())
+ }
+ 
++/// Machine God motif size (replaces Ferris): LARGE beside a roomy overview, SMALL beside a narrow one,
++/// none when even the small motif would squeeze the overview below its minimum.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) enum MotifSize {
++    Large,
++    Small,
++}
++
++const LARGE_MOTIF_MIN_OVERVIEW: usize = 60;
++
++pub(crate) fn motif_size_for(width: usize) -> Option<MotifSize> {
++    let room = |size| width.saturating_sub(motif_column_width(size).saturating_add(FERRIS_TEXT_GAP));
++    if room(MotifSize::Large) >= LARGE_MOTIF_MIN_OVERVIEW {
++        Some(MotifSize::Large)
++    } else if room(MotifSize::Small) >= minimum_overview_width() {
++        Some(MotifSize::Small)
++    } else {
++        None
++    }
++}
++
++fn motif_column_width(size: MotifSize) -> usize {
++    let cols = match size {
++        MotifSize::Large => machine_god_art::LARGE_COLS,
++        MotifSize::Small => machine_god_art::SMALL_COLS,
++    };
++    display_width(FERRIS_LEFT_PADDING).saturating_add(cols)
++}
++
++/// Frame of the red pulse for a given time since start: pure, so tests can pin instants.
++pub(crate) fn motif_frame(elapsed: Duration) -> usize {
++    let step = elapsed.as_millis() / u128::from(machine_god_art::FRAME_MS);
++    usize::try_from(step % machine_god_art::FRAME_COUNT as u128).unwrap_or(0)
++}
++
++fn motif_elapsed() -> Duration {
++    static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
++    START.get_or_init(Instant::now).elapsed()
++}
++
++fn motif_color(class: char) -> Option<Color> {
++    match class {
++        'g' => Some(Color::Rgb(110, 110, 110)),
++        'w' => Some(Color::Rgb(205, 205, 205)),
++        'r' => Some(Color::Rgb(150, 30, 35)),
++        'R' => Some(Color::Rgb(255, 45, 45)),
++        _ => None,
++    }
++}
++
++pub(crate) fn motif_rows(size: MotifSize, frame: usize, color: bool) -> Vec<Line<'static>> {
++    let frame = frame % machine_god_art::FRAME_COUNT;
++    let (art, mask): (&[&str], &[&str]) = match size {
++        MotifSize::Large => (&machine_god_art::LARGE_ART[frame], &machine_god_art::LARGE_MASK[frame]),
++        MotifSize::Small => (&machine_god_art::SMALL_ART[frame], &machine_god_art::SMALL_MASK[frame]),
++    };
++    art.iter()
++        .zip(mask.iter())
++        .map(|(row, classes)| {
++            let mut spans = vec![Span::raw(FERRIS_LEFT_PADDING)];
++            let mut run = String::new();
++            let mut run_class = ' ';
++            for (ch, class) in row.chars().zip(classes.chars()) {
++                if class != run_class && !run.is_empty() {
++                    spans.push(motif_span(std::mem::take(&mut run), run_class, color));
++                }
++                run_class = class;
++                run.push(ch);
++            }
++            if !run.is_empty() {
++                spans.push(motif_span(run, run_class, color));
++            }
++            Line::from(spans)
++        })
++        .collect()
++}
++
++fn motif_span(text: String, class: char, color: bool) -> Span<'static> {
++    match motif_color(class).filter(|_| color) {
++        Some(fg) => Span::styled(text, Style::default().fg(fg)),
++        None => Span::raw(text),
++    }
++}
++
+ fn ferris_column_width() -> usize {
+     display_width(FERRIS_LEFT_PADDING)
+         .saturating_add(FERRIS_REST.iter().map(|line| display_width(line)).max().unwrap_or(0))

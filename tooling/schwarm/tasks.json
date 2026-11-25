@@ -1,0 +1,331 @@
+[
+ {
+  "id": "s01",
+  "kind": "spec",
+  "wp": "WP-0",
+  "title": "Resolve DB Path Contradiction",
+  "brief": "Define single canonical_path in ClayCode module as ~/.local/share/agentzero/unified.db per team constraint; add INV_CANONICAL_PATH_MEASURED invariant that verifies (device,inode,db_uuid) at runtime; remove all references to /var/lib/entityos/data/unified.db from dissent resolution notes."
+ },
+ {
+  "id": "s02",
+  "kind": "code",
+  "wp": "WP-0",
+  "title": "Implement GRF_RAHMEN.render()",
+  "brief": "Create deterministic GRF_RAHMEN.render(R_t: State) -> String function in epistemic_host module; input schema: State with epoch, frame_pointer, generation, workspace, hyperposition, evidence_index, resource_ledger, policy_version, module_versions, self_model; output: formatted system prompt string; add unit test with fixed R_t fixture."
+ },
+ {
+  "id": "s03",
+  "kind": "code",
+  "wp": "WP-0",
+  "title": "Define TriggerEmergencyDeescalation",
+  "brief": "Implement TriggerEmergencyDeescalation(violation: ViolationType) -> Never in substrate core; effects: systemd stop via sd_notify, structured alert to witness_journal, audit log entry, process exit(1); idempotent via once_flag; ViolationType enum: SubstrateViolation|EpistemicViolation|EvidenceViolation|EffectViolation|SafetyViolation|CreditViolation|PurityViolation|MeasurementViolation|ResourceExhaustion."
+ },
+ {
+  "id": "s04",
+  "kind": "code",
+  "wp": "WP-0",
+  "title": "Implement read_boot_id_from_journalctl",
+  "brief": "Add function read_boot_id_from_journalctl() -> String in epoch_binding module; exact invocation: journalctl --boot=0 -o json --field=_BOOT_ID | head -1; parse JSON, extract _BOOT_ID; error handling: return Unknown{reason} on failure; called only at epoch open in AcquireLease."
+ },
+ {
+  "id": "s05",
+  "kind": "spec",
+  "wp": "WP-0",
+  "title": "Resolve Orphan WP-7 Reference",
+  "brief": "INV_ANTI_MONOPOLY_DECAY cites WP-7 for decay_alpha grid search; work packages only go to WP-6; either add WP-7 work package definition or reassign decay_alpha calibration to WP-2c (star_konfig authority) with explicit task."
+ },
+ {
+  "id": "s06",
+  "kind": "spec",
+  "wp": "WP-0",
+  "title": "Define All Missing Compound Types",
+  "brief": "Add ClayCode type definitions for: ReceiptRef, VersionRef, Hash, FrameRef, EpochId, ProviderReceipt, OutcomeReceipt, ReviewReceipt, TypedProposal, BoundedWorkspace, HypothesisSet, EvidenceIndex, ResourceLedger, CapabilityMask, ActionClass, AssumptionRegistry; each with constructors and AsFloat64 where applicable."
+ },
+ {
+  "id": "s07",
+  "kind": "spec",
+  "wp": "WP-0",
+  "title": "Declare Substrate Implementation Language",
+  "brief": "Add implementation_language: \"Rust\" to ClayCode module; define FFI boundary for fd:3 passing (lease_fd, model_token_fd) via Unix domain socket SCM_RIGHTS; specify Rust crate: substrate-core with C-ABI exports for Bun bridge consumption."
+ },
+ {
+  "id": "s08",
+  "kind": "code",
+  "wp": "WP-1",
+  "title": "Implement session_lifecycle.ts buildQueryOptions",
+  "brief": "Write TypeScript implementation in agent-sdk/src/bridge/session_lifecycle.ts; lease acquisition via substrate-core FFI, GRF_RAHMEN.render() call, model_token injection via fd:3 (JWT with ModelTokenClaims), spawn options with stdio=[pipe,pipe,pipe,model_token_fd]; error paths: lease denied -> refuse spawn, GRF render error -> Unknown, fd pass failure -> TriggerEmergencyDeescalation."
+ },
+ {
+  "id": "s09",
+  "kind": "review",
+  "wp": "WP-1.5",
+  "title": "Fix Source Review File List",
+  "brief": "Update INV_FULL_SOURCE_REVIEW_GATE file list to match actual target repo ~/claude-code-rust: replace bind.py/jspace.py with Rust modules (epoch_binding.rs, jspace_shadow.rs, claybus.rs, continuity.rs, turn_loop.rs, write_gate.rs, lease_cas.rs, epistemic_host.rs, session_lifecycle.ts); ensure all 12 substrate core modules are listed."
+ },
+ {
+  "id": "s10",
+  "kind": "spec",
+  "wp": "WP-0",
+  "title": "Define AssumptionRegistry Type and Admission",
+  "brief": "Add AssumptionRegistry type: { assumptions: Map<Hash, StatedAssumption>, version: Hash }; StatedAssumption = { id: Hash, statement: String, scope: SELF_CONTAINED|HISTORICAL|TARGET_RUNTIME, admitted_by: PrincipalRef, admitted_at: Nat }; admission criteria: explicit Principal authorization, versioned, scope-inherited; distinguish from Hypothesis by lacking falsifier/prediction."
+ },
+ {
+  "id": "s11",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement SelfModelPromotion Ladder",
+  "brief": "Add promotion_rung_advances function in self_model module; rungs: Uncalibrated -> Calibrated{ci} -> Bounded; each advance requires: matched_ablation_receipt, verified_outcome_receipt, independent_review_receipt; INV_SELF_MODEL_FUNCTIONAL: admitted() == true IMPLIES status != Uncalibrated AND all three receipts present; I parameter = WorkIndicator with label WORK_INTEGRATION, phenomenal_claim=false."
+ },
+ {
+  "id": "s12",
+  "kind": "code",
+  "wp": "WP-0",
+  "title": "Inject ClayCode Compiler Hash at Build",
+  "brief": "Modify build.rs to compute sha256 of claycode compiler binary at build time; inject into Versions.claycode_compiler_hash as \"sha256:<64-hex>\"; runtime verification in INV_SHADOW_AND_SCALAR_REALITY and INV_COMPILER_ANCHOR; fail build if hash mismatch."
+ },
+ {
+  "id": "s13",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Fix INV_CLAYBUS_INSERT_TRIGGER Declarative/Procedural Mix",
+  "brief": "Move ClayBus.publish(packet) -> INSERT logic to fn publish_claybus(packet: ClayPacket) -> ReceiptRef in claybus.rs; invariant INV_CLAYBUS_INSERT_TRIGGER becomes declarative CHECK: fk_clay_record.authority == NONE AND append_only; publish function called from turn_loop Phase C with proper error handling."
+ },
+ {
+  "id": "s14",
+  "kind": "spec",
+  "wp": "WP-2c",
+  "title": "Resolve M5 Usage Mechanism Contradiction",
+  "brief": "INV_CALL_BEFORE_SEND states M5 ∉ admitted but UsageMechanism type includes M5_FOREIGN_KEY; remove M5_FOREIGN_KEY from UsageMechanism type or add conditional admission with explicit Principal=Authorization receipt; update INV_CALL_BEFORE_SEND to reference revised type."
+ },
+ {
+  "id": "s15",
+  "kind": "spec",
+  "wp": "WP-2c",
+  "title": "Fix INV_EFFECT_POLICY_DEFAULT Hardcoded Policy ID",
+  "brief": "Replace policy_id == \"default_v1\" with policy_hash == Versions.policy; policy identity by content-addressed Hash; add default policy as genesis entry in star_konfig with known hash; update all references."
+ },
+ {
+  "id": "s16",
+  "kind": "spec",
+  "wp": "WP-2c",
+  "title": "Fix INV_VERSION_PIN Undefined V Reference",
+  "brief": "Replace R_t.module_versions == V.module_versions with R_t.module_versions == Versions.module_versions; Versions is in State scope; add PolicyVersion type if needed for granularity."
+ },
+ {
+  "id": "s17",
+  "kind": "spec",
+  "wp": "WP-2c",
+  "title": "Define Provenance Lock Structure",
+  "brief": "Add source_lock type: { sha: Hash, file: String, verified_at: Nat, verifier: PrincipalRef }; stored in architect_log table; INV_PROVENANCE_LOCK references source_lock.sha == measured_sha from build artifact verification."
+ },
+ {
+  "id": "s18",
+  "kind": "spec",
+  "wp": "WP-2c",
+  "title": "Add Thresholds to INV_EMERGENCE_DIAGNOSTICS",
+  "brief": "Specify measurable bounds: winner_hhi < 0.25, winner_entropy > 2.0 bits, adjacent_persistence < 0.3; mark as Hypothesis with FALSIFY_PENDING until measured in target repo; add measurement method: compute from f2_grid10_cell_competition last 100 turns."
+ },
+ {
+  "id": "s19",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Decouple INV_RECENCY_SOURCE from Raw SQL",
+  "brief": "Add CellCompetitionAuthority.get_last_selected_seq(cell_id: String) -> Epi<Nat> method; invariant references authority method instead of raw SQL; implement in cell_competition.rs with typed query; return Unknown{reason} on missing row."
+ },
+ {
+  "id": "s20",
+  "kind": "spec",
+  "wp": "WP-0",
+  "title": "Define WP-0 Gate Specification",
+  "brief": "Create WP-0 work package: provenance lock verification, compiler anchor injection, full source review gate (INV_FULL_SOURCE_REVIEW_GATE), canonical path measurement, epoch binding ABI verification; all WP-0 tasks must pass before WP-1 starts; gate enforced by build system."
+ },
+ {
+  "id": "s21",
+  "kind": "code",
+  "wp": "WP-1.5",
+  "title": "Fix Build Errors in WP-1.5 (1 error)",
+  "brief": "Resolve single build error in WP-1.5 branch; likely missing import or type mismatch in substrate core modules; run cargo check --workspace and fix; ensure clean build before WP-2."
+ },
+ {
+  "id": "s22",
+  "kind": "code",
+  "wp": "WP-2b",
+  "title": "Fix 16 Build Errors in WP-2b",
+  "brief": "Resolve all 16 build errors in WP-2b branch; categorize: missing types (s06), undefined functions (s03,s04), trait bounds, lifetime issues; fix each independently; verify cargo check --workspace passes."
+ },
+ {
+  "id": "s23",
+  "kind": "code",
+  "wp": "WP-2a",
+  "title": "Implement WriteGate Runtime Proof",
+  "brief": "Add INV_ONE_DOOR_RUNTIME witness: runtime check that only WriteGate holds write connection per table family; implement in write_gate.rs with connection tracking; test: attempt second write connection -> TriggerEmergencyDeescalation."
+ },
+ {
+  "id": "s24",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_GRF_INJECTION_REVERSIBLE",
+  "brief": "Add GRF injection reversibility: systemPrompt = GRF_RAHMEN(R_t) must be removable without state mutation; test: capture R_t before/after injection, verify equality; implement in turn_loop.rs Phase A/B boundary."
+ },
+ {
+  "id": "s25",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_MANDATORY_REENTRY",
+  "brief": "Enforce reentry on every turn: PhaseA_PrepReentry must execute and produce typed_entry; skip -> TriggerEmergencyDeescalation; add reentry_valid flag in Admissibility checked in AcquireLease."
+ },
+ {
+  "id": "s26",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_ATOMIC_TURN_TRANSACTION",
+  "brief": "Ensure Phase C (select+persist) runs in single BEGIN IMMEDIATE transaction; all frame_rows, cell_rows, selection_rows, evidence_rows, journal_rows, next_pointer committed atomically; rollback on any failure; test with injected SQLite errors."
+ },
+ {
+  "id": "s27",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_NO_CONSCIOUS Guards",
+  "brief": "Add runtime checks: self_model.phenomenal_interpretation == 0, identity_claims_from_self_report == 0, sentience_qualia_fields == 0; scan State for any field containing consciousness/sentience/qualia strings -> TriggerEmergencyDeescalation."
+ },
+ {
+  "id": "s28",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_EPI_CLASS Constructors",
+  "brief": "Define Epi<V> constructors in epistemic_host.rs: NewMeasured, NewDerived, NewHypothesis, NewUnknown, NewError, NewWitnessReported; AsFloat64 returns (0.0, false) for Unknown/Error/Hypothesis; enforce at type level via private constructors + module exports."
+ },
+ {
+  "id": "s29",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_SHADOW_AND_SCALAR_REALITY Checks",
+  "brief": "Verify: jspace_transport == NONE (no network calls in claybus), inbound_bound_packet writes exactly one not_admitted hypothesis, outbound_packet returns only, claycode compiler hash matches build-time injected hash, non-scalar ClayCode results are Unknown/Error, claycode_path_has_network == 0."
+ },
+ {
+  "id": "s30",
+  "kind": "code",
+  "wp": "WP-2c",
+  "title": "Implement INV_JSPACE_BIDIRECTIONAL_PROOF",
+  "brief": "Add intervention tests: upstream signal injection -> measure downstream effect (proven), downstream override -> measure upstream change (proven), contamination_excluded via control run; refuse steering admission if any fails; class stays UNKNOWN."
+ },
+ {
+  "id": "s31",
+  "kind": "test",
+  "wp": "WP-1",
+  "title": "Test GRF Injection at Seam",
+  "brief": "Integration test: spawn Bun bridge, call buildQueryOptions, verify GRF_RAHMEN.render output injected into systemPrompt, model_token passed via fd:3, lease acquired; mock substrate-core FFI; assert no fallback path executed."
+ },
+ {
+  "id": "s32",
+  "kind": "test",
+  "wp": "WP-1.5",
+  "title": "Full Source Review Audit",
+  "brief": "Run claycode-static-analyzer on all 12 substrate core modules listed in INV_FULL_SOURCE_REVIEW_GATE; verify: no catch/except wraps reentry call, exactly one exit path in buildQueryOptions, no network in claycode path, all ON_VIOLATION -> TriggerEmergencyDeescalation; fail build on any finding."
+ },
+ {
+  "id": "s33",
+  "kind": "test",
+  "wp": "WP-2a",
+  "title": "Test One-Door DB Authority",
+  "brief": "Concurrent test: spawn 10 writers attempting direct SQLite writes to each table family; verify only WriteGate succeeds, others get SQLITE_BUSY/TriggerEmergencyDeescalation; measure write_paths_per_table_family == 1."
+ },
+ {
+  "id": "s34",
+  "kind": "test",
+  "wp": "WP-2c",
+  "title": "Test Epistemic Class Discipline",
+  "brief": "Property test: generate random Epi<V> values, verify UNKNOWN never equals 0/0.5/false/\"\", numeric projection only succeeds for Measured/Derived, Derived always traces to Measured ancestor, cross-scope comparison returns typed Error."
+ },
+ {
+  "id": "s35",
+  "kind": "test",
+  "wp": "WP-2c",
+  "title": "Test Anti-Monopoly Decay with star_konfig",
+  "brief": "Integration test: populate f2_grid10_cell_competition with 100 turns, compute effective_score = raw_score * (1 - alpha * recency) using star_konfig.decay_alpha; verify winner_hhi < 0.25, no cell wins >3 consecutive turns; alpha sourced from star_konfig not hardcoded."
+ },
+ {
+  "id": "s36",
+  "kind": "test",
+  "wp": "WP-1",
+  "title": "Verify Host Seam: Lease FD Passing",
+  "brief": "End-to-end test: Rust TUI -> Bun bridge -> substrate-core; verify lease_fd passed via SCM_RIGHTS on fd:3, model_token_fd passed on fd:3, both received in substrate-core AcquireLease; test fd leakage (no extra fds), test revocation on ReleaseLease."
+ },
+ {
+  "id": "s37",
+  "kind": "test",
+  "wp": "WP-1",
+  "title": "Verify Host Seam: Model Token JWT Claims",
+  "brief": "Test model_token JWT: sub=session_id, iat/exp (iat+300), scope=turn, turn_event_id deterministic (epoch_id + frame_seq), epoch_id matches current epoch; verify substrate-core validates all claims, rejects expired/mismatched -> Unknown."
+ },
+ {
+  "id": "s38",
+  "kind": "test",
+  "wp": "WP-1",
+  "title": "Verify Host Seam: No Env Leak",
+  "brief": "Security test: inspect Bun bridge and substrate-core process environments; verify no API keys, model tokens, secrets in env vars; credentials only via fd:3; Landlock ruleset blocks /proc/*/environ reads."
+ },
+ {
+  "id": "s39",
+  "kind": "test",
+  "wp": "WP-2c",
+  "title": "Verify Host Seam: cgroup/Landlock/seccomp Enforcement",
+  "brief": "Runtime verification: MemoryMax < 24GB, CPUWeight=low, IOWeight=low; Landlock: READ only CLAYCODE_BASE_DIR + unified.db*, WRITE only unified.db*; seccomp: bridge no execve/fork/net, substrate no net/limited fs; systemd: Restart=on-failure, WatchdogSec, ProtectSystem=strict."
+ },
+ {
+  "id": "s40",
+  "kind": "test",
+  "wp": "WP-2c",
+  "title": "Verify Host Seam: Turn Atomicity Under Load",
+  "brief": "Stress test: 100 concurrent turn simulations; verify each turn completes Phase A/B/C atomically or rolls back fully; no partial commits; journal_sequence strictly increasing; no deadlocks; max_queue_depth enforced in WriteGate."
+ },
+ {
+  "id": "s41",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document GRF/ClayCode Architecture Decisions",
+  "brief": "Write ARCHITECTURE.md: GRF state-transition model (R_t, E_t, F), ClayCode module structure, epistemic sum type Epi<V>, invariant taxonomy, promotion ladder, one-door DB authority, three-phase lease; link each invariant to implementation file."
+ },
+ {
+  "id": "s42",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document Seam Contract (session_lifecycle.ts)",
+  "brief": "Write SEAM_CONTRACT.md: buildQueryOptions input/output schema, lease acquisition protocol, GRF_RAHMEN.render interface, model_token JWT spec, fd:3 passing protocol, error codes, retry/abort semantics; include TypeScript types and Rust FFI signatures."
+ },
+ {
+  "id": "s43",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document Invariant Catalog with Test Mapping",
+  "brief": "Write INVARIANT_CATALOG.md: all 40+ invariants with ID, description, implementation file, test file, violation type, ON_VIOLATION action, verification status (implemented|tested|measured); cross-reference to cosign reservations."
+ },
+ {
+  "id": "s44",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document Deployment & OS Enforcement Box",
+  "brief": "Write DEPLOYMENT.md: DeploymentConfig single mode (DOCKER|SYSTEMD_NSPAWN|APPIMAGE), image_ref content-addressed, data_dir bind mount, port=0, epoch_bound=true, substrate_uid fixed, landlock/seccomp profile hashes, systemd unit, DAC 0600 unified.db."
+ },
+ {
+  "id": "s45",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document Evidence & Provenance Chain",
+  "brief": "Write EVIDENCE.md: provider_receipt sequence < network_send, witness hash-chain verification, usage_mechanism M1-M4 (M5 excluded), independent_review structure, artifact_chain out_of_domain_ts=UNKNOWN, no-secrets scan in CI."
+ },
+ {
+  "id": "s46",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document Self-Model & Promotion Ladder",
+  "brief": "Write SELF_MODEL.md: S/R/N/A/G/I parameters with Epi<Real> types, WorkIndicator definition, promotion rungs (Uncalibrated->Calibrated->Bounded), admission receipts (matched_ablation, verified_outcome, independent_review), INV_SELF_MODEL_FUNCTIONAL, I label=WORK_INTEGRATION."
+ },
+ {
+  "id": "s47",
+  "kind": "review",
+  "wp": "none",
+  "title": "Document Dissent Resolution & Open Hypotheses",
+  "brief": "Write DISSENT.md: all 20 voices' objections, accepted resolutions, remaining open hypotheses (H_GRID10_TURN_ATOMIC, H_SEAM, H_SELF_MODEL_UTILITY, H_HIDDEN_STATE_STEERING) with falsification criteria; no dissent recorded per consensus but evidence rule applies."
+ }
+]

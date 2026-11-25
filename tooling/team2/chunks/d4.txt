@@ -1,0 +1,341 @@
+=== DOC: OMEGA_JSPACE_NEEDLES_FORSCHUNG_2026-11-23 ===
+Technische Forschungsakte | OMEGA · Frankenstein · EntityOS · GRID10/GWT
+· J-Lens · Router Needles
+
+Konsolidierung aus gespeicherten Forschungsdokumenten,
+Projektprotokollen und historischen Testnotizen. Stand: 23. November
+2026. Dieses Dokument ist eine Bestandsaufnahme, kein Nachweis eines
+derzeit laufenden Systems.
+
+Kurzbefund
+
+J-Space ist hier eine experimentelle Repräsentations- und
+Koordinationsschicht zwischen modellinternen Zuständen,
+GWT/GRID-Signalen und überprüften Ergebnissen. „Bidirektional“ bedeutet
+zwei explizite Wege: (1) lesen/abbilden von Hidden-State- und
+Workspace-Signalen, (2) gezielt und begrenzt zurückwirken auf die
+Inferenz und anschließend kausal messen. Eine strukturelle Paketübergabe
+ist dokumentiert; ein vollständig kausal validierter
+End-to-End-J-Space++-Betrieb ist nicht nachgewiesen.
+
+1. Evidenzklassen und Abgrenzung
+
+ -----------------------------------------------------------------------
+ Klasse Bedeutung
+ ----------------------------------- -----------------------------------
+ Belegt im historischen Artefakt Test- oder Quellennachweis liegt in
+ früheren Protokollen vor; nicht
+ automatisch heute live.
+
+ Architektur / Vertrag Spezifikation oder
+ Integrationsplan; keine bestätigte
+ Laufzeitwirkung.
+
+ Experimentelle Hypothese Mechanismus und Falsifikation sind
+ formulierbar; Resultat offen.
+
+ Offene Evidenz Fehlender Receipt, Datensatz, Run
+ oder unabhängige Replikation.
+ -----------------------------------------------------------------------
+
+2. Architektur: bidirektionaler J-Space++
+
+Kanonischer geplanter Turn: Typed Entry → Routing → verifizierte
+Engine-Aufnahme und Laden → InferenceReceipt/v3 → GRID10 → GWT/J-Space →
+Entscheidung / Tool / Outcome → OutcomeReceipt → Reentry und
+gegebenenfalls DatasetAdmission. Die Integration darf weder eine neue
+konkurrierende Zustandsinstanz noch eine unkontrollierte
+Trainingsschleife schaffen.
+
+Vorwärtsrichtung: Perzeption, Compiler-Readouts und Modellzustände →
+getypte Koordinaten z_t → Kandidatenwettbewerb → GWT-Broadcast →
+GRID-Reentry. Rückrichtung: ausgewählte, autorisierte Steuerachsen und
+Hypothesen → begrenzte Hidden-State-Intervention am bestimmten Layer →
+Modellreaktion → Wirkungsprüfung anhand instrumentierter Traces.
+
+Als formale Arbeitsnotation (Modell, kein nachgewiesenes
+Implementationsgesetz):
+
+z_t = P_l(h_l(x_t), m_t, g_t); h′_l = h_l + α·v_l; y′ = F(h′_l, x_t).
+
+P_l ist eine zu versionierende Projektion, h_l der Hidden State des
+Layers l, m_t ein Memory-/Kontextzustand, g_t GRID/GWT-Signal und v_l
+eine registrierte Steuerachse. Ein bloß geänderter Prompt oder
+Logit-Bias ist keine nachgewiesene Hidden-State-Intervention. Nötig sind
+Readout vor/nach Intervention, Layer- und Modell-SHA, identische Aufgabe
+und geeignete Kontrollen.
+
+3. GRID10, GWT und kausaler Übertragungsweg
+
+ -----------------------------------------------------------------------
+ Zelle Semantik
+ ----------------------------------- -----------------------------------
+ G1 Abstraktion
+
+ G2 Affektintensität
+
+ G3 Valenzspannung
+
+ G4 Bindung
+
+ G5 Endgültigkeit
+
+ G6 Werkzeugdruck
+
+ G7 Zielkontinuität
+
+ G8 Gedächtnisdruck
+
+ G9 Überraschung
+
+ G10 Umfang
+ -----------------------------------------------------------------------
+
+GWT nimmt Kandidaten aus Compiler, GRID, Memory, TITAN,
+Cognition-Organen und überprüften Welt-/Tool-Receipts auf. Die
+Gewinnerkoalition bestimmt den Broadcast. Ein früherer Broadcast-Fehler
+wurde korrigiert: Nichtgewinnende Zellen dürfen den Winner-Vektor nicht
+überstimmen. Dokumentierter Regressionstest: ein Gewinner mit positivem
+Beitrag gegen sechs negative Außenzellen; Sieger bleibt positiv. Die
+Herkunft „broadcast_contributor_cells“ soll im Trace stehen.
+
+Ein wichtiger methodischer Punkt: Dass ein Executor das GRID-Signal im
+Kontext erhält, ist noch kein Beleg, dass es die Werkzeugwahl verändert
+hat. Benötigt wird eine kontrollierte Gegenprobe mit und ohne Signal bei
+gleicher Ausgangslage.
+
+4. Forschungsdaten: J-Lens und geometrische Diagnostik
+
+ -----------------------------------------------------------------------
+ Messgröße Historisch berichteter Wert /
+ Status
+ ----------------------------------- -----------------------------------
+ Jacobian-Samples 23 Matrizen
+
+ Matrixgröße 1024 × 1024
+
+ Promptbasis 233 Prompts
+
+ Effektiver Rang ca. 108 bis ca. 783 (je Layer)
+
+ Stärkste normierte metrische Layer 14 → 15
+ Änderung 
+
+ Stärkste Top-64-Subraumrotation Layer 14 → 15
+
+ item_proj ↔ Sensitivität Überzufälliges Alignment berichtet;
+ Effektgröße/Rohdaten hier nicht
+ verfügbar
+
+ Checkpoint SHA-256-Abgleich laut Archivplan
+ bestanden; konkreter SHA in diesem
+ Dokument nicht rekonstruiert
+ -----------------------------------------------------------------------
+
+Die Jacobian-Lens-Messung ist eine diagnostische Sensitivitätsanalyse
+und kein Nachweis bewusster Raumstruktur, generalisierender Steuerung
+oder produktiver J-Space-Kontrolle. Der bisherige Mittelwert-Jacobian
+J_l sollte durch zustandsaufgelöste Samples J_l(x_t) ergänzt werden.
+Daraus lässt sich die Kandidatenmetrik g_l(x)=J_l(x)^T J_l(x) prüfen;
+echte intrinsische Krümmung benötigt zusätzliche geometrische Tests.
+
+Empfohlene Ereignisse für begrenztes Sampling: hohe Überraschung,
+GWT-Winnerwechsel, Widerspruch, Tool-Fehler, Nutzerkorrektur,
+Router-Eskalation und randomisierte Kontrollstichprobe. Verbindung zur
+F9-Linie: Compiler-Sensitivität → GWT-Änderung → GRID
+Fisher–Rao-Transition → Route/Tool-Änderung → verifiziertes Outcome.
+
+5. Needle-Programm: Bestand, Setup, Ziel
+
+Die Needle-Forschungsachse untersucht eng definierte Kompetenzen,
+kontrollierbare Modellzustandswirkungen, Retrieval-Routing und kausale
+Intervention. Der historische „needle-tasks“-Branch wurde mit Commit
+0d2b1cd angegeben. Der Aufgabenbestand wird als 62 Tasks à 25 Items
+beschrieben; zugleich wurde eine Gesamtzahl 1.480 protokolliert.
+62×25=1.550: Die Differenz von 70 Items ist offen und muss am Datensatz
+aufgelöst werden. Zusätzlich dokumentiert: 14 Gold-Mund-Tasks à 20 Items
+(=280), wobei deren Inklusionsverhältnis zu den 62 Tasks nicht eindeutig
+belegt ist.
+
+ ------------------------------------------------------------------------
+ Objekt Historische Angabe Interpretation
+ ----------------------- ------------------------ -----------------------
+ Tasks 62 Aufgabenkatalog,
+ synthetisch
+
+ Items pro Task 25 Nominelle Planung
+
+ Gesamtsumme 1.480 protokolliert / Konflikt: nicht als
+ 1.550 rechnerisch validierter Umfang
+ ausgeben
+
+ Gold-Mund-Subset 14 × 20 = 280 Subset-Beziehung noch
+ zu klären
+
+ Worker-Sharding W=0…5, N=6 Disjunkte Zuweisung
+ geplant / protokolliert
+
+ Worker-Output results/T-nnnn.jsonl + Results-Branch
+ .meta.json chatgpt-results
+
+ T-0001 Compiler-Audit Erster historisch
+ benannter Task
+ ------------------------------------------------------------------------
+
+Das Needle-Setup trennt Task-Definition, Worker-Lease, verarbeitete
+Items, Goldreferenz, Result-Sidecar und Reviewer-Entscheidung. Für
+„completed“ sind erfasste Datei-Hashes, Workerlauf und
+Auswertungsreceipt erforderlich. Ohne diese lässt sich aus einem
+Worker-Start keine abgeschlossene Eval ableiten.
+
+6. Needle-Interventionsprotokoll
+
+- Baseline: gleiches Modell, gleicher Task, gleiche Seeds und
+ Modell-SHA; kein Steering.
+
+- Intervention: h_l ← h_l + αv_l mit signierter Achse, Layer,
+ Amplitudenbereich und verborgenem State-Readout.
+
+- Kontrollen: α=0, negative α (Sign-Flip), falscher Layer,
+ Zufallsrichtung, Off-Target-Prompts.
+
+- Generalisierung: getrennte Train-/Validation-/Holdout-Familien und
+ OOD-Semantiktransfer; keine Family-Leakage.
+
+- Causal Rescue: Störung/Lesion und gezieltes Wiederherstellen der
+ Fähigkeit; zugleich Off-Target-Schäden messen.
+
+- Auswertung: Delta der Taskmetrik, Unsicherheit/CI,
+ Worst-Case-Regressions, Dosis-Wirkung, Robustheit gegen
+ Promptposition und Zeit.
+
+Die Forschungsfront nennt zehn Linien: OOD-Transfer, Off-Target,
+Richtungs- und Layerlokalisation, Causal Rescue, Dosis, Position,
+Stabilität, Gain und SAE-Interpretation (einige Kategorien überschneiden
+sich in den historischen Kurzprotokollen). Der entscheidende
+Discriminator bleibt eine echte beobachtete Hidden-State-Änderung mit
+spezifischem Verhaltenseffekt unter Kontrollen.
+
+7. Weitere experimentelle Ergebnisse und Sicherheits-Gates
+
+ -------------------------------------------------------------------------------
+ Prüfpfad Historische Evidenz Limitation
+ --------------------------- ----------------------- ---------------------------
+ J-Space / GRID10 Binder 6/6 PASS; unabhängiger Komponenten-Regression,
+ 6/6 Rerun keine End-to-End-Inferenz
+
+ GRID10-v2 Admission 11/11 PASS Isoliertes Gate
+
+ Entry/JCS 7/7 PASS Secret-Fence/Cleanup/Exit
+ teils offen
+
+ GWT/J-Space-Paketpipeline 16/16 PASS Strukturelle Pipeline,
+ nicht native Vektorwirkung
+
+ J-Space Gateway FREE_ONLY HTTP 500 → 412 nach Fix Fail-closed Gate; keine
+ Sandbox-Ausführung
+
+ TrainingCredit 0 verifiziert im DatasetAdmission und
+ historischen Snapshot Outcome-Verknüpfung fehlten
+
+ J-Space ModelCredit 0 verifiziert im Kein terminaler
+ historischen Snapshot modellspezifischer
+ Run-Receipt
+ -------------------------------------------------------------------------------
+
+Relevanter Unterschied: Gate-Tests belegen Vertragsverhalten; Modell-
+oder Trainings-Credit erfordert Aufnahme, laufende Engine, Intervention,
+Resultat und unabhängige Attribution. Historische SSO-302-Blockierung
+und ein späteres HTTP-412-FREE_ONLY-Gate verhindern gerade den
+unzulässigen Schluss „läuft in der Sandbox“.
+
+8. Compiler, J-Space-Schnittstelle, Microbrains
+
+Für echte Hidden-State-Readouts und Jacobians ist ein hookfähiger
+Modell-Sidecar erforderlich. Im Archivplan ist ein ~1B Full-FT-Compiler
+und eine API skizziert: /health, /compile, /readout, /steer,
+/jacobian/sample, /model-manifest. Ein gewöhnlicher OpenAI-kompatibler
+Textendpunkt genügt für die kausalen Experimente nicht.
+
+Kritische ABI-Bedingung: head_labels.json muss die exakte Reihenfolge
+und Bedeutung von mode, stop, act, role, GRID, capability, TITAN,
+intent, goal, blocked, evidence, item und J-Space-Koordinaten tragen.
+Ohne semantisch verifizierte Labels dürfen Heads keine operative
+Authority erhalten.
+
+Geplante zwei full-fine-getunte Needles: jeweils eigene UnifiedDB,
+Thalamus, Amygdala, Retrieval Entity und DBPulse. Online-Anpassung per
+Logs/Posterioren/Zuständen; periodisches Full-Fine-Tuning nur nach
+ausdrücklicher Zustimmung. Das ist Zielarchitektur, nicht bestätigter
+Produktionsbetrieb.
+
+9. Identität, Provenance und Dataset-Admission
+
+Jeder Zustandsübergang soll turn_id, state_revision, source, provenance,
+epistemic_class, model_sha, layer, intervention_id, task_family, split
+und UTC-Zeit tragen. Ein InferenceReceipt wird nicht automatisch zum
+TrainingTrace. Der TrainingTrace verweist auf einen typisierten
+OutcomeReceipt; erst DatasetAdmission darf aus verifizierten Ergebnissen
+ein trainingsfähiges Item machen. Familiensplit, Trace-ID-Kollision,
+Registry-Rebind und fail-closed Grid-Plan-Transplant wurden historisch
+als Komponentenprüfungen gemeldet.
+
+Minimaler verpflichtender Falsifikationspfad: (A) Vorhersage
+registrieren; (B) echte Baseline/Intervention/Negative Control; (C)
+Hidden-State-Nachweis; (D) überprüftes Verhalten; (E) unabhängiger
+Holdout und Nebenwirkung; (F) signiertes, hash-gebundenes Ergebnis. Ohne
+einen dieser Schritte bleibt ein Claim „nicht bestätigt“.
+
+10. Offene Fragen und nächste Mess-Gates
+
+- Rekonstruktion der tatsächlichen Needle-Itemzahl (1.480 vs. 1.550)
+ aus dem versionierten Index.
+
+- Hashgebundener READY-Deployment-Receipt für exakt den evaluierten
+ J-Space-/Compiler-Source-Head.
+
+- OOD-Transfer E1 mit Baseline, Wrong-Layer, Sign-Flip, Lesion/Rescue,
+ Off-Target und Konfidenzintervallen.
+
+- Messung, ob GRID/GWT den Executor kausal anders routet, statt nur im
+ Kontext sichtbar zu sein.
+
+- Vollständige Lease → RuntimeReceipt → Result-Sidecar-Bytebindung und
+ unabhängiger Reviewer.
+
+- Head-Label-ABI, Modellmanifest und geschützte Steuerachsen vor jeder
+ Live-Controller-Autorisierung.
+
+- State-resolved J-Lens-Sampling und F9-Korrelation zu real
+ verifizierten Outcomes.
+
+- Bestandsaufnahme der tatsächlich persistierten Worker-Ergebnisse,
+ nicht nur der geplanten Taskarchitektur.
+
+11. Quellen- und Provenance-Verzeichnis
+
+[Q1]
+OMEGA_DEEP_RESEARCH_ARCHITEKTURPLAN_2026-10-06_V5_ROUTER_NEEDLE_MICROBRAINS.md;
+archivierte Datei vom 03.10.2026, 69.298 Byte; J-Lens, ABI, Runtime,
+Worker-/Microbrain-Plan.
+
+[Q2] OMEGA_GESAMTARCHITEKTURPLAN_2026-10-06.md; archivierte Datei vom
+03.10.2026, 34.081 Byte; Statuslegende, kanonischer State,
+GRID/GWT/Routing.
+
+[Q3] OMEGA_DEEP_RESEARCH_ARCHITEKTURPLAN_2026-10-06.md; archivierte
+Datei vom 03.10.2026, 35.039 Byte; J-Lens und Compiler-Runtime.
+
+[Q4] Historische Projektprotokolle vom 23.–24.08.2026:
+J-Space/GWT-Binder, Family-Split, Admission-Gates, FREE_ONLY,
+Broadcast-Korrektur und kausale Needle-Falsifikationslinien.
+Projektkontext, Originalreceipts nicht neu eingelesen.
+
+[Q5] Historische Projektprotokolle vom 01.–03.10.2026: needle-tasks
+Commit 0d2b1cd, Task-/Itemzahlen, Worker-Sharding und
+Router-Needle-Microbrains. Zahlenkonflikt ausdrücklich unaufgelöst.
+
+Prüfhinweis: GitHub-Code-Suche für die bekannten Repositories lieferte
+in dieser Sitzung keine zusätzlichen Treffer. Daher wurden keine
+aktuellen Commit-Inhalte, Worker-JSONL-Dateien, Modellgewichte oder
+laufenden Hosts als neu verifiziert bezeichnet.
