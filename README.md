@@ -188,7 +188,7 @@ Once the GRID created `unified.db`, reflection is stored there too (tables `mgr_
 Honest limits: tested on Linux with a dry backend and test payloads; a real reflection round with a logged-in Claude, Ollama or Gemini,
 the hooks inside a live Claude Code session, macOS and Windows are not tested yet. Redaction is pattern based (best effort).
 
-### Planned (not in v0.1.0 yet)
+### Planned (not in v0.1.1 yet)
 
 - `/features` overview, `/retina` window, live token meter in the status line
 - FranKenstein 3.0 / Agent Zero plugin as a one-click option (the plugin source is in `plugins/frankenstein3`)
