@@ -1,14 +1,14 @@
 //! Capability registry, `/features` command handler, and the capability honesty gate.
 //!
-//! GRF / ClayCode mapping
+//! GRF / `ClayCode` mapping
 //! -----------------------
-//! R_t : `CapabilityRegistry` (canonical JSON registry; single source of truth)
-//! E_t : registry JSON + `TestReport` (pipeline artifacts; never self-praise)
+//! `R_t` : `CapabilityRegistry` (canonical JSON registry; single source of truth)
+//! `E_t` : registry JSON + `TestReport` (pipeline artifacts; never self-praise)
 //! F   : validate -> render -> gate (pure, replayable, journaled by the pipeline)
 //! M   : { MEASURED, PLANNED, UNKNOWN } with per-status admissibility rules
 //!
 //! Honesty laws (machine checked, fail closed):
-//!   MEASURED => non-empty evidence_ref naming a passing test artifact
+//!   MEASURED => non-empty `evidence_ref` naming a passing test artifact
 //!   PLANNED  => non-empty tracking issue id
 //!   UNKNOWN  => no evidence claim at all (unknown stays unknown, never 0/0.5)
 //!   A MEASURED capability without a passing test reference fails the CI gate.
@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
+use std::fmt::Write as _;
 use std::path::Path;
 
 pub const REGISTRY_SCHEMA: &str = "zero.capabilities.v1";
@@ -68,8 +69,8 @@ impl fmt::Display for CapabilityStatus {
 }
 
 /// Promotion stage in the CVIR ladder.
-/// Explicit serde renames ensure wire format matches as_str() exactly.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+/// Explicit serde renames ensure wire format matches `as_str()` exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub enum PromotionStage {
     #[serde(rename = "MEASURE")]
     Measure,
@@ -88,6 +89,7 @@ pub enum PromotionStage {
     #[serde(rename = "CONTROL_INFLUENCE")]
     ControlInfluence,
     #[serde(rename = "UNKNOWN")]
+    #[default]
     Unknown,
 }
 
@@ -113,12 +115,6 @@ impl fmt::Display for PromotionStage {
     }
 }
 
-impl Default for PromotionStage {
-    fn default() -> Self {
-        PromotionStage::Unknown
-    }
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LocalizedText {
     #[serde(default)]
@@ -128,6 +124,8 @@ pub struct LocalizedText {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// `capability` is the registry's wire field name; renaming it would break the on-disk contract.
+#[allow(clippy::struct_field_names)]
 pub struct Capability {
     pub capability: String,
     pub status: CapabilityStatus,
@@ -169,18 +167,18 @@ impl EvidenceRef {
         let trimmed = raw.trim();
         let rest = trimmed
             .strip_prefix("test:")
-            .ok_or_else(|| format!("missing 'test:' prefix in {:?}", trimmed))?;
+            .ok_or_else(|| format!("missing 'test:' prefix in {trimmed:?}"))?;
         let (name, commit) =
-            rest.rsplit_once('@').ok_or_else(|| format!("missing '@<commit>' in {:?}", trimmed))?;
+            rest.rsplit_once('@').ok_or_else(|| format!("missing '@<commit>' in {trimmed:?}"))?;
         let name = name.trim();
         let commit = commit.trim();
         if name.is_empty() {
-            return Err(format!("empty test name in {:?}", trimmed));
+            return Err(format!("empty test name in {trimmed:?}"));
         }
         if commit.is_empty() {
-            return Err(format!("empty commit in {:?}", trimmed));
+            return Err(format!("empty commit in {trimmed:?}"));
         }
-        Ok(Self { test_name: name.to_string(), commit: commit.to_string() })
+        Ok(Self { test_name: name.to_owned(), commit: commit.to_owned() })
     }
 }
 
@@ -199,7 +197,7 @@ impl TestReport {
             serde_json::from_str(raw).map_err(|e| RegistryError::Json(e.to_string()))?;
         if report.schema != REPORT_SCHEMA {
             return Err(RegistryError::SchemaMismatch {
-                expected: REPORT_SCHEMA.to_string(),
+                expected: REPORT_SCHEMA.to_owned(),
                 actual: report.schema,
             });
         }
@@ -238,29 +236,29 @@ pub enum RegistryError {
 impl fmt::Display for RegistryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RegistryError::Io(m) => write!(f, "io error: {}", m),
-            RegistryError::Json(m) => write!(f, "json error: {}", m),
+            RegistryError::Io(m) => write!(f, "io error: {m}"),
+            RegistryError::Json(m) => write!(f, "json error: {m}"),
             RegistryError::SchemaMismatch { expected, actual } => {
-                write!(f, "schema mismatch: expected {}, got {}", expected, actual)
+                write!(f, "schema mismatch: expected {expected}, got {actual}")
             }
             RegistryError::EmptyCapabilityName => write!(f, "capability name must not be empty"),
             RegistryError::DuplicateCapability(name) => {
-                write!(f, "duplicate capability: {}", name)
+                write!(f, "duplicate capability: {name}")
             }
             RegistryError::MeasuredWithoutEvidence(name) => {
-                write!(f, "MEASURED capability '{}' has no evidence_ref", name)
+                write!(f, "MEASURED capability '{name}' has no evidence_ref")
             }
             RegistryError::MeasuredWithoutGate(name) => {
-                write!(f, "MEASURED capability '{}' has no gate", name)
+                write!(f, "MEASURED capability '{name}' has no gate")
             }
             RegistryError::PlannedWithoutTrackingIssue(name) => {
-                write!(f, "PLANNED capability '{}' has no tracking issue id", name)
+                write!(f, "PLANNED capability '{name}' has no tracking issue id")
             }
             RegistryError::UnknownWithEvidence(name) => {
-                write!(f, "UNKNOWN capability '{}' must not carry an evidence_ref", name)
+                write!(f, "UNKNOWN capability '{name}' must not carry an evidence_ref")
             }
             RegistryError::MalformedEvidence { capability, reason } => {
-                write!(f, "malformed evidence for '{}': {}", capability, reason)
+                write!(f, "malformed evidence for '{capability}': {reason}")
             }
         }
     }
@@ -277,7 +275,7 @@ impl CapabilityRegistry {
     pub fn validate(&self) -> Result<(), RegistryError> {
         if self.schema != REGISTRY_SCHEMA {
             return Err(RegistryError::SchemaMismatch {
-                expected: REGISTRY_SCHEMA.to_string(),
+                expected: REGISTRY_SCHEMA.to_owned(),
                 actual: self.schema.clone(),
             });
         }
@@ -287,30 +285,30 @@ impl CapabilityRegistry {
             if name.is_empty() {
                 return Err(RegistryError::EmptyCapabilityName);
             }
-            if !seen.insert(name.to_string()) {
-                return Err(RegistryError::DuplicateCapability(name.to_string()));
+            if !seen.insert(name.to_owned()) {
+                return Err(RegistryError::DuplicateCapability(name.to_owned()));
             }
             match cap.status {
                 CapabilityStatus::Measured => {
                     if cap.evidence_ref.trim().is_empty() {
-                        return Err(RegistryError::MeasuredWithoutEvidence(name.to_string()));
+                        return Err(RegistryError::MeasuredWithoutEvidence(name.to_owned()));
                     }
                     if cap.gate.trim().is_empty() {
-                        return Err(RegistryError::MeasuredWithoutGate(name.to_string()));
+                        return Err(RegistryError::MeasuredWithoutGate(name.to_owned()));
                     }
                     EvidenceRef::parse(&cap.evidence_ref).map_err(|reason| {
-                        RegistryError::MalformedEvidence { capability: name.to_string(), reason }
+                        RegistryError::MalformedEvidence { capability: name.to_owned(), reason }
                     })?;
                 }
                 CapabilityStatus::Planned => {
-                    let issue = cap.tracking_issue.as_deref().map(str::trim).unwrap_or("");
+                    let issue = cap.tracking_issue.as_deref().map_or("", str::trim);
                     if issue.is_empty() {
-                        return Err(RegistryError::PlannedWithoutTrackingIssue(name.to_string()));
+                        return Err(RegistryError::PlannedWithoutTrackingIssue(name.to_owned()));
                     }
                 }
                 CapabilityStatus::Unknown => {
                     if !cap.evidence_ref.trim().is_empty() {
-                        return Err(RegistryError::UnknownWithEvidence(name.to_string()));
+                        return Err(RegistryError::UnknownWithEvidence(name.to_owned()));
                     }
                 }
             }
@@ -388,23 +386,21 @@ impl fmt::Display for GateFailure {
         match self {
             GateFailure::MissingReport => write!(f, "test report missing (fail closed)"),
             GateFailure::EmptyReportCommit => write!(f, "test report has no commit"),
-            GateFailure::RegistryInvalid(m) => write!(f, "registry invalid: {}", m),
+            GateFailure::RegistryInvalid(m) => write!(f, "registry invalid: {m}"),
             GateFailure::MeasuredWithoutEvidence(name) => {
-                write!(f, "MEASURED '{}' has no evidence_ref", name)
+                write!(f, "MEASURED '{name}' has no evidence_ref")
             }
-            GateFailure::MeasuredWithoutGate(name) => write!(f, "MEASURED '{}' has no gate", name),
+            GateFailure::MeasuredWithoutGate(name) => write!(f, "MEASURED '{name}' has no gate"),
             GateFailure::MalformedEvidence { capability, reason } => {
-                write!(f, "malformed evidence for '{}': {}", capability, reason)
+                write!(f, "malformed evidence for '{capability}': {reason}")
             }
             GateFailure::TestNotPassing { capability, test_name } => write!(
                 f,
-                "MEASURED '{}' references test '{}' which is not in the passing test report",
-                capability, test_name
+                "MEASURED '{capability}' references test '{test_name}' which is not in the passing test report"
             ),
             GateFailure::CommitMismatch { capability, expected, actual } => write!(
                 f,
-                "MEASURED '{}' evidence commit '{}' differs from report commit '{}'",
-                capability, actual, expected
+                "MEASURED '{capability}' evidence commit '{actual}' differs from report commit '{expected}'"
             ),
         }
     }
@@ -422,11 +418,11 @@ impl GateReport {
 
     pub fn render(&self) -> String {
         if self.passed() {
-            return "capability gate: PASS\n".to_string();
+            return "capability gate: PASS\n".to_owned();
         }
         let mut out = format!("capability gate: FAIL ({} failure(s))\n", self.failures.len());
         for failure in &self.failures {
-            out.push_str(&format!("- {}\n", failure));
+            let _ = writeln!(out, "- {failure}");
         }
         out
     }
@@ -441,12 +437,9 @@ pub fn ci_gate(registry: &CapabilityRegistry, report: Option<&TestReport>) -> Ga
         failures.push(GateFailure::RegistryInvalid(err.to_string()));
     }
 
-    let report = match report {
-        Some(r) => r,
-        None => {
-            failures.push(GateFailure::MissingReport);
-            return GateReport { failures };
-        }
+    let Some(report) = report else {
+        failures.push(GateFailure::MissingReport);
+        return GateReport { failures };
     };
 
     if report.commit.trim().is_empty() {
@@ -484,7 +477,7 @@ pub fn ci_gate(registry: &CapabilityRegistry, report: Option<&TestReport>) -> Ga
         if !report_commit.is_empty() && evidence.commit != report_commit {
             failures.push(GateFailure::CommitMismatch {
                 capability: cap.capability.clone(),
-                expected: report_commit.to_string(),
+                expected: report_commit.to_owned(),
                 actual: evidence.commit.clone(),
             });
         }
@@ -508,7 +501,7 @@ pub fn ci_gate_from_paths(
 // ---------------------------------------------------------------------------
 
 fn dash_if_empty(value: &str) -> String {
-    if value.trim().is_empty() { "-".to_string() } else { value.to_string() }
+    if value.trim().is_empty() { "-".to_owned() } else { value.to_owned() }
 }
 
 fn push_row(out: &mut String, cells: &[String; 6], widths: &[usize; 6]) {
@@ -525,7 +518,7 @@ fn push_row(out: &mut String, cells: &[String; 6], widths: &[usize; 6]) {
     out.push('\n');
 }
 
-/// `/features` table: capability | status | promotion_stage | evidence_ref | gate | tracking_issue
+/// `/features` table: capability | status | `promotion_stage` | `evidence_ref` | gate | `tracking_issue`
 pub fn render_table(registry: &CapabilityRegistry) -> String {
     let headers = TABLE_COLUMNS;
 
@@ -533,8 +526,8 @@ pub fn render_table(registry: &CapabilityRegistry) -> String {
     for cap in &registry.capabilities {
         rows.push([
             cap.capability.clone(),
-            cap.status.as_str().to_string(),
-            cap.promotion_stage.as_str().to_string(),
+            cap.status.as_str().to_owned(),
+            cap.promotion_stage.as_str().to_owned(),
             dash_if_empty(&cap.evidence_ref),
             dash_if_empty(&cap.gate),
             dash_if_empty(cap.tracking_issue.as_deref().unwrap_or("")),
@@ -553,12 +546,12 @@ pub fn render_table(registry: &CapabilityRegistry) -> String {
 
     let mut out = String::new();
     let header_cells: [String; 6] = [
-        headers[0].to_string(),
-        headers[1].to_string(),
-        headers[2].to_string(),
-        headers[3].to_string(),
-        headers[4].to_string(),
-        headers[5].to_string(),
+        headers[0].to_owned(),
+        headers[1].to_owned(),
+        headers[2].to_owned(),
+        headers[3].to_owned(),
+        headers[4].to_owned(),
+        headers[5].to_owned(),
     ];
     push_row(&mut out, &header_cells, &widths);
     let separator: [String; 6] = [
@@ -578,7 +571,7 @@ pub fn render_table(registry: &CapabilityRegistry) -> String {
 
 pub fn render_json(registry: &CapabilityRegistry) -> String {
     serde_json::to_string_pretty(registry)
-        .unwrap_or_else(|e| format!("registry serialization failed: {}", e))
+        .unwrap_or_else(|e| format!("registry serialization failed: {e}"))
 }
 
 /// Compact, prompt-safe capability summary for the ground mode.
@@ -589,19 +582,20 @@ pub fn render_ground_summary(registry: &CapabilityRegistry, language: Language) 
         Language::English => out.push_str("Capability registry (canonical):\n"),
     }
     for cap in &registry.capabilities {
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "- {} [{}] promotion={}",
             cap.capability,
             cap.status.as_str(),
             cap.promotion_stage.as_str()
-        ));
+        );
         if cap.status == CapabilityStatus::Measured && !cap.evidence_ref.trim().is_empty() {
-            out.push_str(&format!(" evidence={}", cap.evidence_ref));
+            let _ = write!(out, " evidence={}", cap.evidence_ref);
         }
-        if cap.status == CapabilityStatus::Planned {
-            if let Some(issue) = cap.tracking_issue.as_deref() {
-                out.push_str(&format!(" issue={}", issue));
-            }
+        if cap.status == CapabilityStatus::Planned
+            && let Some(issue) = cap.tracking_issue.as_deref()
+        {
+            let _ = write!(out, " issue={issue}");
         }
         out.push('\n');
     }
@@ -692,31 +686,34 @@ pub fn explain_entry(cap: &Capability, language: Language) -> String {
         Language::German => {
             match cap.status {
                 CapabilityStatus::Measured => {
-                    out.push_str(&format!(
+                    let _ = write!(
+                        out,
                         "{} ist MEASURED: durch einen bestandenen Test belegt. Beleg: {}.",
                         cap.capability, cap.evidence_ref
-                    ));
+                    );
                     if !cap.gate.trim().is_empty() {
-                        out.push_str(&format!(" Gate: {}.", cap.gate));
+                        let _ = write!(out, " Gate: {}.", cap.gate);
                     }
                 }
                 CapabilityStatus::Planned => {
-                    out.push_str(&format!(
+                    let _ = write!(
+                        out,
                         "{} ist PLANNED und noch nicht verifiziert. Tracking: {}.",
                         cap.capability,
                         cap.tracking_issue.as_deref().unwrap_or("UNKNOWN")
-                    ));
+                    );
                     if !cap.gate.trim().is_empty() {
-                        out.push_str(&format!(" Geplantes Gate: {}.", cap.gate));
+                        let _ = write!(out, " Geplantes Gate: {}.", cap.gate);
                     }
                 }
                 CapabilityStatus::Unknown => {
-                    out.push_str(&format!(
+                    let _ = write!(
+                        out,
                         "{} ist UNKNOWN: in dieser Registry liegt keine verifizierende Messung vor. Das heisst nicht, dass die Faehigkeit fehlt.",
                         cap.capability
-                    ));
+                    );
                     if !cap.gate.trim().is_empty() {
-                        out.push_str(&format!(" Offenes Gate: {}.", cap.gate));
+                        let _ = write!(out, " Offenes Gate: {}.", cap.gate);
                     }
                 }
             }
@@ -729,31 +726,34 @@ pub fn explain_entry(cap: &Capability, language: Language) -> String {
         Language::English => {
             match cap.status {
                 CapabilityStatus::Measured => {
-                    out.push_str(&format!(
+                    let _ = write!(
+                        out,
                         "{} is MEASURED: backed by a passing test. Evidence: {}.",
                         cap.capability, cap.evidence_ref
-                    ));
+                    );
                     if !cap.gate.trim().is_empty() {
-                        out.push_str(&format!(" Gate: {}.", cap.gate));
+                        let _ = write!(out, " Gate: {}.", cap.gate);
                     }
                 }
                 CapabilityStatus::Planned => {
-                    out.push_str(&format!(
+                    let _ = write!(
+                        out,
                         "{} is PLANNED and not verified yet. Tracking: {}.",
                         cap.capability,
                         cap.tracking_issue.as_deref().unwrap_or("UNKNOWN")
-                    ));
+                    );
                     if !cap.gate.trim().is_empty() {
-                        out.push_str(&format!(" Planned gate: {}.", cap.gate));
+                        let _ = write!(out, " Planned gate: {}.", cap.gate);
                     }
                 }
                 CapabilityStatus::Unknown => {
-                    out.push_str(&format!(
+                    let _ = write!(
+                        out,
                         "{} is UNKNOWN: this registry holds no verifying measurement. That does not mean the capability is absent.",
                         cap.capability
-                    ));
+                    );
                     if !cap.gate.trim().is_empty() {
-                        out.push_str(&format!(" Open gate: {}.", cap.gate));
+                        let _ = write!(out, " Open gate: {}.", cap.gate);
                     }
                 }
             }
@@ -774,7 +774,7 @@ pub fn explain_entry(cap: &Capability, language: Language) -> String {
 /// `/features` command handler. Returns `None` when the input is not this command.
 pub fn handle_features_command(input: &str, registry: &CapabilityRegistry) -> Option<String> {
     let trimmed = input.trim();
-    if trimmed == FEATURES_COMMAND || trimmed.starts_with(&format!("{} ", FEATURES_COMMAND)) {
+    if trimmed == FEATURES_COMMAND || trimmed.starts_with(&format!("{FEATURES_COMMAND} ")) {
         return Some(render_table(registry));
     }
     None
@@ -825,7 +825,7 @@ mod tests {
 
         let expected: [&str; 6] = TABLE_COLUMNS;
 
-        let cells: Vec<String> = header.split(" | ").map(|c| c.trim().to_string()).collect();
+        let cells: Vec<String> = header.split(" | ").map(|c| c.trim().to_owned()).collect();
         assert_eq!(
             cells.len(),
             expected.len(),
@@ -834,7 +834,7 @@ mod tests {
         );
         assert_eq!(cells, expected, "header columns must match documented order exactly");
 
-        let sep_cells: Vec<String> = separator.split(" | ").map(|c| c.trim().to_string()).collect();
+        let sep_cells: Vec<String> = separator.split(" | ").map(|c| c.trim().to_owned()).collect();
         assert_eq!(
             sep_cells.len(),
             expected.len(),
@@ -845,7 +845,7 @@ mod tests {
         // No duplicate columns.
         let mut seen = BTreeSet::new();
         for cell in &cells {
-            assert!(seen.insert(cell.as_str()), "duplicate column: {}", cell);
+            assert!(seen.insert(cell.as_str()), "duplicate column: {cell}");
         }
 
         for cap in &registry.capabilities {
@@ -858,8 +858,8 @@ mod tests {
     fn ci_gate_rejects_measured_without_passing_test() {
         let registry = CapabilityRegistry::from_json_str(sample_registry_json()).unwrap();
         let report = TestReport {
-            schema: REPORT_SCHEMA.to_string(),
-            commit: "WORKTREE".to_string(),
+            schema: REPORT_SCHEMA.to_owned(),
+            commit: "WORKTREE".to_owned(),
             passed_tests: Vec::new(),
         };
         let gate = ci_gate(&registry, Some(&report));
@@ -950,16 +950,14 @@ mod tests {
             let expected = format!("\"{}\"", stage.as_str());
             assert_eq!(
                 serialized, expected,
-                "PromotionStage::{:?} serde output '{}' != as_str() '{}'",
-                stage, serialized, expected
+                "PromotionStage::{stage:?} serde output '{serialized}' != as_str() '{expected}'"
             );
 
             // Also test deserialization round-trip
             let deserialized: PromotionStage = serde_json::from_str(&serialized).unwrap();
             assert_eq!(
                 deserialized, stage,
-                "PromotionStage::{:?} deserialization round-trip failed",
-                stage
+                "PromotionStage::{stage:?} deserialization round-trip failed"
             );
         }
     }

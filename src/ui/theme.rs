@@ -2,7 +2,7 @@
 
 use ratatui::style::Color;
 
-/// True when stdout is a terminal and NO_COLOR is unset (cached once per process).
+/// True when stdout is a terminal and `NO_COLOR` is unset (cached once per process).
 pub(crate) fn colors_enabled() -> bool {
     static CACHE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *CACHE.get_or_init(|| {
@@ -190,14 +190,14 @@ mod tests {
     #[test]
     fn no_blue_or_cyan_constants_in_theme() {
         for c in all_theme_colors() {
-            assert!(!is_blue_or_cyan(c), "theme color must not be blue/cyan: {:?}", c);
+            assert!(!is_blue_or_cyan(c), "theme color must not be blue/cyan: {c:?}");
         }
     }
 
     #[test]
     fn test_palette_constraints() {
         for c in all_theme_colors() {
-            assert!(channel_ok(c), "theme color violates b <= r or gray invariant: {:?}", c);
+            assert!(channel_ok(c), "theme color violates b <= r or gray invariant: {c:?}");
         }
     }
 
@@ -205,9 +205,9 @@ mod tests {
     fn all_theme_colors_is_exhaustive() {
         // This test ensures all_theme_colors() includes every public Color constant.
         // If a new Color constant is added, it must be added to all_theme_colors().
-        let colors = all_theme_colors();
         // Count of public Color constants in this module (excluding those in functions)
         const EXPECTED_COUNT: usize = 10;
+        let colors = all_theme_colors();
         assert_eq!(
             colors.len(),
             EXPECTED_COUNT,

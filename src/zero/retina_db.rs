@@ -1,11 +1,11 @@
-//! Retina-side adapter for the canonical EntityOS database path.
+//! Retina-side adapter for the canonical `EntityOS` database path.
 //!
 //! The retina organ must not re-derive `unified.db` on its own: it consumes
 //! this adapter, which delegates to the canonical resolver in
 //! `crate::zero::entity`. Both organs therefore address one database file.
 //!
 //! GRF: `R_t` = resolved plugin binding, `E_t` = environment snapshot,
-//! `F` = `unified_db_path` (pure delegation), `M` = { plugin_dir, data_dir }.
+//! `F` = `unified_db_path` (pure delegation), `M` = { `plugin_dir`, `data_dir` }.
 
 use std::path::PathBuf;
 

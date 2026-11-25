@@ -1,15 +1,17 @@
 //! Ground-mode adapter for the capability registry (DE / EN).
 //!
-//! GRF / ClayCode mapping
+//! GRF / `ClayCode` mapping
 //! -----------------------
-//! R_t : `CapabilityRegistry` (canonical state)
-//! E_t : the user's question (evidence of intent, not of truth)
-//! F   : detect_language -> find_capability -> explain_entry (pure)
+//! `R_t` : `CapabilityRegistry` (canonical state)
+//! `E_t` : the user's question (evidence of intent, not of truth)
+//! F   : `detect_language` -> `find_capability` -> `explain_entry` (pure)
 //! M   : { MEASURED, PLANNED, UNKNOWN }; an unknown capability stays UNKNOWN.
 //!
 //! Integration point for `src/zero/omega.rs`: the ground mode can call
 //! `answer_question(&registry, question)` to explain any capability in the
 //! user's language without inventing capability claims.
+
+use std::fmt::Write as _;
 
 use crate::zero::features::{
     Capability, CapabilityRegistry, CapabilityStatus, Language, detect_language, explain_entry,
@@ -50,10 +52,10 @@ pub fn answer_question(registry: &CapabilityRegistry, question: &str) -> String 
     match language {
         Language::German => {
             "Diese Faehigkeit ist im kanonischen Register nicht bekannt; Status: UNKNOWN."
-                .to_string()
+                .to_owned()
         }
         Language::English => {
-            "This capability is not listed in the canonical registry; status: UNKNOWN.".to_string()
+            "This capability is not listed in the canonical registry; status: UNKNOWN.".to_owned()
         }
     }
 }
@@ -62,16 +64,16 @@ pub fn answer_question(registry: &CapabilityRegistry, question: &str) -> String 
 pub fn ground_context(registry: &CapabilityRegistry) -> String {
     let mut out = String::from("CAPABILITY_REGISTRY (canonical, honest):\n");
     for cap in &registry.capabilities {
-        out.push_str(&format!("- {} | {}", cap.capability, cap.status.as_str()));
+        let _ = write!(out, "- {} | {}", cap.capability, cap.status.as_str());
         match cap.status {
             CapabilityStatus::Measured => {
                 if !cap.evidence_ref.trim().is_empty() {
-                    out.push_str(&format!(" | evidence={}", cap.evidence_ref));
+                    let _ = write!(out, " | evidence={}", cap.evidence_ref);
                 }
             }
             CapabilityStatus::Planned => {
                 if let Some(issue) = cap.tracking_issue.as_deref() {
-                    out.push_str(&format!(" | issue={}", issue));
+                    let _ = write!(out, " | issue={issue}");
                 }
             }
             CapabilityStatus::Unknown => {}

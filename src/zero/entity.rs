@@ -3,17 +3,17 @@
 //! GRF binding
 //! -----------
 //! * `R_t`  = persisted plugin state: `zero-manifest.json`, `plugin.json` and
-//!             the plugin data directory that owns `unified.db`.
+//!   the plugin data directory that owns `unified.db`.
 //! * `E_t`  = bytes observed on disk (manifest, plugin metadata, db presence).
 //! * `F`    = `load_entity_state_at` / `entity_health_at` (pure with respect to
-//!             their explicit inputs).
+//!   their explicit inputs).
 //! * `M`    = admissibility space: only files below the resolved plugin or
-//!             data directory are admissible evidence.
+//!   data directory are admissible evidence.
 //!
 //! Missing or malformed evidence is reported as an error or UNKNOWN; it is
 //! never replaced by an invented identity or root state.
 //!
-//! Path resolution (f3_paths.py precedence)
+//! Path resolution (`f3_paths.py` precedence)
 //! ----------------------------------------
 //! Plugin directory:
 //!   1. `MACHINE_GOD_PLUGIN_DIR`
@@ -162,7 +162,7 @@ pub enum EntityHealthClass {
     Unknown,
 }
 
-/// A measured health record for EntityOS.
+/// A measured health record for `EntityOS`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EntityHealth {
     pub class: EntityHealthClass,
@@ -271,7 +271,7 @@ fn find_existing_file(candidates: &[PathBuf]) -> Option<PathBuf> {
     candidates.iter().find(|path| path.is_file()).cloned()
 }
 
-/// Resolves the manifest path, or reports a NotFound read error.
+/// Resolves the manifest path, or reports a `NotFound` read error.
 pub fn resolve_manifest_path(plugin_dir: &Path) -> Result<PathBuf, EntityError> {
     let candidates = manifest_candidates(plugin_dir);
     if let Some(path) = find_existing_file(&candidates) {
@@ -286,7 +286,7 @@ pub fn resolve_manifest_path(plugin_dir: &Path) -> Result<PathBuf, EntityError> 
     })
 }
 
-/// Resolves the plugin metadata path, or reports a NotFound read error.
+/// Resolves the plugin metadata path, or reports a `NotFound` read error.
 pub fn resolve_plugin_json_path(plugin_dir: &Path) -> Result<PathBuf, EntityError> {
     let candidates = plugin_json_candidates(plugin_dir);
     if let Some(path) = find_existing_file(&candidates) {
@@ -419,7 +419,7 @@ fn find_bundled_plugin(start: &Path) -> PathBuf {
     start.join(BUNDLED_PLUGIN_RELATIVE)
 }
 
-/// Pure plugin-directory resolution (f3_paths precedence).
+/// Pure plugin-directory resolution (`f3_paths` precedence).
 pub fn resolve_plugin_dir(env: &EnvSnapshot, bundled: &Path) -> PathBuf {
     env.get(PLUGIN_DIR_ENV)
         .map(PathBuf::from)
@@ -437,7 +437,7 @@ pub fn manifest_data_dir(manifest: Option<&Value>) -> Option<&str> {
         .filter(|value| !value.is_empty())
 }
 
-/// Pure plugin-data-directory resolution (f3_paths precedence).
+/// Pure plugin-data-directory resolution (`f3_paths` precedence).
 pub fn resolve_data_dir(env: &EnvSnapshot, plugin_dir: &Path, manifest: Option<&Value>) -> PathBuf {
     if let Some(value) = env.get(PLUGIN_DATA_DIR_ENV) {
         return PathBuf::from(value);
@@ -500,7 +500,7 @@ pub fn load_bundled_entity_state() -> Result<EntitySnapshot, EntityError> {
     load_entity_state(&plugin_dir_from_env())
 }
 
-/// Measures EntityOS health. OK is reported only when the plugin state was
+/// Measures `EntityOS` health. OK is reported only when the plugin state was
 /// actually read and parsed; every failure stays UNKNOWN with a cause.
 pub fn entity_health_at(paths: &PluginPaths, now: SystemTime) -> EntityHealth {
     let db_path = paths.unified_db_path();
@@ -526,7 +526,7 @@ pub fn entity_health_at(paths: &PluginPaths, now: SystemTime) -> EntityHealth {
     }
 }
 
-/// Measures EntityOS health from the current process environment.
+/// Measures `EntityOS` health from the current process environment.
 pub fn entity_health() -> EntityHealth {
     entity_health_at(&plugin_paths_from_env(), SystemTime::now())
 }
@@ -586,7 +586,3 @@ pub fn status_line_from_health(
     let entity = entity_health_status(health, now);
     format_entity_status_line(grid, retina, &entity, omnipool, now)
 }
-
-#[cfg(test)]
-#[path = "entity_test.rs"]
-mod tests;

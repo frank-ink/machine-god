@@ -1,9 +1,7 @@
-//! Additional integration tests for claude_code module.
+//! Additional integration tests for `claude_code` module.
 //! These tests verify the mode switch logic with realistic scenarios.
 
 use crate::zero::claude_code::*;
-use std::env;
-use std::fs;
 
 #[test]
 fn test_full_mode_switch_flow_logged_in() {
@@ -26,8 +24,7 @@ fn test_full_mode_switch_flow_logged_in() {
 
 #[test]
 fn test_full_mode_switch_flow_not_logged_in() {
-    let mut state = ModeState::default();
-    state.login_status = LoginStatus::NotLoggedIn;
+    let mut state = ModeState { login_status: LoginStatus::NotLoggedIn, ..ModeState::default() };
 
     // Attempt to switch to Claude Code - should fail
     let result = state.switch_mode(Mode::ClaudeCode);
@@ -68,9 +65,11 @@ fn test_mode_state_default_values() {
 
 #[test]
 fn test_status_line_both_languages() {
-    let mut state = ModeState::default();
-    state.login_status = LoginStatus::LoggedIn;
-    state.current_mode = Mode::ClaudeCode;
+    let state = ModeState {
+        login_status: LoginStatus::LoggedIn,
+        current_mode: Mode::ClaudeCode,
+        ..ModeState::default()
+    };
 
     let en = state.status_line("en");
     assert!(en.contains("Claude Code"));
@@ -83,9 +82,11 @@ fn test_status_line_both_languages() {
 
 #[test]
 fn test_invalid_mode_transition_rejected() {
-    let mut state = ModeState::default();
-    state.current_mode = Mode::ClaudeCode;
-    state.login_status = LoginStatus::LoggedIn;
+    let mut state = ModeState {
+        current_mode: Mode::ClaudeCode,
+        login_status: LoginStatus::LoggedIn,
+        ..ModeState::default()
+    };
 
     // This is actually valid (ClaudeCode -> FreePool)
     let result = state.switch_mode(Mode::FreePool);
@@ -100,10 +101,10 @@ fn test_invalid_mode_transition_rejected() {
 #[test]
 fn test_omnipool_request_with_custom_values() {
     let mut req = build_free_pool_request();
-    req.model = "custom-model".to_string();
+    req.model = "custom-model".to_owned();
     req.max_tokens = Some(2048);
     req.temperature = Some(0.5);
-    req.messages.push(OmnipoolMessage { role: "user".to_string(), content: "Hello".to_string() });
+    req.messages.push(OmnipoolMessage { role: "user".to_owned(), content: "Hello".to_owned() });
 
     assert_eq!(req.model, "custom-model");
     assert_eq!(req.max_tokens, Some(2048));
@@ -113,10 +114,11 @@ fn test_omnipool_request_with_custom_values() {
 
 #[test]
 fn test_mode_state_serialization_roundtrip() {
-    let mut state = ModeState::default();
-    state.current_mode = Mode::ClaudeCode;
-    state.login_status = LoginStatus::LoggedIn;
-    state.last_detection = Some(1_700_000_000);
+    let state = ModeState {
+        current_mode: Mode::ClaudeCode,
+        login_status: LoginStatus::LoggedIn,
+        last_detection: Some(1_700_000_000),
+    };
 
     let json = serde_json::to_string(&state).unwrap();
     let restored: ModeState = serde_json::from_str(&json).unwrap();

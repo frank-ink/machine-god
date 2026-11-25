@@ -42,7 +42,7 @@ fn ok_grid(now: SystemTime) -> GridHealth {
     }
 }
 
-/// Independent re-implementation of the documented f3_paths data-directory
+/// Independent re-implementation of the documented `f3_paths` data-directory
 /// precedence. Used only as a cross-check against the production resolver.
 fn reference_data_dir(env: &EnvSnapshot, plugin_dir: &Path) -> PathBuf {
     let explicit =

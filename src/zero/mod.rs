@@ -1,17 +1,23 @@
 pub mod claude_code;
-pub mod claude_code_test;
+#[cfg(test)]
+mod claude_code_test;
 pub mod entity;
-pub mod entity_test;
+#[cfg(test)]
+mod entity_test;
 pub mod features;
 pub mod features_ground;
 pub mod freewiki;
-pub mod freewiki_test;
+#[cfg(test)]
+mod freewiki_test;
 pub mod grid;
-pub mod grid_test;
+#[cfg(test)]
+mod grid_test;
 pub mod image_studio;
 pub mod loader;
 pub mod omega;
-pub mod omega_test;
+#[cfg(test)]
+mod omega_test;
 pub mod retina;
 pub mod retina_db;
-pub mod retina_test;
+#[cfg(test)]
+mod retina_test;

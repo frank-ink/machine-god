@@ -142,7 +142,7 @@ mod tests {
     fn no_blue_or_cyan_in_row_colors() {
         for i in 0..ART.len() {
             let c = row_color(i, ART.len());
-            if let Color::Rgb(r, g, b) = c {
+            if let Color::Rgb(r, _g, b) = c {
                 // In our palette, blue component should never exceed red (no blue/cyan dominance)
                 assert!(b <= r, "row {i} has blue > red: {c:?}");
             }

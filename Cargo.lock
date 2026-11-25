@@ -545,58 +545,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "machine-god"
-version = "0.1.1"
-dependencies = [
- "anyhow",
- "arboard",
- "base64 0.23.1",
- "chrono",
- "chrono-tz",
- "clap",
- "clap_complete",
- "clap_mangen",
- "crossterm",
- "dirs",
- "fastrand",
- "fs4",
- "futures",
- "ignore",
- "image",
- "libc",
- "notify",
- "notify-rust",
- "nucleo",
- "portable-pty",
- "pretty_assertions",
- "pulldown-cmark",
- "ratatui",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "similar",
- "syntect",
- "sys-locale",
- "tempfile",
- "thiserror 2.0.21",
- "time",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "tui-markdown",
- "tui-textarea-2",
- "two-face",
- "unicode-segmentation",
- "unicode-width",
- "uuid",
- "vt100",
- "which",
- "zip",
-]
-
-[[package]]
 name = "clipboard-win"
 version = "5.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1993,6 +1941,58 @@ checksum = "c0aeb26bf5e836cc1c341c8106051b573f1766dfa05aa87f0b98be5e51b02303"
 dependencies = [
  "nix 0.29.0",
  "winapi",
+]
+
+[[package]]
+name = "machine-god"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "arboard",
+ "base64 0.23.1",
+ "chrono",
+ "chrono-tz",
+ "clap",
+ "clap_complete",
+ "clap_mangen",
+ "crossterm",
+ "dirs",
+ "fastrand",
+ "fs4",
+ "futures",
+ "ignore",
+ "image",
+ "libc",
+ "notify",
+ "notify-rust",
+ "nucleo",
+ "portable-pty",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "ratatui",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "similar",
+ "syntect",
+ "sys-locale",
+ "tempfile",
+ "thiserror 2.0.21",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "tui-markdown",
+ "tui-textarea-2",
+ "two-face",
+ "unicode-segmentation",
+ "unicode-width",
+ "uuid",
+ "vt100",
+ "which",
+ "zip",
 ]
 
 [[package]]

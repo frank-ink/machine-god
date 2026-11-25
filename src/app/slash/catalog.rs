@@ -406,7 +406,6 @@ impl AppSlashCommand {
     pub(crate) fn submission_class(self, args: &[&str]) -> SubmissionClass {
         match self {
             Self::Btw if args.is_empty() => SubmissionClass::Invalid,
-            Self::Btw => SubmissionClass::Informational,
             Self::Cancel => {
                 if args.is_empty() {
                     SubmissionClass::TurnControl
@@ -432,7 +431,7 @@ impl AppSlashCommand {
                     SubmissionClass::Invalid
                 }
             }
-            Self::Api => SubmissionClass::Informational,
+            Self::Btw | Self::Api => SubmissionClass::Informational,
             Self::Copy => {
                 if args.is_empty() {
                     SubmissionClass::Informational

@@ -9,6 +9,12 @@ const {
   supportedPlatformsText
 } = require("../../bin/machine-god.js");
 
+// Single literal for the platform package prefix: the release snapshot rewrites it as one unit,
+// so every expectation below is derived from it instead of repeating a split or escaped form.
+const PLATFORM_PREFIX = "@gschaidergabriel/machine-god";
+const platformPackage = (suffix) => `${PLATFORM_PREFIX}-${suffix}`;
+const platformDir = (suffix) => path.join("node_modules", ...platformPackage(suffix).split("/"));
+
 function processLike(platform, arch, glibcVersionRuntime) {
   return {
     platform,
@@ -27,7 +33,7 @@ test("selectTarget resolves glibc Linux platform package", () => {
   const selected = selectTarget(processLike("linux", "x64", "2.39"));
 
   assert.equal(selected.error, undefined);
-  assert.equal(selected.info.packageName, "@gschaidergabriel/machine-god-linux-x64-gnu");
+  assert.equal(selected.info.packageName, platformPackage("linux-x64-gnu"));
 });
 
 test("selectTarget rejects musl Linux without reinstall advice", () => {
@@ -57,18 +63,18 @@ test("resolveInstall reports omitted optional dependency for supported platform"
     }
   });
 
-  assert.match(resolved.error, /@srothgan\/claude-code-rust-linux-arm64-gnu/);
+  assert.ok(resolved.error.includes(platformPackage("linux-arm64-gnu")));
   assert.match(resolved.error, /npm install --omit=optional/);
   assert.match(resolved.error, /npm config get omit/);
 });
 
 test("resolveInstall returns binary and bridge paths when package payload is complete", () => {
-  const packageJsonPath = path.join("node_modules", "@srothgan", "claude-code-rust-darwin-arm64", "package.json");
+  const packageJsonPath = path.join(platformDir("darwin-arm64"), "package.json");
   const resolved = resolveInstall({
     processLike: processLike("darwin", "arm64", undefined),
     dirname: path.join("node_modules", "machine-god", "bin"),
     requireResolve(request) {
-      assert.equal(request, "@gschaidergabriel/machine-god-darwin-arm64/package.json");
+      assert.equal(request, `${platformPackage("darwin-arm64")}/package.json`);
       return packageJsonPath;
     },
     existsSync() {
@@ -77,7 +83,7 @@ test("resolveInstall returns binary and bridge paths when package payload is com
   });
 
   assert.equal(resolved.error, undefined);
-  assert.equal(resolved.binaryPath, path.join("node_modules", "@srothgan", "claude-code-rust-darwin-arm64", "bin", "machine-god-core"));
+  assert.equal(resolved.binaryPath, path.join(platformDir("darwin-arm64"), "bin", "machine-god-core"));
   assert.equal(
     resolved.bundledBridgeScript,
     path.join("node_modules", "machine-god", "agent-sdk", "dist", "bridge.js")

@@ -1,7 +1,7 @@
-//! src/zero/omega_test.rs
+//! `src/zero/omega_test.rs`
 //! Dedicated acceptance tests for the Machine God ground mode (omega).
-//! Covers: test_loopback_enforcement, test_language_detection,
-//! test_fallback_on_down.
+//! Covers: `test_loopback_enforcement`, `test_language_detection`,
+//! `test_fallback_on_down`.
 
 use crate::zero::omega::*;
 
@@ -21,7 +21,7 @@ fn test_loopback_enforcement() {
     assert!(OmegaConfig::validate_loopback("http://0.0.0.0:8111/v1/chat/completions").is_err());
 
     // The env-derived endpoint always uses 127.0.0.1 regardless of the port.
-    let ep = OmegaConfig::endpoint_from_env().expect("endpoint must build");
+    let ep = OmegaConfig::endpoint_from_env();
     assert!(ep.starts_with("http://127.0.0.1:"));
 }
 
@@ -47,7 +47,7 @@ fn test_language_detection() {
 #[test]
 fn test_fallback_on_down() {
     let port = OmegaConfig::port_from_env();
-    let expected = format!("127.0.0.1:{}", port);
+    let expected = format!("127.0.0.1:{port}");
 
     let de = fallback_sentence(Lang::De, port);
     assert!(de.contains("Maschine-Gott"));
@@ -71,7 +71,7 @@ fn test_fallback_on_down() {
 
 #[test]
 fn test_build_chat_request_shape() {
-    let messages = vec![ChatMessage { role: "user".to_string(), content: "Hallo".to_string() }];
+    let messages = vec![ChatMessage { role: "user".to_owned(), content: "Hallo".to_owned() }];
     let req = build_chat_request(&messages, "local-0.8b");
     let json = serde_json::to_string(&req).unwrap();
     let value: serde_json::Value = serde_json::from_str(&json).unwrap();

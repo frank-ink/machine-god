@@ -69,6 +69,7 @@ impl ComponentStatus {
         }
     }
 
+    #[must_use]
     pub fn reevaluated(&self, now: SystemTime) -> Self {
         Self { state: self.effective_state(now), last_success: self.last_success }
     }
@@ -319,6 +320,7 @@ impl GridEvent {
         Self { kind: kind.into(), payload, source: None }
     }
 
+    #[must_use]
     pub fn with_source(mut self, source: impl Into<String>) -> Self {
         self.source = Some(source.into());
         self
@@ -532,6 +534,7 @@ impl TcpGridTransport {
         Ok(Self { endpoint, timeout: DEFAULT_TIMEOUT })
     }
 
+    #[must_use]
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
@@ -633,50 +636,43 @@ fn read_http_response(stream: &mut TcpStream) -> Result<GridHttpResponse, GridTr
         }
     });
 
-    match content_length {
-        Some(length) => {
-            if length > MAX_RESPONSE_BYTES {
-                return Err(GridTransportError::new("HTTP response body exceeds limit"));
-            }
-
-            let available = buffer.len().saturating_sub(body_start);
-            let mut body = Vec::with_capacity(length);
-            body.extend_from_slice(&buffer[body_start..(body_start + available).min(buffer.len())]);
-
-            if body.len() < length {
-                let mut remaining = vec![0_u8; length - body.len()];
-                stream.read_exact(&mut remaining).map_err(|error| {
-                    GridTransportError::new(format!("incomplete HTTP body: {error}"))
-                })?;
-                body.extend_from_slice(&remaining);
-            }
-
-            body.truncate(length);
-            Ok(GridHttpResponse { status, body })
+    if let Some(length) = content_length {
+        if length > MAX_RESPONSE_BYTES {
+            return Err(GridTransportError::new("HTTP response body exceeds limit"));
         }
-        None => {
-            let mut body = buffer[body_start..].to_vec();
-            let mut rest = Vec::new();
-            let limit = MAX_RESPONSE_BYTES.saturating_sub(body.len()) as u64;
-            stream
-                .take(limit)
-                .read_to_end(&mut rest)
-                .map_err(|error| GridTransportError::new(format!("read body failed: {error}")))?;
-            body.extend_from_slice(&rest);
 
-            if body.len() > MAX_RESPONSE_BYTES {
-                return Err(GridTransportError::new("HTTP response body exceeds limit"));
-            }
+        let available = buffer.len().saturating_sub(body_start);
+        let mut body = Vec::with_capacity(length);
+        body.extend_from_slice(&buffer[body_start..(body_start + available).min(buffer.len())]);
 
-            Ok(GridHttpResponse { status, body })
+        if body.len() < length {
+            let mut remaining = vec![0_u8; length - body.len()];
+            stream.read_exact(&mut remaining).map_err(|error| {
+                GridTransportError::new(format!("incomplete HTTP body: {error}"))
+            })?;
+            body.extend_from_slice(&remaining);
         }
+
+        body.truncate(length);
+        Ok(GridHttpResponse { status, body })
+    } else {
+        let mut body = buffer[body_start..].to_vec();
+        let mut rest = Vec::new();
+        let limit = MAX_RESPONSE_BYTES.saturating_sub(body.len()) as u64;
+        stream
+            .take(limit)
+            .read_to_end(&mut rest)
+            .map_err(|error| GridTransportError::new(format!("read body failed: {error}")))?;
+        body.extend_from_slice(&rest);
+
+        if body.len() > MAX_RESPONSE_BYTES {
+            return Err(GridTransportError::new("HTTP response body exceeds limit"));
+        }
+
+        Ok(GridHttpResponse { status, body })
     }
 }
 
 fn find_header_end(buffer: &[u8]) -> Option<usize> {
     buffer.windows(4).position(|window| window == b"\r\n\r\n")
 }
-
-#[cfg(test)]
-#[path = "grid_test.rs"]
-mod tests;

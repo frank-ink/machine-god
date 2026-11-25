@@ -2,7 +2,7 @@
 //! Theme palette constraint tests.
 //!
 //! 1. Palette invariant: every theme color satisfies (b <= r) OR (r == g && g == b).
-//! 2. Integration grep: scans src/ui/*.rs for forbidden Color:: variants and non-palette Rgb().
+//! 2. Integration grep: scans src/ui/*.rs for forbidden `Color::` variants and non-palette `Rgb()`.
 
 use ratatui::style::Color;
 use std::fs;
@@ -69,9 +69,7 @@ fn palette_constraint_b_le_r_or_gray() {
     for (name, color) in palette_colors() {
         assert!(
             channel_ok(color),
-            "palette color {} violates b <= r or gray invariant: {:?}",
-            name,
-            color
+            "palette color {name} violates b <= r or gray invariant: {color:?}"
         );
     }
 }
@@ -81,14 +79,12 @@ fn palette_no_forbidden_variants() {
     for (name, color) in palette_colors() {
         assert!(
             !is_forbidden_variant(color),
-            "palette color {} is a forbidden blue/cyan variant: {:?}",
-            name,
-            color
+            "palette color {name} is a forbidden blue/cyan variant: {color:?}"
         );
     }
 }
 
-/// Integration test: grep src/ui/*.rs for forbidden Color:: variants and non-palette Rgb().
+/// Integration test: grep src/ui/*.rs for forbidden `Color::` variants and non-palette `Rgb()`.
 #[test]
 fn grep_ui_for_forbidden_colors_and_stray_rgb() {
     let ui_dir = Path::new("src/ui");
@@ -124,8 +120,7 @@ fn grep_ui_for_forbidden_colors_and_stray_rgb() {
             continue;
         }
         // Everything after a top-level `#[cfg(test)]` is test code.
-        let content: String =
-            content.split("\n#[cfg(test)]\nmod ").next().unwrap_or("").to_string();
+        let content: String = content.split("\n#[cfg(test)]\nmod ").next().unwrap_or("").to_owned();
 
         // Check each line for forbidden patterns
         for (line_num, line) in content.lines().enumerate() {
@@ -162,32 +157,32 @@ fn grep_ui_for_forbidden_colors_and_stray_rgb() {
                 let after = &line[start + "Color::Rgb(".len()..];
                 if let Some(end) = after.find(')') {
                     let tuple_str = &after[..end];
-                    let parts: Vec<&str> = tuple_str.split(',').map(|s| s.trim()).collect();
-                    if parts.len() == 3 {
-                        if let (Ok(r), Ok(g), Ok(b)) =
+                    let parts: Vec<&str> = tuple_str.split(',').map(str::trim).collect();
+                    if parts.len() == 3
+                        && let (Ok(r), Ok(g), Ok(b)) =
                             (parts[0].parse::<u8>(), parts[1].parse::<u8>(), parts[2].parse::<u8>())
-                        {
-                            if !rgb_tuple_allowed(r, g, b) {
-                                violations.push(format!(
-                                    "{}:{}: non-palette Color::Rgb({},{},{}) found: {}",
-                                    file_name,
-                                    line_num + 1,
-                                    r,
-                                    g,
-                                    b,
-                                    line.trim()
-                                ));
-                            }
-                        }
+                        && !rgb_tuple_allowed(r, g, b)
+                    {
+                        violations.push(format!(
+                            "{}:{}: non-palette Color::Rgb({},{},{}) found: {}",
+                            file_name,
+                            line_num + 1,
+                            r,
+                            g,
+                            b,
+                            line.trim()
+                        ));
                     }
                 }
             }
         }
     }
 
-    if !violations.is_empty() {
-        panic!("Forbidden colors or stray Rgb found in src/ui:\n{}", violations.join("\n"));
-    }
+    assert!(
+        violations.is_empty(),
+        "Forbidden colors or stray Rgb found in src/ui:\n{}",
+        violations.join("\n")
+    );
 }
 
 #[cfg(test)]
@@ -198,7 +193,7 @@ mod tests {
     fn test_palette_constraints_duplicate_check() {
         // This duplicates the inline test in theme.rs to ensure the separate test file works.
         for (name, color) in palette_colors() {
-            assert!(channel_ok(color), "{} violates constraint: {:?}", name, color);
+            assert!(channel_ok(color), "{name} violates constraint: {color:?}");
         }
     }
 }

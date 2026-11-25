@@ -1,12 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Message role and background colors
-pub const USER_MSG_BG: Color = Color::Rgb(58, 24, 26);
-pub const USER_MSG_FG: Color = Color::Rgb(255, 255, 255);
-pub const ACCENT: Color = Color::Rgb(200, 30, 40);
-pub const ROLE_ASSISTANT: Color = ACCENT;
-pub const STATUS_ERROR: Color = Color::Rgb(255, 80, 80);
-
 #[cfg(test)]
 use crate::app::ChatMessage;
 use crate::app::{BlockCache, TextBlock};
@@ -149,6 +142,7 @@ pub(super) fn render_text_block_cached(
 mod tests {
     use super::*;
     use crate::app::{ChatMessage, MessageBlock, MessageRole, TextBlock};
+    use crate::ui::theme::{ACCENT, ROLE_ASSISTANT, STATUS_ERROR, USER_MSG_BG};
     use pretty_assertions::assert_eq;
 
     fn make_text_message(role: MessageRole, text: &str) -> ChatMessage {
@@ -244,7 +238,6 @@ mod tests {
             }
         }
         assert!(no_blue_cyan(USER_MSG_BG), "USER_MSG_BG has blue/cyan cast");
-        assert!(no_blue_cyan(USER_MSG_FG), "USER_MSG_FG has blue/cyan cast");
         assert!(no_blue_cyan(ACCENT), "ACCENT has blue/cyan cast");
         assert!(no_blue_cyan(ROLE_ASSISTANT), "ROLE_ASSISTANT has blue/cyan cast");
         assert!(no_blue_cyan(STATUS_ERROR), "STATUS_ERROR has blue/cyan cast");
@@ -253,11 +246,11 @@ mod tests {
     #[test]
     fn user_msg_bg_contrast_meets_wcag_aa() {
         // WCAG AA normal text: ≥4.5:1
-        // USER_MSG_BG = Rgb(58,24,26), USER_MSG_FG = Rgb(255,255,255)
+        // White text on theme::USER_MSG_BG
         // Luminance calculation (sRGB -> linear -> Y)
         fn luminance(r: u8, g: u8, b: u8) -> f32 {
             let to_linear = |c: u8| {
-                let c = c as f32 / 255.0;
+                let c = f32::from(c) / 255.0;
                 if c <= 0.03928 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
             };
             0.2126 * to_linear(r) + 0.7152 * to_linear(g) + 0.0722 * to_linear(b)
@@ -266,10 +259,13 @@ mod tests {
             let (lighter, darker) = if l1 > l2 { (l1, l2) } else { (l2, l1) };
             (lighter + 0.05) / (darker + 0.05)
         }
-        let bg_l = luminance(58, 24, 26);
+        let Color::Rgb(bg_r, bg_g, bg_b) = USER_MSG_BG else {
+            panic!("USER_MSG_BG must be an RGB color");
+        };
+        let bg_l = luminance(bg_r, bg_g, bg_b);
         let fg_l = luminance(255, 255, 255);
         let ratio = contrast_ratio(fg_l, bg_l);
-        assert!(ratio >= 4.5, "USER_MSG_FG on USER_MSG_BG contrast {ratio:.2}:1 < 4.5:1");
+        assert!(ratio >= 4.5, "white text on USER_MSG_BG contrast {ratio:.2}:1 < 4.5:1");
     }
 
     #[test]
@@ -286,7 +282,7 @@ mod tests {
             // STATUS_ERROR should be brighter (higher luminance)
             fn lum(r: u8, g: u8, b: u8) -> f32 {
                 let to_lin = |c: u8| {
-                    let c = c as f32 / 255.0;
+                    let c = f32::from(c) / 255.0;
                     if c <= 0.03928 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
                 };
                 0.2126 * to_lin(r) + 0.7152 * to_lin(g) + 0.0722 * to_lin(b)

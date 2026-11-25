@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
@@ -45,7 +45,7 @@ struct MockCli {
 
 impl MockCli {
     fn line(text: &str) -> Self {
-        Self { stdout: Some(text.to_string()), fail: false }
+        Self { stdout: Some(text.to_owned()), fail: false }
     }
 
     fn missing() -> Self {
@@ -60,7 +60,7 @@ impl MockCli {
 impl RetinaCli for MockCli {
     fn read_line_reading(&mut self) -> Result<String, RetinaError> {
         if self.fail {
-            return Err(RetinaError::CliFailed("mock cli failure".to_string()));
+            return Err(RetinaError::CliFailed("mock cli failure".to_owned()));
         }
         match &self.stdout {
             Some(text) => Ok(text.clone()),
@@ -81,11 +81,11 @@ fn unique_dir(tag: &str) -> PathBuf {
 }
 
 #[cfg(unix)]
-fn write_script(dir: &PathBuf, name: &str, body: &str) -> PathBuf {
+fn write_script(dir: &Path, name: &str, body: &str) -> PathBuf {
     let path = dir.join(name);
     let mut file = fs::File::create(&path).expect("script file");
     writeln!(file, "#!/bin/sh").expect("shebang");
-    write!(file, "{}", body).expect("script body");
+    write!(file, "{body}").expect("script body");
     let mut perms = fs::metadata(&path).expect("metadata").permissions();
     perms.set_mode(0o755);
     fs::set_permissions(&path, perms).expect("perms");
@@ -129,21 +129,21 @@ fn test_parse_line_under_50ms() {
         parse_line("retina-timing-line");
     }
     let elapsed = start.elapsed();
-    assert!(elapsed.as_millis() < 50, "one-line parse too slow: {:?}", elapsed);
+    assert!(elapsed.as_millis() < 50, "one-line parse too slow: {elapsed:?}");
 }
 
 #[test]
 fn test_build_grid_event_json() {
     let cfg = RetinaConfig {
         cli_path: PathBuf::from("retina-frage"),
-        grid_host: "127.0.0.1".to_string(),
+        grid_host: "127.0.0.1".to_owned(),
         grid_port: 8490,
         db_path: PathBuf::from("unified.db"),
     };
     let reading = RetinaReading::Line {
-        line: "test-zeile".to_string(),
-        raw: "test-zeile\n".to_string(),
-        ts_ms: 1700000000000,
+        line: "test-zeile".to_owned(),
+        raw: "test-zeile\n".to_owned(),
+        ts_ms: 1_700_000_000_000,
     };
     let event = build_grid_event(&reading, &cfg);
     let json = serde_json::to_string(&event).expect("serialize");
@@ -159,9 +159,9 @@ fn test_build_grid_event_json() {
 #[test]
 fn test_build_db_insert_kind_retina() {
     let reading = RetinaReading::Line {
-        line: "db-zeile".to_string(),
-        raw: "db-zeile\n".to_string(),
-        ts_ms: 1700000000000,
+        line: "db-zeile".to_owned(),
+        raw: "db-zeile\n".to_owned(),
+        ts_ms: 1_700_000_000_000,
     };
     let insert = build_db_insert(&reading);
     assert_eq!(insert.kind, "retina");
@@ -183,14 +183,13 @@ fn test_enforce_loopback_only() {
 
 #[test]
 fn test_push_grid_event_rejects_non_loopback() {
-    let mut cfg = RetinaConfig::default();
-    cfg.grid_host = "10.0.0.1".to_string();
-    let reading = RetinaReading::Line { line: "x".to_string(), raw: "x\n".to_string(), ts_ms: 1 };
+    let cfg = RetinaConfig { grid_host: "10.0.0.1".to_owned(), ..RetinaConfig::default() };
+    let reading = RetinaReading::Line { line: "x".to_owned(), raw: "x\n".to_owned(), ts_ms: 1 };
     let event = build_grid_event(&reading, &cfg);
     let err = push_grid_event(&event, &cfg).expect_err("non-loopback must be rejected");
     match err {
         RetinaError::LoopbackViolation(host) => assert_eq!(host, "10.0.0.1"),
-        other => panic!("expected LoopbackViolation, got {:?}", other),
+        other => panic!("expected LoopbackViolation, got {other:?}"),
     }
 }
 
@@ -314,8 +313,7 @@ fn test_spawn_retina_line_with_local_script() {
         "if [ \"$1\" = \"--zeile\" ]; then echo 'retina-script-line'; exit 0; fi; exit 9\n",
     );
 
-    let mut cfg = RetinaConfig::default();
-    cfg.cli_path = path;
+    let cfg = RetinaConfig { cli_path: path, ..RetinaConfig::default() };
     let output = spawn_retina_line(&cfg).expect("local script must run");
     assert!(output.contains("retina-script-line"));
 }
@@ -326,8 +324,7 @@ fn test_spawn_retina_line_failing_script_is_error() {
     let dir = unique_dir("script-fail");
     let path = write_script(&dir, "retina-frage-fail", "echo boom >&2\nexit 3\n");
 
-    let mut cfg = RetinaConfig::default();
-    cfg.cli_path = path;
+    let cfg = RetinaConfig { cli_path: path, ..RetinaConfig::default() };
     let err = spawn_retina_line(&cfg).expect_err("failing CLI must fail");
     assert!(matches!(err, RetinaError::CliFailed(_)));
     assert!(err.to_string().contains("Retina nicht verfuegbar"));
@@ -340,7 +337,7 @@ fn test_mock_pipeline_pushes_event_and_row() {
     let mut cli = MockCli::line("mock-line\n");
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
-    let target = GridTarget { host: "127.0.0.1".to_string(), port: 8490 };
+    let target = GridTarget { host: "127.0.0.1".to_owned(), port: 8490 };
     let mut rt =
         RetinaRuntime { target: target.clone(), cli: &mut cli, grid: &mut grid, db: &mut db };
 
@@ -372,7 +369,7 @@ fn test_mock_pipeline_missing_cli_publishes_nothing() {
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
     let mut rt = RetinaRuntime {
-        target: GridTarget { host: "127.0.0.1".to_string(), port: 8490 },
+        target: GridTarget { host: "127.0.0.1".to_owned(), port: 8490 },
         cli: &mut cli,
         grid: &mut grid,
         db: &mut db,
@@ -390,7 +387,7 @@ fn test_mock_pipeline_empty_output_is_unknown_and_publishes_nothing() {
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
     let mut rt = RetinaRuntime {
-        target: GridTarget { host: "127.0.0.1".to_string(), port: 8490 },
+        target: GridTarget { host: "127.0.0.1".to_owned(), port: 8490 },
         cli: &mut cli,
         grid: &mut grid,
         db: &mut db,
@@ -419,14 +416,14 @@ fn test_mock_grid_endpoint_receives_perception_event() {
 
     let cfg = RetinaConfig {
         cli_path: PathBuf::from(RETINA_CLI),
-        grid_host: "127.0.0.1".to_string(),
+        grid_host: "127.0.0.1".to_owned(),
         grid_port: port,
         db_path: PathBuf::from("unified.db"),
     };
     let reading = RetinaReading::Line {
-        line: "tcp-zeile".to_string(),
-        raw: "tcp-zeile\n".to_string(),
-        ts_ms: 1700000000002,
+        line: "tcp-zeile".to_owned(),
+        raw: "tcp-zeile\n".to_owned(),
+        ts_ms: 1_700_000_000_002,
     };
     let event = build_grid_event(&reading, &cfg);
     push_grid_event(&event, &cfg).expect("push to loopback mock");
@@ -438,7 +435,7 @@ fn test_mock_grid_endpoint_receives_perception_event() {
     assert_eq!(value["type"].as_str(), Some("retina_reading"));
     assert_eq!(value["payload"]["zeile"].as_str(), Some("tcp-zeile"));
     assert_eq!(value["host"].as_str(), Some("127.0.0.1"));
-    assert_eq!(value["port"].as_u64(), Some(port as u64));
+    assert_eq!(value["port"].as_u64(), Some(u64::from(port)));
 }
 
 // ---------------------------------------------------------------- unified.db
@@ -448,9 +445,9 @@ fn test_write_db_insert_rejects_foreign_kind() {
     let dir = unique_dir("kind");
     let db_path = dir.join("unified.db");
     let insert = DbInsert {
-        kind: "other".to_string(),
-        payload: "{}".to_string(),
-        sql: "INSERT INTO memory (kind, payload, ts_ms) VALUES ('other', '{}', 1);".to_string(),
+        kind: "other".to_owned(),
+        payload: "{}".to_owned(),
+        sql: "INSERT INTO memory (kind, payload, ts_ms) VALUES ('other', '{}', 1);".to_owned(),
         ts_ms: 1,
     };
     let err = write_db_insert(&insert, &db_path).expect_err("foreign kind must be rejected");
@@ -466,9 +463,9 @@ fn test_sqlite_db_inserts_retina_row() {
     let dir = unique_dir("sqlite");
     let db_path = dir.join("unified.db");
     let reading = RetinaReading::Line {
-        line: "sqlite-zeile".to_string(),
-        raw: "sqlite-zeile\n".to_string(),
-        ts_ms: 1700000000000,
+        line: "sqlite-zeile".to_owned(),
+        raw: "sqlite-zeile\n".to_owned(),
+        ts_ms: 1_700_000_000_000,
     };
     let insert = build_db_insert(&reading);
     let mut db = SqliteDb::with_binary(db_path.clone(), PathBuf::from("sqlite3"));
@@ -488,13 +485,13 @@ fn test_sqlite_db_inserts_retina_row() {
 // ACCEPTANCE TESTS - exact names required by the task
 // ================================================================
 
-/// test_retina_cli_one_line_state: verifies the CLI --zeile output is parsed as a one-line state
+/// `test_retina_cli_one_line_state`: verifies the CLI --zeile output is parsed as a one-line state
 #[test]
 fn test_retina_cli_one_line_state() {
     let mut cli = MockCli::line("retina-one-line-state\n");
     let mut grid = MockGrid::default();
     let mut db = MockDb::default();
-    let target = GridTarget { host: "127.0.0.1".to_string(), port: 8490 };
+    let target = GridTarget { host: "127.0.0.1".to_owned(), port: 8490 };
     let mut rt = RetinaRuntime { target, cli: &mut cli, grid: &mut grid, db: &mut db };
 
     let reading = read_and_push_with(&mut rt).expect("pipeline must succeed");
@@ -508,7 +505,7 @@ fn test_retina_cli_one_line_state() {
     }
 }
 
-/// test_push_to_grid_loopback: verifies a perception event is pushed to loopback GRID
+/// `test_push_to_grid_loopback`: verifies a perception event is pushed to loopback GRID
 #[test]
 fn test_push_to_grid_loopback() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback listener");
@@ -524,14 +521,14 @@ fn test_push_to_grid_loopback() {
 
     let cfg = RetinaConfig {
         cli_path: PathBuf::from(RETINA_CLI),
-        grid_host: "127.0.0.1".to_string(),
+        grid_host: "127.0.0.1".to_owned(),
         grid_port: port,
         db_path: PathBuf::from("unified.db"),
     };
     let reading = RetinaReading::Line {
-        line: "loopback-test-zeile".to_string(),
-        raw: "loopback-test-zeile\n".to_string(),
-        ts_ms: 1700000000003,
+        line: "loopback-test-zeile".to_owned(),
+        raw: "loopback-test-zeile\n".to_owned(),
+        ts_ms: 1_700_000_000_003,
     };
     let event = build_grid_event(&reading, &cfg);
     push_grid_event(&event, &cfg).expect("push to loopback GRID");
@@ -543,10 +540,10 @@ fn test_push_to_grid_loopback() {
     assert_eq!(value["type"].as_str(), Some("retina_reading"));
     assert_eq!(value["payload"]["zeile"].as_str(), Some("loopback-test-zeile"));
     assert_eq!(value["host"].as_str(), Some("127.0.0.1"));
-    assert_eq!(value["port"].as_u64(), Some(port as u64));
+    assert_eq!(value["port"].as_u64(), Some(u64::from(port)));
 }
 
-/// test_push_to_entityos_unified_db: verifies a retina reading is written to unified.db with kind='retina'
+/// `test_push_to_entityos_unified_db`: verifies a retina reading is written to unified.db with kind='retina'
 #[test]
 fn test_push_to_entityos_unified_db() {
     if !sqlite_available() {
@@ -556,9 +553,9 @@ fn test_push_to_entityos_unified_db() {
     let dir = unique_dir("entityos");
     let db_path = dir.join("unified.db");
     let reading = RetinaReading::Line {
-        line: "entityos-test-zeile".to_string(),
-        raw: "entityos-test-zeile\n".to_string(),
-        ts_ms: 1700000000004,
+        line: "entityos-test-zeile".to_owned(),
+        raw: "entityos-test-zeile\n".to_owned(),
+        ts_ms: 1_700_000_000_004,
     };
     let insert = build_db_insert(&reading);
     let mut db = SqliteDb::with_binary(db_path.clone(), PathBuf::from("sqlite3"));

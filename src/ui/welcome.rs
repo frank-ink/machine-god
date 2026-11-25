@@ -305,13 +305,7 @@ fn motif_column_width(size: MotifSize) -> usize {
     display_width(FERRIS_LEFT_PADDING).saturating_add(cols)
 }
 
-/// Frame of the red pulse for a given time since start: pure, so tests can pin instants.
-pub(crate) fn motif_frame(elapsed: Duration) -> usize {
-    let step = elapsed.as_millis() / u128::from(machine_god_art::FRAME_MS);
-    usize::try_from(step % machine_god_art::FRAME_COUNT as u128).unwrap_or(0)
-}
-
-/// Motif frame for the tick-driven Ferris pose: rest -> 0, every moving pose -> a pulse frame (1..FRAME_COUNT).
+/// Motif frame for the tick-driven Ferris pose: rest -> 0, every moving pose -> a pulse frame (`1..FRAME_COUNT`).
 fn motif_frame_for(ferris: &FerrisFrame) -> usize {
     if *ferris == FERRIS_REST {
         return 0;
@@ -382,18 +376,6 @@ pub(crate) fn ferris_column_width() -> usize {
 pub(crate) fn ferris_column_visible(width: usize) -> bool {
     let overview_offset = ferris_column_width().saturating_add(FERRIS_TEXT_GAP);
     width.saturating_sub(overview_offset) >= minimum_overview_width()
-}
-
-fn ferris_rows(ferris: &FerrisFrame) -> Vec<Line<'static>> {
-    ferris
-        .iter()
-        .map(|art| {
-            Line::from(Span::styled(
-                format!("{FERRIS_LEFT_PADDING}{art}"),
-                Style::default().fg(theme::ACCENT),
-            ))
-        })
-        .collect()
 }
 
 fn minimum_overview_width() -> usize {

@@ -321,9 +321,8 @@ fn should_show_startup_mcp_hint(app: &App) -> bool {
 
 fn mode_color(mode_id: &str) -> Color {
     match mode_id {
-        "default" => theme::DIM,
+        "default" | "plan" => theme::DIM,
         "auto" | "acceptEdits" => theme::ACCENT,
-        "plan" => theme::DIM,
         "bypassPermissions" | "dontAsk" => Color::Red,
         _ => Color::Rgb(110, 110, 110),
     }

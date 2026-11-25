@@ -2,9 +2,9 @@
 //!
 //! Scope: this module only spawns the external `bild` CLI and maps its
 //! observable output into typed records. It contains no image logic, no HTTP
-//! client and no retry of the ChatGPT message: one spawn is one real message.
+//! client and no retry of the `ChatGPT` message: one spawn is one real message.
 //!
-//! Hard invariants (see ClayCode block):
+//! Hard invariants (see `ClayCode` block):
 //!   * the studio is loopback-only (`127.0.0.1:18796`),
 //!   * URLs are secrets: they never appear in `Debug`, `Display` or error text,
 //!   * missing CLI / missing service are reported honestly, never faked.
@@ -61,7 +61,7 @@ pub enum ImageStudioError {
 pub enum ImageStudioExit {
     /// Exit 0: the job finished, files are available.
     Success,
-    /// Exit 2: ChatGPT answered with text instead of an image.
+    /// Exit 2: `ChatGPT` answered with text instead of an image.
     TextAnswer,
     /// Exit 3: the job is still running in the studio (delivered later).
     JobRunning,
@@ -108,7 +108,7 @@ impl Progress {
         if let Some(status) = &self.status {
             parts.push(redact_urls(status));
         }
-        if parts.is_empty() { "progress unknown".to_string() } else { parts.join(" | ") }
+        if parts.is_empty() { "progress unknown".to_owned() } else { parts.join(" | ") }
     }
 }
 
@@ -119,7 +119,7 @@ pub struct ImageStudioResult {
     pub kind: ImageStudioExit,
     /// Absolute paths of produced files.
     pub files: Vec<PathBuf>,
-    /// ChatGPT text answer, if any.
+    /// `ChatGPT` text answer, if any.
     pub text: Option<String>,
     /// Studio job id, if reported.
     pub job_id: Option<String>,
@@ -149,7 +149,7 @@ impl ImageStudioResult {
         self.kind == ImageStudioExit::Success
     }
 
-    /// True when ChatGPT answered with text instead of an image.
+    /// True when `ChatGPT` answered with text instead of an image.
     pub fn is_text_answer(&self) -> bool {
         self.kind == ImageStudioExit::TextAnswer
     }
@@ -261,9 +261,8 @@ pub fn resolve_cli() -> Result<PathBuf, ImageStudioError> {
 }
 
 fn is_executable(path: &Path) -> bool {
-    let meta = match std::fs::metadata(path) {
-        Ok(meta) => meta,
-        Err(_) => return false,
+    let Ok(meta) = std::fs::metadata(path) else {
+        return false;
     };
     if !meta.is_file() {
         return false;
@@ -283,10 +282,10 @@ fn is_executable(path: &Path) -> bool {
 pub fn validate_service_addr(addr: &str) -> Result<(), ImageStudioError> {
     let (host, port) = addr
         .rsplit_once(':')
-        .ok_or_else(|| ImageStudioError::InvalidServiceAddress("missing port".to_string()))?;
+        .ok_or_else(|| ImageStudioError::InvalidServiceAddress("missing port".to_owned()))?;
     let port = port
         .parse::<u16>()
-        .map_err(|_| ImageStudioError::InvalidServiceAddress("invalid port".to_string()))?;
+        .map_err(|_| ImageStudioError::InvalidServiceAddress("invalid port".to_owned()))?;
     if !is_loopback_host(host) || port != SERVICE_PORT {
         return Err(ImageStudioError::InvalidServiceAddress(format!("{host}:{port}")));
     }
@@ -297,15 +296,15 @@ pub fn validate_service_addr(addr: &str) -> Result<(), ImageStudioError> {
 pub fn validate_service_url(url: &str) -> Result<(), ImageStudioError> {
     let rest =
         url.strip_prefix("http://").or_else(|| url.strip_prefix("https://")).ok_or_else(|| {
-            ImageStudioError::InvalidServiceAddress("scheme is not http(s)".to_string())
+            ImageStudioError::InvalidServiceAddress("scheme is not http(s)".to_owned())
         })?;
-    let authority = rest.split(|c| c == '/' || c == '?' || c == '#').next().unwrap_or("");
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
     let (host, port) = authority
         .rsplit_once(':')
-        .ok_or_else(|| ImageStudioError::InvalidServiceAddress("missing port".to_string()))?;
+        .ok_or_else(|| ImageStudioError::InvalidServiceAddress("missing port".to_owned()))?;
     let port_num = port
         .parse::<u16>()
-        .map_err(|_| ImageStudioError::InvalidServiceAddress("invalid port".to_string()))?;
+        .map_err(|_| ImageStudioError::InvalidServiceAddress("invalid port".to_owned()))?;
     if !is_loopback_host(host) || port_num != SERVICE_PORT {
         return Err(ImageStudioError::InvalidServiceAddress(format!("{host}:{port_num}")));
     }
@@ -340,7 +339,7 @@ pub fn redact_json_urls(value: &mut Value) {
     match value {
         Value::String(text) => {
             if text.contains("http://") || text.contains("https://") {
-                *text = REDACTED.to_string();
+                REDACTED.clone_into(text);
             }
         }
         Value::Array(items) => {
@@ -360,7 +359,6 @@ pub fn redact_json_urls(value: &mut Value) {
 /// Classify a failing invocation. Service outages are distinguished from
 /// ordinary command failures; URLs are redacted from the message.
 pub fn classify_failure(exit_code: i32, stderr: &str) -> ImageStudioError {
-    let lower = stderr.to_ascii_lowercase();
     const SERVICE_MARKERS: [&str; 10] = [
         "connection refused",
         "service unavailable",
@@ -373,8 +371,9 @@ pub fn classify_failure(exit_code: i32, stderr: &str) -> ImageStudioError {
         "unreachable",
         "failed to start service",
     ];
+    let lower = stderr.to_ascii_lowercase();
     if SERVICE_MARKERS.iter().any(|marker| lower.contains(marker)) {
-        return ImageStudioError::ServiceUnavailable { addr: SERVICE_ADDR.to_string() };
+        return ImageStudioError::ServiceUnavailable { addr: SERVICE_ADDR.to_owned() };
     }
     let message = redact_urls(stderr.trim());
     if message.is_empty() {
@@ -386,36 +385,43 @@ pub fn classify_failure(exit_code: i32, stderr: &str) -> ImageStudioError {
 
 fn value_at<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a Value> {
     for key in keys {
-        if let Some(found) = value.get(*key) {
-            if !found.is_null() {
-                return Some(found);
-            }
+        if let Some(found) = value.get(*key)
+            && !found.is_null()
+        {
+            return Some(found);
         }
     }
     None
 }
 
+// Finite and non-negative is checked before the float-to-integer cast.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn number_to_u64(value: &Value) -> Option<u64> {
     if let Some(number) = value.as_u64() {
         return Some(number);
     }
     if let Some(number) = value.as_i64() {
-        return if number >= 0 { Some(number as u64) } else { None };
+        return u64::try_from(number).ok();
     }
-    if let Some(number) = value.as_f64() {
-        if number.is_finite() && number >= 0.0 {
-            return Some(number as u64);
-        }
+    if let Some(number) = value.as_f64()
+        && number.is_finite()
+        && number >= 0.0
+    {
+        return Some(number as u64);
     }
     None
 }
 
+// Progress counters stay far below 2^53, so the integer-to-float cast is exact.
+#[allow(clippy::cast_precision_loss)]
 fn number_to_f64(value: &Value) -> Option<f64> {
     value.as_f64().or_else(|| value.as_u64().map(|n| n as f64))
 }
 
 /// Normalise a progress value to percent. Values in `(0, 1)` are fractions,
 /// values `>= 1` are already percent.
+// Both casts follow `clamp(0.0, 100.0)`, so the value always fits in `u8`.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn percent_from_value(value: &Value) -> Option<u8> {
     if let Some(text) = value.as_str() {
         let trimmed = text.trim().trim_end_matches('%');
@@ -462,7 +468,7 @@ fn collect_progress(value: &Value, out: &mut Progress, found: &mut bool, depth: 
                     }
                     "status" | "state" => {
                         if let Some(text) = item.as_str() {
-                            out.status = Some(text.to_string());
+                            out.status = Some(text.to_owned());
                             *found = true;
                         }
                     }
@@ -563,17 +569,17 @@ fn collect_text(value: &Value) -> Option<String> {
         match v {
             Value::Object(map) => {
                 for key in ["text", "answer", "response", "message"] {
-                    if let Some(text) = map.get(key).and_then(|x| x.as_str()) {
-                        if !text.trim().is_empty() {
-                            return Some(text.to_string());
-                        }
+                    if let Some(text) = map.get(key).and_then(|x| x.as_str())
+                        && !text.trim().is_empty()
+                    {
+                        return Some(text.to_owned());
                     }
                 }
                 for key in ["jobs", "job", "result", "data"] {
-                    if let Some(child) = map.get(key) {
-                        if let Some(found) = from_obj(child, depth + 1) {
-                            return Some(found);
-                        }
+                    if let Some(child) = map.get(key)
+                        && let Some(found) = from_obj(child, depth + 1)
+                    {
+                        return Some(found);
                     }
                 }
                 None
@@ -600,17 +606,17 @@ fn collect_job_id(value: &Value) -> Option<String> {
         match v {
             Value::Object(map) => {
                 for key in ["job_id", "jobId", "id"] {
-                    if let Some(id) = map.get(key).and_then(|x| x.as_str()) {
-                        if !id.trim().is_empty() {
-                            return Some(id.to_string());
-                        }
+                    if let Some(id) = map.get(key).and_then(|x| x.as_str())
+                        && !id.trim().is_empty()
+                    {
+                        return Some(id.to_owned());
                     }
                 }
                 for key in ["jobs", "job", "result", "data"] {
-                    if let Some(child) = map.get(key) {
-                        if let Some(found) = from_obj(child, depth + 1) {
-                            return Some(found);
-                        }
+                    if let Some(child) = map.get(key)
+                        && let Some(found) = from_obj(child, depth + 1)
+                    {
+                        return Some(found);
                     }
                 }
                 None
@@ -634,12 +640,11 @@ fn build_result(kind: ImageStudioExit, raw: Value) -> ImageStudioResult {
     collect_files(&raw, &mut files, 0);
     let files = absolutize(files);
     let mut text = collect_text(&raw);
-    if text.is_none() {
-        if let Value::String(plain) = &raw {
-            if !plain.trim().is_empty() {
-                text = Some(plain.clone());
-            }
-        }
+    if text.is_none()
+        && let Value::String(plain) = &raw
+        && !plain.trim().is_empty()
+    {
+        text = Some(plain.clone());
     }
     let job_id = collect_job_id(&raw);
     let progress = parse_progress(&raw);
@@ -649,7 +654,7 @@ fn build_result(kind: ImageStudioExit, raw: Value) -> ImageStudioResult {
 }
 
 /// Parse a `--json` payload. Invalid JSON is an error, except for exit code 2
-/// where plain text is accepted as the ChatGPT answer.
+/// where plain text is accepted as the `ChatGPT` answer.
 pub fn parse_result(exit_code: i32, stdout: &str) -> Result<ImageStudioResult, ImageStudioError> {
     let kind = map_exit_code(exit_code);
     let trimmed = stdout.trim();
@@ -660,7 +665,7 @@ pub fn parse_result(exit_code: i32, stdout: &str) -> Result<ImageStudioResult, I
         Ok(raw) => Ok(build_result(kind, raw)),
         Err(err) => {
             if kind == ImageStudioExit::TextAnswer {
-                Ok(build_result(kind, Value::String(trimmed.to_string())))
+                Ok(build_result(kind, Value::String(trimmed.to_owned())))
             } else {
                 Err(ImageStudioError::InvalidJson { message: redact_urls(&err.to_string()) })
             }
@@ -670,18 +675,15 @@ pub fn parse_result(exit_code: i32, stdout: &str) -> Result<ImageStudioResult, I
 
 /// Like [`parse_result`] but never fails on non-JSON output (used for
 /// `bild edit`, which is passed through unchanged).
-pub fn parse_result_lenient(
-    exit_code: i32,
-    stdout: &str,
-) -> Result<ImageStudioResult, ImageStudioError> {
+pub fn parse_result_lenient(exit_code: i32, stdout: &str) -> ImageStudioResult {
     let kind = map_exit_code(exit_code);
     let trimmed = stdout.trim();
     if trimmed.is_empty() {
-        return Ok(build_result(kind, Value::Null));
+        return build_result(kind, Value::Null);
     }
     match serde_json::from_str::<Value>(trimmed) {
-        Ok(raw) => Ok(build_result(kind, raw)),
-        Err(_) => Ok(build_result(kind, Value::String(trimmed.to_string()))),
+        Ok(raw) => build_result(kind, raw),
+        Err(_) => build_result(kind, Value::String(trimmed.to_owned())),
     }
 }
 
@@ -689,18 +691,18 @@ pub fn parse_result_lenient(
 pub fn parse_url_output(stdout: &str) -> Result<ImageStudioUrl, ImageStudioError> {
     let trimmed = stdout.trim();
     if trimmed.is_empty() {
-        return Err(ImageStudioError::InvalidJson { message: "empty output".to_string() });
+        return Err(ImageStudioError::InvalidJson { message: "empty output".to_owned() });
     }
     let parsed = serde_json::from_str::<Value>(trimmed).ok();
     let candidate = match parsed.as_ref() {
         Some(Value::String(text)) => text.clone(),
         Some(value) => value_at(value, &["url", "link", "href"])
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
+            .map(std::borrow::ToOwned::to_owned)
             .ok_or_else(|| ImageStudioError::InvalidJson {
-                message: "no url field in output".to_string(),
+                message: "no url field in output".to_owned(),
             })?,
-        None => trimmed.to_string(),
+        None => trimmed.to_owned(),
     };
     validate_service_url(&candidate)?;
     let expires = parsed.as_ref().and_then(|value| {
@@ -798,7 +800,7 @@ impl BildCli {
 
     /// `bild url`: one-time studio URL (never logged by this module).
     pub async fn url(&self) -> Result<ImageStudioUrl, ImageStudioError> {
-        let captured = self.capture(&["url".to_string()]).await?;
+        let captured = self.capture(&["url".to_owned()]).await?;
         if map_exit_code(captured.code) != ImageStudioExit::Success {
             return Err(classify_failure(captured.code, &captured.stderr));
         }
@@ -807,7 +809,7 @@ impl BildCli {
 
     /// `bild generate "<prompt>" --json`.
     pub async fn generate(&self, prompt: &str) -> Result<ImageStudioResult, ImageStudioError> {
-        let args = vec!["generate".to_string(), prompt.to_string(), "--json".to_string()];
+        let args = vec!["generate".to_owned(), prompt.to_owned(), "--json".to_owned()];
         let captured = self.capture(&args).await?;
         match map_exit_code(captured.code) {
             ImageStudioExit::Failure => Err(classify_failure(captured.code, &captured.stderr)),
@@ -821,38 +823,38 @@ impl BildCli {
         name: &str,
         region: Option<&str>,
     ) -> Result<ImageStudioResult, ImageStudioError> {
-        let mut args = vec!["edit".to_string(), name.to_string()];
+        let mut args = vec!["edit".to_owned(), name.to_owned()];
         if let Some(region) = region {
-            args.push("--region".to_string());
-            args.push(region.to_string());
+            args.push("--region".to_owned());
+            args.push(region.to_owned());
         }
         self.edit_args(&args[1..]).await
     }
 
     /// Raw pass-through for `bild edit` (regions may contain `%` values).
     pub async fn edit_args(&self, extra: &[String]) -> Result<ImageStudioResult, ImageStudioError> {
-        let mut args = vec!["edit".to_string()];
+        let mut args = vec!["edit".to_owned()];
         args.extend(extra.iter().cloned());
-        args.push("--json".to_string());
+        args.push("--json".to_owned());
         let captured = self.capture(&args).await?;
         match map_exit_code(captured.code) {
             ImageStudioExit::Failure => Err(classify_failure(captured.code, &captured.stderr)),
-            _ => parse_result_lenient(captured.code, &captured.stdout),
+            _ => Ok(parse_result_lenient(captured.code, &captured.stdout)),
         }
     }
 
     /// `bild status <job_id> --json`.
     pub async fn status(&self, job_id: &str) -> Result<ImageStudioResult, ImageStudioError> {
-        let args = vec!["status".to_string(), job_id.to_string(), "--json".to_string()];
+        let args = vec!["status".to_owned(), job_id.to_owned(), "--json".to_owned()];
         let captured = self.capture(&args).await?;
         match map_exit_code(captured.code) {
             ImageStudioExit::Failure => Err(classify_failure(captured.code, &captured.stderr)),
-            _ => parse_result_lenient(captured.code, &captured.stdout),
+            _ => Ok(parse_result_lenient(captured.code, &captured.stdout)),
         }
     }
 
     /// Background generate: one `generate` spawn, then `status` polling.
-    /// The ChatGPT message is never retried.
+    /// The `ChatGPT` message is never retried.
     pub async fn generate_with_progress<F>(
         &self,
         prompt: &str,
@@ -866,9 +868,8 @@ impl BildCli {
         if first.kind != ImageStudioExit::JobRunning {
             return Ok(first);
         }
-        let job_id = match first.job_id.clone() {
-            Some(id) => id,
-            None => return Ok(first),
+        let Some(job_id) = first.job_id.clone() else {
+            return Ok(first);
         };
         if let Some(progress) = &first.progress {
             on_progress(progress);
@@ -879,28 +880,28 @@ impl BildCli {
             if polls >= opts.max_polls {
                 return Err(ImageStudioError::Timeout { seconds: start.elapsed().as_secs() });
             }
-            if let Some(timeout) = opts.timeout {
-                if start.elapsed() >= timeout {
-                    return Err(ImageStudioError::Timeout { seconds: timeout.as_secs() });
-                }
+            if let Some(timeout) = opts.timeout
+                && start.elapsed() >= timeout
+            {
+                return Err(ImageStudioError::Timeout { seconds: timeout.as_secs() });
             }
             polls += 1;
             tokio::time::sleep(opts.poll_interval).await;
             let captured =
-                self.capture(&["status".to_string(), job_id.clone(), "--json".to_string()]).await?;
+                self.capture(&["status".to_owned(), job_id.clone(), "--json".to_owned()]).await?;
             match map_exit_code(captured.code) {
                 ImageStudioExit::Failure => {
                     return Err(classify_failure(captured.code, &captured.stderr));
                 }
                 ImageStudioExit::TextAnswer => {
-                    let result = parse_result_lenient(captured.code, &captured.stdout)?;
+                    let result = parse_result_lenient(captured.code, &captured.stdout);
                     if let Some(progress) = &result.progress {
                         on_progress(progress);
                     }
                     return Ok(result);
                 }
                 _ => {
-                    let result = parse_result_lenient(captured.code, &captured.stdout)?;
+                    let result = parse_result_lenient(captured.code, &captured.stdout);
                     if let Some(progress) = &result.progress {
                         on_progress(progress);
                     }
@@ -1024,7 +1025,7 @@ mod tests {
     #[test]
     fn classify_failure_maps_service_outage() {
         let err = classify_failure(1, "connection refused");
-        assert_eq!(err, ImageStudioError::ServiceUnavailable { addr: SERVICE_ADDR.to_string() });
+        assert_eq!(err, ImageStudioError::ServiceUnavailable { addr: SERVICE_ADDR.to_owned() });
     }
 
     #[test]
@@ -1251,14 +1252,14 @@ exit 1
     async fn missing_service_maps_to_service_unavailable() {
         let (dir, script) = write_stub(
             "service",
-            r#"#!/bin/sh
+            r"#!/bin/sh
 printf '%s\n' 'connection refused' >&2
 exit 1
-"#,
+",
         );
         let cli = BildCli::from_path(&script);
         let err = cli.generate("a cat").await.unwrap_err();
-        assert_eq!(err, ImageStudioError::ServiceUnavailable { addr: SERVICE_ADDR.to_string() });
+        assert_eq!(err, ImageStudioError::ServiceUnavailable { addr: SERVICE_ADDR.to_owned() });
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1267,10 +1268,10 @@ exit 1
     async fn failure_message_never_leaks_url() {
         let (dir, script) = write_stub(
             "leak",
-            r#"#!/bin/sh
+            r"#!/bin/sh
 printf '%s\n' 'failed http://127.0.0.1:18796/?token=SECRET' >&2
 exit 1
-"#,
+",
         );
         let cli = BildCli::from_path(&script);
         let err = cli.generate("a cat").await.unwrap_err();

@@ -38,13 +38,18 @@ pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
     Sha256::new().chain_update(pad(0x5c)).chain_update(inner).finalize().into()
 }
 
+fn to_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::with_capacity(bytes.len() * 2), |mut out, b| {
+        let _ = write!(out, "{b:02x}");
+        out
+    })
+}
+
 /// Same derivation as Omnipool's `harness_key(app)`: `op-<app>-<first 24 hex of HMAC>`.
 #[must_use]
 pub fn harness_key(app_key: &str, app: &str) -> String {
-    let hex: String = hmac_sha256(app_key.as_bytes(), app.as_bytes())
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect();
+    let hex = to_hex(&hmac_sha256(app_key.as_bytes(), app.as_bytes()));
     format!("op-{app}-{}", &hex[..24])
 }
 
@@ -139,7 +144,7 @@ pub struct Browser {
 pub fn browsers() -> Vec<Browser> {
     let b = |name: &str, launch: &[&str]| Browser {
         name: name.into(),
-        launch: launch.iter().map(|s| (*s).to_string()).collect(),
+        launch: launch.iter().map(|s| (*s).to_owned()).collect(),
     };
     let mut v = Vec::new();
     if cfg!(target_os = "macos") {
@@ -230,7 +235,7 @@ mod tests {
     #[test]
     fn hmac_matches_rfc4231_case_2() {
         let h = hmac_sha256(b"Jefe", b"what do ya want for nothing?");
-        let hex: String = h.iter().map(|b| format!("{b:02x}")).collect();
+        let hex = to_hex(&h);
         assert_eq!(hex, "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843");
     }
 

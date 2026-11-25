@@ -6,7 +6,7 @@ use crate::app::subagent;
 use crate::app::{App, FocusOwner};
 use crate::ui::theme;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use tui_textarea::{CursorRenderMode, TextArea};
 
 use super::message_layout::{MessageLayout, VERTICAL_PADDING as INPUT_VERTICAL_PAD};

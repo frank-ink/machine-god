@@ -3,24 +3,20 @@
 //! No credential handling; uses user's own Claude Code subscription.
 
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::process::{Child, Command};
 
 /// Current operation mode of the agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum Mode {
     /// Free pool (Omnipool) - default, no login required
+    #[default]
     FreePool,
     /// Real Claude Code with user's own subscription login
     ClaudeCode,
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Mode::FreePool
-    }
 }
 
 /// Login status detected from ~/.claude/.credentials.json
@@ -74,9 +70,10 @@ impl ChildProcess {
 
 /// Get the path to the Claude credentials file.
 fn claude_credentials_path() -> PathBuf {
-    dirs::home_dir()
-        .map(|h| h.join(".claude").join(".credentials.json"))
-        .unwrap_or_else(|| PathBuf::from("/nonexistent/.claude/.credentials.json"))
+    dirs::home_dir().map_or_else(
+        || PathBuf::from("/nonexistent/.claude/.credentials.json"),
+        |h| h.join(".claude").join(".credentials.json"),
+    )
 }
 
 /// Pure function: detect Claude Code login status.
@@ -89,15 +86,13 @@ pub fn detect_claude_login() -> LoginStatus {
         return LoginStatus::NotLoggedIn;
     }
 
-    let content = match std::fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return LoginStatus::Unknown,
+    let Ok(content) = std::fs::read_to_string(&path) else {
+        return LoginStatus::Unknown;
     };
 
     // Basic JSON validation - check for required fields without extracting secrets
-    let parsed: serde_json::Value = match serde_json::from_str(&content) {
-        Ok(v) => v,
-        Err(_) => return LoginStatus::Unknown,
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&content) else {
+        return LoginStatus::Unknown;
     };
 
     // Check for expected structure: { "claudeAiOauth": { "accessToken": "...", ... } }
@@ -105,8 +100,7 @@ pub fn detect_claude_login() -> LoginStatus {
         .get("claudeAiOauth")
         .and_then(|v| v.get("accessToken"))
         .and_then(|v| v.as_str())
-        .map(|s| !s.is_empty())
-        .unwrap_or(false);
+        .is_some_and(|s| !s.is_empty());
 
     if has_oauth { LoginStatus::LoggedIn } else { LoginStatus::NotLoggedIn }
 }
@@ -114,7 +108,7 @@ pub fn detect_claude_login() -> LoginStatus {
 /// Pure function: build a default Omnipool request for free pool mode.
 pub fn build_free_pool_request() -> OmnipoolRequest {
     OmnipoolRequest {
-        model: "auto".to_string(),
+        model: "auto".to_owned(),
         messages: Vec::new(),
         max_tokens: Some(4096),
         temperature: Some(0.7),
@@ -172,7 +166,7 @@ Die Anmeldedaten werden lokal in `~/.claude/.credentials.json` gespeichert.
 - Der Standard-Modus bleibt **Free Pool (Omnipool)**
 
 Nach dem Login können Sie im Menü auf "Claude Code" umschalten."#
-            .to_string(),
+            .to_owned(),
         _ => r#"## Claude Code Setup
 
 To use **Claude Code mode**, you need to log in once:
@@ -190,7 +184,7 @@ Credentials are stored locally in `~/.claude/.credentials.json`.
 - Default mode stays **Free Pool (Omnipool)**
 
 After login, you can switch to "Claude Code" in the menu."#
-            .to_string(),
+            .to_owned(),
     }
 }
 
@@ -233,7 +227,7 @@ impl ModeState {
                         self.current_mode = Mode::ClaudeCode;
                         Ok(())
                     } else {
-                        Err("Claude Code login required. Run `claude /login` first.".to_string())
+                        Err("Claude Code login required. Run `claude /login` first.".to_owned())
                     }
                 }
             }
@@ -249,7 +243,6 @@ impl ModeState {
     /// Get a human-readable status line.
     pub fn status_line(&self, lang: &str) -> String {
         let mode_str = match (lang, self.current_mode) {
-            ("de" | "DE" | "de_DE" | "de-DE", Mode::FreePool) => "Free Pool (Omnipool)",
             ("de" | "DE" | "de_DE" | "de-DE", Mode::ClaudeCode) => "Claude Code (Ihr Login)",
             (_, Mode::FreePool) => "Free Pool (Omnipool)",
             (_, Mode::ClaudeCode) => "Claude Code (Your Login)",
@@ -264,14 +257,13 @@ impl ModeState {
             (_, LoginStatus::Unknown) => "unknown",
         };
 
-        format!("Mode: {} | Login: {}", mode_str, login_str)
+        format!("Mode: {mode_str} | Login: {login_str}")
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_mode_default_is_free_pool() {
@@ -287,8 +279,8 @@ mod tests {
 
     #[test]
     fn test_switch_free_pool_to_claude_code_requires_login() {
-        let mut state = ModeState::default();
-        state.login_status = LoginStatus::NotLoggedIn;
+        let mut state =
+            ModeState { login_status: LoginStatus::NotLoggedIn, ..ModeState::default() };
 
         let result = state.switch_mode(Mode::ClaudeCode);
         assert!(result.is_err());
@@ -297,9 +289,11 @@ mod tests {
 
     #[test]
     fn test_switch_claude_code_to_free_pool_always_allowed() {
-        let mut state = ModeState::default();
-        state.current_mode = Mode::ClaudeCode;
-        state.login_status = LoginStatus::LoggedIn;
+        let mut state = ModeState {
+            current_mode: Mode::ClaudeCode,
+            login_status: LoginStatus::LoggedIn,
+            ..ModeState::default()
+        };
 
         let result = state.switch_mode(Mode::FreePool);
         assert!(result.is_ok());
@@ -341,8 +335,7 @@ mod tests {
 
     #[test]
     fn test_mode_state_status_line() {
-        let mut state = ModeState::default();
-        state.login_status = LoginStatus::LoggedIn;
+        let state = ModeState { login_status: LoginStatus::LoggedIn, ..ModeState::default() };
 
         let line_en = state.status_line("en");
         assert!(line_en.contains("Free Pool"));
@@ -379,10 +372,11 @@ mod tests {
 
     #[test]
     fn test_mode_state_serialization_roundtrip() {
-        let mut state = ModeState::default();
-        state.current_mode = Mode::ClaudeCode;
-        state.login_status = LoginStatus::LoggedIn;
-        state.last_detection = Some(1_700_000_000);
+        let state = ModeState {
+            current_mode: Mode::ClaudeCode,
+            login_status: LoginStatus::LoggedIn,
+            last_detection: Some(1_700_000_000),
+        };
 
         let json = serde_json::to_string(&state).unwrap();
         let restored: ModeState = serde_json::from_str(&json).unwrap();

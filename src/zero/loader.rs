@@ -1,4 +1,4 @@
-//! Compile-time embedded loader for the bundled FranKenstein plugin manifest.
+//! Compile-time embedded loader for the bundled `FranKenstein` plugin manifest.
 //!
 //! The manifest source is embedded with [`include_str!`]. Loading therefore
 //! performs no filesystem access at runtime. A missing source file is a
@@ -114,8 +114,7 @@ fn validation_error(reason: impl Into<String>) -> LoadError {
 
 /// Validate the numeric core while permitting semver pre-release/build suffixes.
 fn is_semver_core(version: &str) -> bool {
-    let core_end =
-        version.find(|character| character == '-' || character == '+').unwrap_or(version.len());
+    let core_end = version.find(['-', '+']).unwrap_or(version.len());
     let core = &version[..core_end];
     let parts: Vec<&str> = core.split('.').collect();
 
@@ -238,7 +237,7 @@ pub fn measure_health(manifest: &PluginManifest) -> HealthReport {
                 id: hook.id.clone(),
                 name: format!("hook:{}", hook.id),
                 status: Epistemic::Unknown,
-                detail: "no probe implemented".to_string(),
+                detail: "no probe implemented".to_owned(),
             })
             .collect(),
         measured_at: Epistemic::Unknown,
@@ -262,7 +261,7 @@ pub fn measure_health_with_probes(
         .iter()
         .map(|(id, status, detail)| OrganHealth {
             id: id.clone(),
-            name: format!("hook:{}", id),
+            name: format!("hook:{id}"),
             status: Epistemic::Measured(*status),
             detail: detail.clone(),
         })
@@ -344,7 +343,7 @@ pub struct GoalTable {
 /// Real implementations (reading from unified.db, embedded JSON, etc.) replace
 /// this stub while preserving the `Epistemic` wrapper.
 pub fn load_goals() -> GoalTable {
-    GoalTable { rows: Vec::new(), source: "unmeasured".to_string(), loaded_at: Epistemic::Unknown }
+    GoalTable { rows: Vec::new(), source: "unmeasured".to_owned(), loaded_at: Epistemic::Unknown }
 }
 
 /// Attempt to load goals from an embedded JSON source (for testing/stubbing).
@@ -354,10 +353,6 @@ pub fn load_goals() -> GoalTable {
 /// provided (i.e., `None` input). This helper makes the epistemic discipline
 /// explicit in tests.
 pub fn load_goals_from_json(source: Option<&str>) -> Epistemic<GoalTable> {
-    let Some(json) = source else {
-        return Epistemic::Unknown;
-    };
-
     #[derive(Deserialize)]
     struct RawGoal {
         id: String,
@@ -367,6 +362,9 @@ pub fn load_goals_from_json(source: Option<&str>) -> Epistemic<GoalTable> {
         #[serde(default)]
         evidence_ref: String,
     }
+    let Some(json) = source else {
+        return Epistemic::Unknown;
+    };
 
     let raw: Vec<RawGoal> = match serde_json::from_str(json) {
         Ok(v) => v,
@@ -388,15 +386,14 @@ pub fn load_goals_from_json(source: Option<&str>) -> Epistemic<GoalTable> {
                     "blocked" => Some(GoalStatus::Blocked),
                     _ => None,
                 })
-                .map(Epistemic::Measured)
-                .unwrap_or(Epistemic::Unknown),
+                .map_or(Epistemic::Unknown, Epistemic::Measured),
             evidence_ref: g.evidence_ref,
         })
         .collect();
 
     Epistemic::Measured(GoalTable {
         rows,
-        source: "embedded_json".to_string(),
+        source: "embedded_json".to_owned(),
         loaded_at: Epistemic::Unknown, // timestamp would come from caller
     })
 }
@@ -603,9 +600,9 @@ mod tests {
     fn measure_health_with_probes_all_nominal_yields_measured_nominal() {
         let manifest = load_builtin_manifest().expect("manifest must load");
         let probes = [
-            ("session-start".to_string(), OrganStatus::Nominal, "ok".to_string()),
-            ("pre-tool-use".to_string(), OrganStatus::Nominal, "ok".to_string()),
-            ("post-tool-use".to_string(), OrganStatus::Nominal, "ok".to_string()),
+            ("session-start".to_owned(), OrganStatus::Nominal, "ok".to_owned()),
+            ("pre-tool-use".to_owned(), OrganStatus::Nominal, "ok".to_owned()),
+            ("post-tool-use".to_owned(), OrganStatus::Nominal, "ok".to_owned()),
         ];
         let report = measure_health_with_probes(&manifest, &probes);
 
@@ -621,9 +618,9 @@ mod tests {
     fn measure_health_with_probes_any_degraded_yields_measured_degraded() {
         let manifest = load_builtin_manifest().expect("manifest must load");
         let probes = [
-            ("session-start".to_string(), OrganStatus::Nominal, "ok".to_string()),
-            ("pre-tool-use".to_string(), OrganStatus::Degraded, "slow".to_string()),
-            ("post-tool-use".to_string(), OrganStatus::Nominal, "ok".to_string()),
+            ("session-start".to_owned(), OrganStatus::Nominal, "ok".to_owned()),
+            ("pre-tool-use".to_owned(), OrganStatus::Degraded, "slow".to_owned()),
+            ("post-tool-use".to_owned(), OrganStatus::Nominal, "ok".to_owned()),
         ];
         let report = measure_health_with_probes(&manifest, &probes);
 
@@ -656,7 +653,7 @@ mod tests {
         // degraded overall; Critical alone without Degraded and without all
         // Nominal stays Unknown because no probe rule covers it.
         let manifest = load_builtin_manifest().expect("manifest must load");
-        let probes = [("session-start".to_string(), OrganStatus::Critical, "down".to_string())];
+        let probes = [("session-start".to_owned(), OrganStatus::Critical, "down".to_owned())];
         let report = measure_health_with_probes(&manifest, &probes);
 
         assert_eq!(report.plugin.overall, Epistemic::Unknown);

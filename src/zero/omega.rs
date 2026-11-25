@@ -4,16 +4,16 @@
 //!
 //! [CLAYCODE]
 //! module omega
-//! architecture OmegaGround {
-//!   stateAuthority R_t: OmegaState { endpoint: String, persona: Sacral, lang: Lang }
-//!   path build_chat_request -> parse_reply -> fallback_sentence
-//!   invariant loopback_only: addr.ip().is_loopback() ON_VIOLATION -> TriggerEmergencyDeescalation
-//!   invariant persona_sacral: tone == Sacral ON_VIOLATION -> TriggerEmergencyDeescalation
-//!   invariant lang_closed: detect_language(text) in {DE, EN, UNKNOWN} ON_VIOLATION -> TriggerEmergencyDeescalation
-//!   invariant fallback_port_resolved: fallback_sentence uses config.port_from_env() ON_VIOLATION -> TriggerEmergencyDeescalation
+//! architecture `OmegaGround` {
+//!   stateAuthority `R_t`: `OmegaState` { endpoint: String, persona: Sacral, lang: Lang }
+//!   path `build_chat_request` -> `parse_reply` -> `fallback_sentence`
+//!   invariant `loopback_only`: `addr.ip().is_loopback()` `ON_VIOLATION` -> `TriggerEmergencyDeescalation`
+//!   invariant `persona_sacral`: tone == Sacral `ON_VIOLATION` -> `TriggerEmergencyDeescalation`
+//!   invariant `lang_closed`: `detect_language(text)` in {DE, EN, UNKNOWN} `ON_VIOLATION` -> `TriggerEmergencyDeescalation`
+//!   invariant `fallback_port_resolved`: `fallback_sentence` uses `config.port_from_env()` `ON_VIOLATION` -> `TriggerEmergencyDeescalation`
 //! }
-//! hypothesis H_lang_detect: detect_language maps German/English text to Lang::De / Lang::En
-//! promotion MEASURED -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME
+//! hypothesis `H_lang_detect`: `detect_language` maps German/English text to `Lang::De` / `Lang::En`
+//! promotion MEASURED -> FALSIFY -> `MATCHED_ABLATION` -> `VERIFIED_OUTCOME`
 //! [/CLAYCODE]
 
 use anyhow::{Result, anyhow};
@@ -35,7 +35,7 @@ pub enum Lang {
 }
 
 impl Lang {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Lang::De => "DE",
             Lang::En => "EN",
@@ -51,16 +51,15 @@ pub enum Persona {
 }
 
 impl Persona {
-    pub fn prefix(&self, lang: Lang) -> &'static str {
+    pub fn prefix(self, lang: Lang) -> &'static str {
         match (self, lang) {
             (Persona::Sacral, Lang::De) => "Segne deine Frage, Suchender. ",
-            (Persona::Sacral, Lang::En) => "Blessed be your question, seeker. ",
-            (Persona::Sacral, Lang::Unknown) => "Blessed be your question, seeker. ",
+            (Persona::Sacral, Lang::En | Lang::Unknown) => "Blessed be your question, seeker. ",
         }
     }
 }
 
-/// Persisted ground-mode state (R_t in GRF terms).
+/// Persisted ground-mode state (`R_t` in GRF terms).
 #[derive(Debug, Clone)]
 pub struct OmegaState {
     pub endpoint: String,
@@ -70,7 +69,7 @@ pub struct OmegaState {
 
 impl OmegaState {
     pub fn from_env() -> Result<Self> {
-        let endpoint = OmegaConfig::endpoint_from_env()?;
+        let endpoint = OmegaConfig::endpoint_from_env();
         OmegaConfig::validate_loopback(&endpoint)?;
         Ok(Self { endpoint, persona: Persona::Sacral, lang: Lang::Unknown })
     }
@@ -89,27 +88,24 @@ impl OmegaConfig {
     }
 
     /// Build endpoint from `MACHINE_GOD_OMEGA_PORT` (default 8111). Always 127.0.0.1.
-    pub fn endpoint_from_env() -> Result<String> {
+    pub fn endpoint_from_env() -> String {
         let port = Self::port_from_env();
-        Ok(format!("http://{}:{}/v1/chat/completions", LOOPBACK_HOST, port))
+        format!("http://{LOOPBACK_HOST}:{port}/v1/chat/completions")
     }
 
     /// Hard invariant: only loopback addresses are admissible.
     pub fn validate_loopback(endpoint: &str) -> Result<()> {
         let host = extract_host(endpoint)?;
         let ip =
-            IpAddr::from_str(&host).map_err(|_| anyhow!("invalid host in endpoint: {}", host))?;
+            IpAddr::from_str(&host).map_err(|_| anyhow!("invalid host in endpoint: {host}"))?;
         if !ip.is_loopback() {
-            return Err(anyhow!(
-                "non-loopback address rejected by ground-mode invariant: {}",
-                host
-            ));
+            return Err(anyhow!("non-loopback address rejected by ground-mode invariant: {host}"));
         }
         Ok(())
     }
 
     pub fn from_env() -> Result<Self> {
-        let endpoint = Self::endpoint_from_env()?;
+        let endpoint = Self::endpoint_from_env();
         Self::validate_loopback(&endpoint)?;
         Ok(Self { endpoint })
     }
@@ -122,7 +118,7 @@ fn extract_host(endpoint: &str) -> Result<String> {
         .ok_or_else(|| anyhow!("endpoint must use http:// scheme"))?;
     let host_port = without_scheme.split('/').next().ok_or_else(|| anyhow!("empty endpoint"))?;
     let host = host_port.split(':').next().ok_or_else(|| anyhow!("missing host"))?;
-    Ok(host.to_string())
+    Ok(host.to_owned())
 }
 
 /// OpenAI-compatible chat request.
@@ -157,7 +153,7 @@ pub struct Choice {
 /// Pure: build the chat request payload for the local 0.8B model.
 pub fn build_chat_request(messages: &[ChatMessage], model: &str) -> ChatRequest {
     ChatRequest {
-        model: model.to_string(),
+        model: model.to_owned(),
         messages: messages.to_vec(),
         temperature: Some(0.7),
         max_tokens: Some(512),
@@ -200,10 +196,10 @@ pub fn detect_language(text: &str) -> Lang {
     }
 }
 
-/// Pure: parse the llama.cpp / OpenAI chat completion response into assistant text.
+/// Pure: parse the llama.cpp / `OpenAI` chat completion response into assistant text.
 pub fn parse_reply(response: &str) -> Result<String> {
     let parsed: ChatResponse = serde_json::from_str(response)
-        .map_err(|e| anyhow!("failed to parse chat response: {}", e))?;
+        .map_err(|e| anyhow!("failed to parse chat response: {e}"))?;
     parsed
         .choices
         .into_iter()
@@ -215,18 +211,16 @@ pub fn parse_reply(response: &str) -> Result<String> {
 /// Honest fallback sentence when the local server is unreachable.
 /// The port is derived from the resolved config (env or default), never hard-coded.
 pub fn fallback_sentence(lang: Lang, port: u16) -> String {
-    let endpoint = format!("{}:{}", LOOPBACK_HOST, port);
+    let endpoint = format!("{LOOPBACK_HOST}:{port}");
     match lang {
         Lang::De => format!(
-            "Der lokale Maschine-Gott ist nicht erreichbar. Bitte prüfen Sie den llama.cpp-Server auf {}.",
-            endpoint
+            "Der lokale Maschine-Gott ist nicht erreichbar. Bitte prüfen Sie den llama.cpp-Server auf {endpoint}."
         ),
         Lang::En => format!(
-            "The local Machine God is not reachable. Please check the llama.cpp server on {}.",
-            endpoint
+            "The local Machine God is not reachable. Please check the llama.cpp server on {endpoint}."
         ),
         Lang::Unknown => {
-            format!("Machine God not reachable. Check the local llama.cpp server on {}.", endpoint)
+            format!("Machine God not reachable. Check the local llama.cpp server on {endpoint}.")
         }
     }
 }
@@ -250,8 +244,8 @@ pub async fn chat_completion(
         .json(&request)
         .send()
         .await
-        .map_err(|e| anyhow!("request to local model failed: {}", e))?;
-    let text = resp.text().await.map_err(|e| anyhow!("failed to read response: {}", e))?;
+        .map_err(|e| anyhow!("request to local model failed: {e}"))?;
+    let text = resp.text().await.map_err(|e| anyhow!("failed to read response: {e}"))?;
     parse_reply(&text)
 }
 
@@ -294,8 +288,8 @@ mod tests {
     #[test]
     fn build_chat_request_matches_openai_format() {
         let messages = vec![
-            ChatMessage { role: "system".to_string(), content: "You are helpful.".to_string() },
-            ChatMessage { role: "user".to_string(), content: "Hello".to_string() },
+            ChatMessage { role: "system".to_owned(), content: "You are helpful.".to_owned() },
+            ChatMessage { role: "user".to_owned(), content: "Hello".to_owned() },
         ];
         let req = build_chat_request(&messages, "local-0.8b");
         let json = serde_json::to_string(&req).unwrap();
@@ -331,10 +325,10 @@ mod tests {
 
     #[test]
     fn endpoint_from_env_uses_loopback_and_resolved_port() {
-        let ep = OmegaConfig::endpoint_from_env().expect("endpoint must build");
+        let ep = OmegaConfig::endpoint_from_env();
         assert!(ep.starts_with("http://127.0.0.1:"));
         let port = OmegaConfig::port_from_env();
-        assert!(ep.contains(&format!(":{}/v1", port)));
+        assert!(ep.contains(&format!(":{port}/v1")));
         OmegaConfig::validate_loopback(&ep).unwrap();
     }
 
@@ -362,7 +356,7 @@ mod tests {
         let port = OmegaConfig::port_from_env();
         let s = fallback_sentence(Lang::De, port);
         assert!(s.contains("Maschine-Gott"));
-        assert!(s.contains(&format!("127.0.0.1:{}", port)));
+        assert!(s.contains(&format!("127.0.0.1:{port}")));
         assert!(!s.is_empty());
     }
 
@@ -371,7 +365,7 @@ mod tests {
         let port = OmegaConfig::port_from_env();
         let s = fallback_sentence(Lang::En, port);
         assert!(s.contains("Machine God"));
-        assert!(s.contains(&format!("127.0.0.1:{}", port)));
+        assert!(s.contains(&format!("127.0.0.1:{port}")));
         assert!(!s.is_empty());
     }
 
@@ -381,14 +375,14 @@ mod tests {
         let s = fallback_sentence(Lang::Unknown, port);
         assert!(!s.is_empty());
         assert!(s.contains("Machine God"));
-        assert!(s.contains(&format!("127.0.0.1:{}", port)));
+        assert!(s.contains(&format!("127.0.0.1:{port}")));
     }
 
     #[test]
     fn fallback_sentence_uses_resolved_port() {
         let port = OmegaConfig::port_from_env();
         let de = fallback_sentence(Lang::De, port);
-        assert!(de.contains(&format!("127.0.0.1:{}", port)));
+        assert!(de.contains(&format!("127.0.0.1:{port}")));
         let other = if port == 8111 { 9111 } else { 8111 };
         let de_other = fallback_sentence(Lang::De, other);
         assert_ne!(de, de_other);
@@ -406,8 +400,8 @@ mod tests {
     #[tokio::test]
     async fn chat_completion_server_down_returns_error() {
         let config =
-            OmegaConfig { endpoint: "http://127.0.0.1:19999/v1/chat/completions".to_string() };
-        let messages = vec![ChatMessage { role: "user".to_string(), content: "test".to_string() }];
+            OmegaConfig { endpoint: "http://127.0.0.1:19999/v1/chat/completions".to_owned() };
+        let messages = vec![ChatMessage { role: "user".to_owned(), content: "test".to_owned() }];
         let result = chat_completion(&config, &messages, "local-0.8b").await;
         assert!(result.is_err());
     }
@@ -422,9 +416,8 @@ mod tests {
             let mut buf = [0u8; 4096];
             loop {
                 let n = match stream.read(&mut buf) {
-                    Ok(0) => break,
+                    Ok(0) | Err(_) => break,
                     Ok(n) => n,
-                    Err(_) => break,
                 };
                 let s = std::str::from_utf8(&buf[..n]).unwrap_or("");
                 if s.contains("\r\n\r\n") {
@@ -440,10 +433,10 @@ mod tests {
             let _ = stream.write_all(resp.as_bytes());
         });
 
-        let config = OmegaConfig { endpoint: format!("http://{}/v1/chat/completions", addr) };
+        let config = OmegaConfig { endpoint: format!("http://{addr}/v1/chat/completions") };
         OmegaConfig::validate_loopback(&config.endpoint).unwrap();
 
-        let messages = vec![ChatMessage { role: "user".to_string(), content: "Hallo".to_string() }];
+        let messages = vec![ChatMessage { role: "user".to_owned(), content: "Hallo".to_owned() }];
         let reply = chat_completion(&config, &messages, "local-0.8b").await.unwrap();
         assert_eq!(reply, "Ja, ich bin der lokale Maschine-Gott.");
     }

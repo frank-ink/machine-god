@@ -2,8 +2,6 @@
 // These tests verify the full pipeline with file I/O (using std::fs with temp dirs)
 
 use crate::zero::freewiki::*;
-use std::fs;
-use std::path::PathBuf;
 
 const PROVIDERS_JSON: &str = r#"{
   "as_of": "2026-01-15",
@@ -18,23 +16,6 @@ const PROVIDERS_JSON: &str = r#"{
       "status": "active",
       "configured": false,
       "since": "2026-01-10"
-    }
-  ]
-}"#;
-
-const NEW_JSON: &str = r#"{
-  "as_of": "2026-01-20",
-  "providers": [
-    {
-      "id": "provider2",
-      "name": "New Provider 2",
-      "url": "https://example2.com",
-      "category": "Embedding",
-      "gratis": "500 req/day",
-      "quelle": "api",
-      "status": "active",
-      "configured": false,
-      "since": "2026-01-18"
     }
   ]
 }"#;

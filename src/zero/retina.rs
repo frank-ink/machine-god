@@ -1,7 +1,7 @@
 //! src/zero/retina.rs
 //! Machine God's own Retina eye.
 //!
-//! GRF / ClayCode surface (spec):
+//! GRF / `ClayCode` surface (spec):
 //! ```text
 //! module retina {
 //!   architecture Retina {
@@ -16,16 +16,16 @@
 //! }
 //! ```
 //!
-//! Contract (R_t = realised state, E_t = evidence, F = transition):
-//! * E_t = stdout of the local `retina-frage --zeile` process (text layers only, no images).
-//! * R_t = the one-line reading plus exactly one GRID perception event and at most one
+//! Contract (`R_t` = realised state, `E_t` = evidence, F = transition):
+//! * `E_t` = stdout of the local `retina-frage --zeile` process (text layers only, no images).
+//! * `R_t` = the one-line reading plus exactly one GRID perception event and at most one
 //!   unified.db row with kind='retina'.
 //! * F = `read_and_push`: deterministic ordering, one reading per call, fail-closed.
 //! * Missing/failed CLI => honest "Retina nicht verfuegbar"; never invented content.
 //! * GRID target is loopback-only (127.0.0.1). Non-loopback URLs are rejected in code,
 //!   before any socket operation.
 //! * unified.db rows are written through the local `sqlite3` executable (no linked
-//!   SQLite driver exists in the available crate set). If that executable is absent the
+//!   `SQLite` driver exists in the available crate set). If that executable is absent the
 //!   write fails closed instead of pretending that a row exists.
 
 use std::io::Write;
@@ -51,7 +51,7 @@ pub const GRID_URL_ENV: &str = "MACHINE_GOD_GRID_URL";
 pub const UNIFIED_DB_ENV: &str = "MACHINE_GOD_UNIFIED_DB";
 /// Environment variable holding the sqlite executable used for unified.db writes.
 pub const SQLITE_BIN_ENV: &str = "MACHINE_GOD_SQLITE_BIN";
-/// EntityOS memory table used for retina rows.
+/// `EntityOS` memory table used for retina rows.
 pub const DB_TABLE: &str = "memory";
 /// Hard-coded row kind for retina readings.
 pub const RETINA_KIND: &str = "retina";
@@ -108,7 +108,7 @@ impl Default for RetinaConfig {
     fn default() -> Self {
         Self {
             cli_path: PathBuf::from(RETINA_CLI),
-            grid_host: "127.0.0.1".to_string(),
+            grid_host: "127.0.0.1".to_owned(),
             grid_port: DEFAULT_GRID_PORT,
             db_path: PathBuf::from("unified.db"),
         }
@@ -152,27 +152,28 @@ pub enum RetinaError {
 
 /// Wall-clock milliseconds. Used for timestamps only, never as a causal clock.
 pub fn now_ms() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+        .unwrap_or(0)
 }
 
 /// unified.db path from the environment (default: relative `unified.db`).
 pub fn db_path_from_env() -> PathBuf {
-    std::env::var_os(UNIFIED_DB_ENV)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("unified.db"))
+    std::env::var_os(UNIFIED_DB_ENV).map_or_else(|| PathBuf::from("unified.db"), PathBuf::from)
 }
 
 /// sqlite executable used for unified.db writes.
 pub fn sqlite_binary() -> PathBuf {
-    std::env::var_os(SQLITE_BIN_ENV).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("sqlite3"))
+    std::env::var_os(SQLITE_BIN_ENV).map_or_else(|| PathBuf::from("sqlite3"), PathBuf::from)
 }
 
 /// Pure: parse `retina-frage --zeile` output into a tagged reading.
 pub fn parse_line_at(raw: &str, ts_ms: u64) -> RetinaReading {
-    let raw = raw.trim_end().to_string();
-    let line = raw.lines().next().unwrap_or("").trim().to_string();
+    let raw = raw.trim_end().to_owned();
+    let line = raw.lines().next().unwrap_or("").trim().to_owned();
     if line.is_empty() {
-        RetinaReading::Unavailable { reason: "empty zeile output".to_string(), ts_ms }
+        RetinaReading::Unavailable { reason: "empty zeile output".to_owned(), ts_ms }
     } else {
         RetinaReading::Line { line, raw, ts_ms }
     }
@@ -196,9 +197,9 @@ pub fn build_grid_event_at(reading: &RetinaReading, target: &GridTarget, ts_ms: 
         }),
     };
     GridEvent {
-        kind: "perception".to_string(),
-        source: "retina".to_string(),
-        r#type: "retina_reading".to_string(),
+        kind: "perception".to_owned(),
+        source: "retina".to_owned(),
+        r#type: "retina_reading".to_owned(),
         payload,
         timestamp_ms: ts_ms,
         host: target.host.clone(),
@@ -219,13 +220,13 @@ pub fn build_grid_event(reading: &RetinaReading, cfg: &RetinaConfig) -> GridEven
 
 /// Pure: build the unified.db insert record. Kind is hard-coded 'retina'.
 pub fn build_db_insert_at(reading: &RetinaReading, ts_ms: u64) -> DbInsert {
-    let payload = serde_json::to_string(reading).unwrap_or_else(|_| "{}".to_string());
+    let payload = serde_json::to_string(reading).unwrap_or_else(|_| "{}".to_owned());
     let sql = format!(
         "INSERT INTO {DB_TABLE} (kind, payload, ts_ms) VALUES ('{RETINA_KIND}', '{}', {});",
         escape_sql(&payload),
         ts_ms
     );
-    DbInsert { kind: RETINA_KIND.to_string(), payload, sql, ts_ms }
+    DbInsert { kind: RETINA_KIND.to_owned(), payload, sql, ts_ms }
 }
 
 /// Build the unified.db insert record (timestamped now).
@@ -250,7 +251,7 @@ pub fn enforce_loopback(host: &str) -> bool {
 pub fn parse_grid_url(url: &str) -> Result<GridTarget, RetinaError> {
     let trimmed = url.trim();
     if trimmed.is_empty() {
-        return Err(RetinaError::ParseFailed("empty GRID URL".to_string()));
+        return Err(RetinaError::ParseFailed("empty GRID URL".to_owned()));
     }
     let without_scheme = match trimmed.split_once("://") {
         Some((scheme, rest)) => {
@@ -263,7 +264,7 @@ pub fn parse_grid_url(url: &str) -> Result<GridTarget, RetinaError> {
     };
     let authority = without_scheme.split('/').next().unwrap_or("").trim();
     if authority.is_empty() {
-        return Err(RetinaError::ParseFailed("missing GRID host".to_string()));
+        return Err(RetinaError::ParseFailed("missing GRID host".to_owned()));
     }
     let (host, port) = match authority.rsplit_once(':') {
         Some((host, port_text)) => {
@@ -272,12 +273,12 @@ pub fn parse_grid_url(url: &str) -> Result<GridTarget, RetinaError> {
                 .map_err(|_| RetinaError::ParseFailed(format!("invalid GRID port: {port_text}")))?;
             if port == 0 {
                 return Err(RetinaError::ParseFailed(
-                    "GRID port must be greater than zero".to_string(),
+                    "GRID port must be greater than zero".to_owned(),
                 ));
             }
-            (host.to_string(), port)
+            (host.to_owned(), port)
         }
-        None => (authority.to_string(), DEFAULT_GRID_PORT),
+        None => (authority.to_owned(), DEFAULT_GRID_PORT),
     };
     if !enforce_loopback(&host) {
         return Err(RetinaError::LoopbackViolation(host));
@@ -291,7 +292,7 @@ pub fn grid_target_from_parts(
     url: Option<&str>,
     port: Option<&str>,
 ) -> Result<GridTarget, RetinaError> {
-    let mut target = GridTarget { host: "127.0.0.1".to_string(), port: DEFAULT_GRID_PORT };
+    let mut target = GridTarget { host: "127.0.0.1".to_owned(), port: DEFAULT_GRID_PORT };
     if let Some(url) = url {
         target = parse_grid_url(url)?;
     }
@@ -321,7 +322,7 @@ pub fn run_line_command(cmd: &mut Command) -> Result<String, RetinaError> {
         }
     })?;
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
         return Err(RetinaError::CliFailed(if stderr.is_empty() {
             format!("exit status {}", output.status)
         } else {
@@ -349,7 +350,7 @@ pub fn push_grid_event(event: &GridEvent, cfg: &RetinaConfig) -> Result<(), Reti
 /// Push a GRID event to an explicit loopback target (newline-delimited JSON).
 pub fn push_grid_event_to(event: &GridEvent, host: &str, port: u16) -> Result<(), RetinaError> {
     if !enforce_loopback(host) {
-        return Err(RetinaError::LoopbackViolation(host.to_string()));
+        return Err(RetinaError::LoopbackViolation(host.to_owned()));
     }
     let payload = serde_json::to_string(event).map_err(|e| RetinaError::GridPush(e.to_string()))?;
     let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
@@ -363,7 +364,7 @@ pub fn push_grid_event_to(event: &GridEvent, host: &str, port: u16) -> Result<()
     Ok(())
 }
 
-/// Sink contract for EntityOS memory writes (mockable in tests).
+/// Sink contract for `EntityOS` memory writes (mockable in tests).
 pub trait RetinaDb {
     fn insert(&mut self, insert: &DbInsert) -> Result<(), RetinaError>;
 }
@@ -402,9 +403,9 @@ impl GridSink for UdpGridSink {
     }
 }
 
-/// Production EntityOS sink: unified.db row via the local `sqlite3` executable.
+/// Production `EntityOS` sink: unified.db row via the local `sqlite3` executable.
 ///
-/// No linked SQLite driver is available in the crate set, so the write goes through
+/// No linked `SQLite` driver is available in the crate set, so the write goes through
 /// the local sqlite3 binary. If that binary is missing the write fails closed.
 #[derive(Debug, Clone)]
 pub struct SqliteDb {
@@ -442,7 +443,7 @@ impl RetinaDb for SqliteDb {
                 }
             })?;
         if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
             return Err(RetinaError::DbWrite(if stderr.is_empty() {
                 format!("sqlite exit status {}", output.status)
             } else {
@@ -508,9 +509,9 @@ pub fn read_and_push_strict(cfg: &RetinaConfig) -> Result<RetinaReading, RetinaE
 pub fn read_and_push(cfg: &RetinaConfig) -> Result<RetinaReading, RetinaError> {
     match read_and_push_strict(cfg) {
         Ok(reading) => Ok(reading),
-        Err(RetinaError::CliNotFound(_)) | Err(RetinaError::CliFailed(_)) => {
+        Err(RetinaError::CliNotFound(_) | RetinaError::CliFailed(_)) => {
             Ok(RetinaReading::Unavailable {
-                reason: RETINA_UNAVAILABLE_DE.to_string(),
+                reason: RETINA_UNAVAILABLE_DE.to_owned(),
                 ts_ms: now_ms(),
             })
         }
@@ -531,7 +532,7 @@ pub fn read_and_push_text(cfg: &RetinaConfig) -> Result<String, RetinaError> {
 pub fn retina_context_text(cfg: &RetinaConfig) -> String {
     match spawn_retina_line(cfg) {
         Ok(raw) => reading_text(&parse_line(&raw)),
-        Err(_) => RETINA_UNAVAILABLE_DE.to_string(),
+        Err(_) => RETINA_UNAVAILABLE_DE.to_owned(),
     }
 }
 
@@ -539,7 +540,7 @@ pub fn retina_context_text(cfg: &RetinaConfig) -> String {
 pub fn retina_context_text_with(cli: &mut dyn RetinaCli) -> String {
     match cli.read_line_reading() {
         Ok(raw) => reading_text(&parse_line(&raw)),
-        Err(_) => RETINA_UNAVAILABLE_DE.to_string(),
+        Err(_) => RETINA_UNAVAILABLE_DE.to_owned(),
     }
 }
 
@@ -547,7 +548,7 @@ pub fn retina_context_text_with(cli: &mut dyn RetinaCli) -> String {
 pub fn reading_text(reading: &RetinaReading) -> String {
     match reading {
         RetinaReading::Line { line, .. } => line.clone(),
-        RetinaReading::Unavailable { .. } => RETINA_UNAVAILABLE_DE.to_string(),
+        RetinaReading::Unavailable { .. } => RETINA_UNAVAILABLE_DE.to_owned(),
     }
 }
 
@@ -580,13 +581,13 @@ mod tests {
             parse_grid_url("http://10.0.0.1:8490"),
             Err(RetinaError::LoopbackViolation(_))
         ));
-        assert!(matches!(parse_grid_url("http://127.0.0.1:8490"), Ok(_)));
+        assert!(parse_grid_url("http://127.0.0.1:8490").is_ok());
     }
 
     #[test]
     fn db_insert_kind_is_retina() {
         let reading =
-            RetinaReading::Line { line: "inline".to_string(), raw: "inline".to_string(), ts_ms: 7 };
+            RetinaReading::Line { line: "inline".to_owned(), raw: "inline".to_owned(), ts_ms: 7 };
         let insert = build_db_insert_at(&reading, 7);
         assert_eq!(insert.kind, RETINA_KIND);
         assert!(insert.sql.contains("'retina'"));

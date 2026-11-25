@@ -57,7 +57,7 @@ pub fn parse_wiki_file(json: &str) -> anyhow::Result<WikiFile> {
     Ok(wiki)
 }
 
-/// Parse providers and convert since to NaiveDate for sorting
+/// Parse providers and convert since to `NaiveDate` for sorting
 pub fn parse_providers(wiki: WikiFile) -> anyhow::Result<Vec<ParsedProvider>> {
     let mut parsed = Vec::new();
     for provider in wiki.providers {
@@ -176,12 +176,12 @@ pub fn render_tip(provider: &ParsedProvider, lang: Language) -> RenderedTip {
 
 /// Render "no new providers" message in German
 pub fn render_de_empty() -> String {
-    "ℹ️ Keine neuen Anbieter verfügbar.".to_string()
+    "ℹ️ Keine neuen Anbieter verfügbar.".to_owned()
 }
 
 /// Render "no new providers" message in English
 pub fn render_en_empty() -> String {
-    "ℹ️ No new providers available.".to_string()
+    "ℹ️ No new providers available.".to_owned()
 }
 
 /// Render empty message based on language
@@ -194,12 +194,12 @@ pub fn render_empty(lang: Language) -> String {
 
 /// Render "wiki not available" message in German
 pub fn render_de_unavailable() -> String {
-    "ℹ️ Wiki nicht verfügbar.".to_string()
+    "ℹ️ Wiki nicht verfügbar.".to_owned()
 }
 
 /// Render "wiki not available" message in English
 pub fn render_en_unavailable() -> String {
-    "ℹ️ Wiki not available.".to_string()
+    "ℹ️ Wiki not available.".to_owned()
 }
 
 /// Render unavailable message based on language
@@ -283,11 +283,11 @@ pub fn get_next_tip(session: &mut SessionState, user_input: &str) -> anyhow::Res
 
     let merged = merge_providers(providers, new);
     let mut providers = parse_providers(merged)?;
-    let unsetup = filter_unsetup_providers(&providers);
     sort_by_since_desc(&mut providers);
+    let unsetup = filter_unsetup_providers(&providers);
     let lang = detect_language(user_input);
 
-    if let Some(picked) = pick_one_per_session(&providers, session) {
+    if let Some(picked) = pick_one_per_session(&unsetup, session) {
         let rendered = render_tip(&picked, lang);
         Ok(rendered.message)
     } else {
@@ -575,9 +575,6 @@ mod tests {
         let new = parse_wiki_file(NEW_JSON).unwrap();
         let merged = merge_providers(Some(providers), Some(new));
         let mut providers = parse_providers(merged).unwrap();
-
-        // Filter unsetup
-        let unsetup = filter_unsetup_providers(&providers);
 
         // Sort by since desc
         sort_by_since_desc(&mut providers);

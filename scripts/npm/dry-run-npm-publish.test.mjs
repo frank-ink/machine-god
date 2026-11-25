@@ -13,9 +13,11 @@ import {
 } from "./dry-run-npm-publish.mjs";
 
 test("npmTarballName matches npm scoped package tarball filenames", () => {
+  // npm packs a scoped package `@scope/name` as `scope-name-<version>.tgz`.
+  const scopedName = "@gschaidergabriel/machine-god-linux-x64-gnu";
   assert.equal(
-    npmTarballName("@gschaidergabriel/machine-god-linux-x64-gnu", "1.2.3"),
-    "srothgan-claude-code-rust-linux-x64-gnu-1.2.3.tgz",
+    npmTarballName(scopedName, "1.2.3"),
+    `${scopedName.slice(1).replace("/", "-")}-1.2.3.tgz`,
   );
   assert.equal(npmTarballName(ROOT_PACKAGE_NAME, "1.2.3"), "machine-god-1.2.3.tgz");
 });
