@@ -146,15 +146,15 @@ printf '%s' "$output" | grep -q 'Could not uninstall'
 rmdir "$sandbox/.machine-god-install.lock"
 
 mkdir -p "$install_dir/share/man/man1" "$other_dir/share/man/man1" "$sandbox/share/man/man1"
-touch "$install_dir/share/man/man1/machine-god-core.1" "$other_dir/share/man/man1/machine-god-old.1"
-ln -s "$install_dir/share/man/man1/machine-god-core.1" "$sandbox/share/man/man1/machine-god-core.1"
+touch "$install_dir/share/man/man1/machine-god.1" "$other_dir/share/man/man1/machine-god-old.1"
+ln -s "$install_dir/share/man/man1/machine-god.1" "$sandbox/share/man/man1/machine-god.1"
 ln -s "$other_dir/share/man/man1/machine-god-old.1" "$sandbox/share/man/man1/machine-god-old.1"
 printf 'ACCEPTED_BEGIN\n'
 warn_other_machine_god_commands
 printf 'ACCEPTED_END\n'
 [ ! -e "$other_dir" ] && [ ! -e "$other_bin/machine-god-core" ] && [ ! -e "$second_other_bin/machine-god-core" ]
 [ -f "$install_dir/machine-god-core" ] && [ -f "$bin_dir/machine-god-core" ] && [ -f "$unknown_dir/machine-god-core" ]
-[ -L "$sandbox/share/man/man1/machine-god-core.1" ] && [ ! -L "$sandbox/share/man/man1/machine-god-old.1" ]
+[ -L "$sandbox/share/man/man1/machine-god.1" ] && [ ! -L "$sandbox/share/man/man1/machine-god-old.1" ]
 grep -F -e "$current_bin_dir" "$HOME/.profile" >/dev/null
 if grep -F -e "$other_bin" "$HOME/.profile" >/dev/null; then exit 1; fi
 [ ! -d "$sandbox/.machine-god-install.lock" ]
@@ -199,7 +199,7 @@ printf '%s' "$output" | grep -q NPM_REMOVED
 # Explicit uninstall still cleans its own launcher, manual, and profile block.
 uninstall_script_install
 [ ! -e "$install_dir" ] && [ ! -e "$bin_dir/machine-god-core" ]
-[ ! -L "$sandbox/share/man/man1/machine-god-core.1" ]
+[ ! -L "$sandbox/share/man/man1/machine-god.1" ]
 if grep -q '# machine-god-core PATH start' "$HOME/.profile"; then exit 1; fi
 [ -f "$unknown_dir/machine-god-core" ]
 `;

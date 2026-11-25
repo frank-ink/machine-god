@@ -147,7 +147,7 @@ function generateManPages(appRoot) {
   fs.mkdirSync(outDir, { recursive: true });
   if (options.mockBinaries) {
     // Layout fixtures only; real release manuals always come from the CLI.
-    fs.writeFileSync(path.join(outDir, "machine-god-core.1"), '.TH CLAUDE-RS 1\n.SH NAME\nmachine-god-core \\- mock manual for archive layout tests\n');
+    fs.writeFileSync(path.join(outDir, "machine-god.1"), '.TH MACHINE-GOD 1\n.SH NAME\nmachine-god-core \\- mock manual for archive layout tests\n');
     return;
   }
   const host = PLATFORM_PACKAGES.find((entry) => entry.os.includes(process.platform) && entry.cpu.includes(process.arch));

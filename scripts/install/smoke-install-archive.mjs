@@ -107,7 +107,7 @@ function smokeExtractedApp(appRoot, platformPackage) {
   }
   const manualDir = path.join(path.dirname(appRoot), "generated-manuals");
   runCommand(commandState, ["man", manualDir]);
-  if (!fs.existsSync(path.join(manualDir, "machine-god-core.1"))) {
+  if (!fs.existsSync(path.join(manualDir, "machine-god.1"))) {
     throw new Error("Installed CLI did not generate its manual");
   }
 

@@ -223,8 +223,8 @@ function expectArchiveSpecifics(platformPackage, appRoot, context) {
   if (platformPackage.binaryName.endsWith(".exe") || platformPackage.bundledRuntimeName.endsWith(".exe")) {
     fail(`${context} Unix platform metadata must not use .exe names`);
   }
-  expectFilesExist(listRelativeFiles(appRoot), ["share/man/man1/machine-god-core.1"], context);
-  const manPage = path.join(appRoot, "share", "man", "man1", "machine-god-core.1");
+  expectFilesExist(listRelativeFiles(appRoot), ["share/man/man1/machine-god.1"], context);
+  const manPage = path.join(appRoot, "share", "man", "man1", "machine-god.1");
   if (fs.existsSync(manPage) && !fs.readFileSync(manPage, "utf8").includes(".TH")) {
     fail(`${context} has an invalid generated man page`);
   }

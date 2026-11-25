@@ -1060,7 +1060,7 @@ install_man_pages() {
   [ -d "$manual_dir" ] || return 0
   link_dir="$(man_link_dir)"
   mkdir -p "$link_dir"
-  for manual in "$manual_dir"/machine-god-core*.1; do
+  for manual in "$manual_dir"/machine-god*.1; do
     [ -f "$manual" ] || continue
     destination="$link_dir/$(basename "$manual")"
     if [ -e "$destination" ] || [ -L "$destination" ]; then
@@ -1074,11 +1074,11 @@ install_man_pages() {
 remove_man_pages_if_owned() {
   link_dir="$(man_link_dir "${2:-$bin_dir}")"
   source_dir="$(man_source_dir "${1:-$install_dir}")"
-  for destination in "$link_dir"/machine-god-core*.1; do
+  for destination in "$link_dir"/machine-god*.1; do
     [ -L "$destination" ] || continue
     target="$(readlink "$destination")"
     case "$target" in
-      "$source_dir/"machine-god-core*.1) rm -f "$destination" ;;
+      "$source_dir/"machine-god*.1) rm -f "$destination" ;;
     esac
   done
 }

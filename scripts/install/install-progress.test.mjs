@@ -238,7 +238,7 @@ function runInstallerScenario(scenario, { claudeCliAvailable = true, verify = fa
     fs.mkdirSync(directory, { recursive: true });
   }
   const manualDir = path.join(sandbox, "share", "man", "man1");
-  const manualPath = path.join(manualDir, "machine-god-core.1");
+  const manualPath = path.join(manualDir, "machine-god.1");
   const staleManualPath = path.join(manualDir, "machine-god-old.1");
   fs.mkdirSync(manualDir, { recursive: true });
   fs.symlinkSync(path.join(installDir, "share", "man", "man1", "machine-god-old.1"), staleManualPath);
