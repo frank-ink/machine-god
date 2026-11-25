@@ -6,7 +6,8 @@ use std::path::{Path, PathBuf};
 const SETTINGS_DIR_NAME: &str = "machine-god";
 const SETTINGS_FILE: &str = "settings.json";
 const UPDATE_SOURCE_GITHUB_RELEASE: &str = "github_release";
-const GITHUB_RELEASE_BASE_URL: &str = "https://github.com/gschaidergabriel/machine-god/releases/tag";
+const GITHUB_RELEASE_BASE_URL: &str =
+    "https://github.com/gschaidergabriel/machine-god/releases/tag";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AppSettings {
