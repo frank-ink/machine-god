@@ -1,0 +1,16 @@
+{
+ "id": "MG-RL2-004",
+ "due_ts": 1795763643.0,
+ "check_cmd": [
+  "python3",
+  "experiments/rl2_watch.py",
+  "1795677243.0",
+  "/home/immortal369/backups/rl2-hparam-20261126/rl2.db",
+  "experiments/rl2_watch_MG-RL2-004.json"
+ ],
+ "result": "experiments/rl2_watch_MG-RL2-004.json",
+ "rollback_cmd": [
+  "bash",
+  "/home/immortal369/backups/rl2-hparam-20261126/ROLLBACK_SOFT.sh"
+ ]
+}

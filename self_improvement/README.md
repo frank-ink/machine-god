@@ -12,13 +12,23 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
   `~/.local/share/machine-god/KILL`, load, memory, lock, forbidden paths (hooks, vault, keys, trading code, gate code),
   self-stop after 3 reverts in 7 days.
 - `experiments/mgfixed/mg/gate.py`: paired bootstrap and gate v2 (PASS needs the CI lower bound above the minimum effect).
-- Unit files: `deploy/`. Tests: `tests/` (`python3 -m pytest -q tests/`).
+- `mg_watch.py tick` (same cycle): re-measures every adoption after its due time on live data and runs its rollback on FAIL.
+- `mg_fresh.py`: once per ISO week (inside the cycle) rebuilds 60 known-item probes from the last 30 days and measures live.
+- `mg_report.py`: the loop's own metrics (trials/week, acceptance, revert rate, held-out gain per compute hour).
+- `bench/m3/`: M3 task benchmark (15 code tasks here; 15 memory tasks are generated privately), run with organs on/off;
+  M8 = Brier score of the free pool's p(success) stated before each run.
+- Unit files: `deploy/`. Tests: `python3 -m pytest -q tests/ bench/m3/tests`.
 
 ## What it has measured (details and every number in DESIGN.md, sections 14-18d)
 - Adopted live: full-text memory index + spell-fix/AND-first recall lane (sealed audit PASS, rollback tested).
 - Adopted live: RL2 ranker 300 rounds / minleaf 55 / lr 0.3 (found by the loop, confirmed by one-look 5-fold CV on unused sessions; DESIGN 18e).
 - Rejected, with reasons: normalisation arm E; synthetic known-item rows for the RL2 ranker (gains lookup, loses held-out
   usefulness AUC 0.683 -> 0.607); RL2 rounds=100 (dev pass, audit AUC guard missed by 0.0007).
+
+## First baselines of the other loops (DESIGN 19b, 19c)
+- M3: memory on vs off, 30 tasks: real_task_memory_delta +0.033 [0.000, 0.100]; code 13/15 both arms, memory tasks 1/15 vs 0/15.
+- M8: Brier 0.325 (organs on) / 0.224 (off); the predictor is overconfident about memory.
+- Fresh set week 48: live hit@1 0.833, hit@5 0.967, MRR@5 0.882.
 
 ## Layout
 `DESIGN.md` plan, preregistrations and results · `INVENTORY.md` system inventory · `experiments/` trial scripts and result

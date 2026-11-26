@@ -1,19 +1,19 @@
 {
-  "PASS": false,
+  "PASS": true,
   "pooled": {
-    "delta": 0.0029338372875363852,
-    "ci_low": 0.00040768498691143507,
-    "ci_high": 0.005402264616094479,
-    "n_items": 39
+    "delta": 0.002759667028267811,
+    "ci_low": 0.00047315170217584513,
+    "ci_high": 0.004933175156152495,
+    "n_items": 41
   },
-  "auc_old": 0.7157652810592061,
-  "auc_new": 0.7100692413857634,
-  "n_sessions": 39,
-  "n_rows": 611,
+  "auc_old": 0.6562155267512411,
+  "auc_new": 0.657844387755102,
+  "n_sessions": 41,
+  "n_rows": 886,
   "params": {
-    "rounds": 100,
-    "minleaf": 20,
-    "lr": 0.1
+    "rounds": 200,
+    "minleaf": 10,
+    "lr": 0.05
   },
   "fit_accepted": true
 }

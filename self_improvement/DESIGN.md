@@ -916,3 +916,31 @@ The NON-blind sessions were never a test set for any config (selection saw only 
   reference 0.659; that fold includes the selection sessions, so it is a sanity check, not the evidence). Live model v43, serving p95
   157 ms. Backup + ROLLBACK.sh in ~/backups/rl2-hparam-20261126/. tpl_rl2_hparam now uses the live defaults as its base.
 - Known limit: the blind dev/audit split has been looked at ~15 times; future rl2_hparam audits on it are weaker evidence.
+
+## 19. Definition of done for Machine God v1 (fixed 2026-11-26 before building; each line needs a receipt)
+1. Loop 1 retrieval/RL2: gated trials on a timer, one adoption live (17t, 18e). DONE.
+2. Fresh set (sec. 1, 5.2): `mg_fresh.py` rebuilds 60 known-item probes from the last 30 days of memory, weekly timer, live baseline measured.
+3. Live re-measure + auto-revert (sec. 2.5): `mg_watch.py` runs each adoption's check after its due time and runs its rollback on FAIL;
+   RL2 v43 registered.
+4. Improver metrics (sec. 4): `mg_report.py` prints trials/week, acceptance rate, held-out gain per compute hour, revert rate.
+5. Loop 2 / M3: 30 tasks with automatic checks, run by frank-agent with organs on and off; first `real_task_memory_delta` measured.
+6. Loop 4 / M8: before each M3 task the free pool states p(success); Brier score measured on the M3 run.
+7. Loop 3 / M4: ARC games seeds 100-103, same free model bare vs with harness, bounded moves; measured, or the blocker named.
+8. Tests green; everything public-safe shipped to gschaidergabriel/machine-god PR #6.
+
+### 19a. PREREGISTRATION MG-M4-001 harness vs bare (frozen before the run, 2026-11-26)
+- Model fixed for both arms: nvidia/nemotron-3-ultra-550b-a55b (free tier). Bare = suite/agent_api.py --engine nvidia; harness = the
+  same script with --engine omega, OMEGA_BENCHMARK_MODEL=free-nvidia/nvidia/nemotron-3-ultra-550b-a55b, vault profile nvidia, no
+  reasoning flag. Games a-d, seeds 100-103, --max-moves 60 both arms (bounded; the earlier rounds used 200, so not comparable to them).
+- Metric: levels solved out of 12 (level_reached - 1, +1 if the game ended won). Report per game and total; paid cost must be 0.
+- n = 4 games: this is a measurement, not a gate. Harness "helps" only if it solves more levels on at least 3 of 4 games.
+
+### 19b. RESULT M3 / M8 first baseline (run 20261126T080232Z-f7307c63, 60 agent runs, 2026-11-26 ~15:00-16:00)
+- Ablation verified from the run manifests: 30 runs organs on (titan ok, kontext ok), 30 off (off/off); off also drops recall tools and RL2 hook.
+- Code tasks (15): pass 13/15 on and 13/15 off. Memory doesn't change coding success.
+- Memory tasks (15, private, generated from tat rows older than 2 days): 1/15 on, 0/15 off.
+- **real_task_memory_delta = +0.033 [0.000, 0.100]** (paired, 30 tasks). The memory stack helps real tasks only marginally, and
+  recovering one exact past evidence token fails 14 of 15 times even with memory on. This is now Loop 2's target.
+- M8 self-model (free pool predicts p(success) before each run): Brier 0.325 with organs on, 0.224 off (0.25 = always saying 0.5).
+  The predictor is overconfident about memory: on memory tasks Brier 0.544 on vs 0.342 off. Loop 4 target: get Brier below 0.25.
+- Mean agent wall time 40.5 s on, 57.7 s off.

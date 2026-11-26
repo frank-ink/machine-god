@@ -144,6 +144,8 @@ def test_dev_pass_enqueues_one_audit(tmp_path, monkeypatch):
     import json, sys, subprocess
     monkeypatch.setenv("MG_NO_LEHRE", "1"); monkeypatch.setenv("MG_STATE", str(tmp_path / "state"))
     root = tmp_path / "trials"; (root / "queue").mkdir(parents=True)
+    monkeypatch.setattr(mg_loop.os, "getloadavg", lambda: (0, 0, 0))                 # host load must not decide a unit test
+    monkeypatch.setattr(mg_loop, "available_kib", lambda: 4 * 1024 * 1024)
     res = tmp_path / "r.json"
     cmd = [sys.executable, "-c", f"open({str(res)!r},'w').write('{{\"PASS\": true}}')"]
     spec = {"id": "T1", "hypothesis": "h", "proposer": "p", "target_metric": "m", "cmd": cmd, "result": str(res),

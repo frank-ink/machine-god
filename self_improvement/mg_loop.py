@@ -1,6 +1,6 @@
 """Run one queued Machine God trial at a time."""
 import argparse
-from contextlib import closing
+from contextlib import closing, contextmanager
 import fcntl
 import hashlib
 import json
@@ -113,6 +113,20 @@ def finish(source, root, spec, decision):
     source.unlink()
 
 
+def record_trial(db, spec, digest, decision, reason, result, base_ref="spec"):
+    pooled = result.get("pooled")
+    metrics = pooled if isinstance(pooled, dict) else result
+    with db:
+        db.execute(
+            "INSERT INTO mg_trial VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                spec["id"], spec.get("hypothesis", ""), digest, spec.get("proposer"), base_ref,
+                spec.get("target_metric"), metrics.get("delta"), metrics.get("ci_low"),
+                metrics.get("ci_high"), json.dumps(result)[:4000], decision, reason, time.time(),
+            ),
+        )
+
+
 def process(source, root, db, dry):
     raw = source.read_bytes()
     digest = hashlib.sha256(raw).hexdigest()
@@ -143,17 +157,7 @@ def process(source, root, db, dry):
     else:
         result_path = root.parent / spec["result"]
         decision, reason = execute_trial(spec, root, result_path, result)
-    pooled = result.get("pooled")
-    metrics = pooled if isinstance(pooled, dict) else result
-    with db:
-        db.execute(
-            "INSERT INTO mg_trial VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                trial_id, spec["hypothesis"], digest, spec["proposer"], "spec",
-                spec["target_metric"], metrics.get("delta"), metrics.get("ci_low"),
-                metrics.get("ci_high"), json.dumps(result)[:4000], decision, reason, time.time(),
-            ),
-        )
+    record_trial(db, spec, digest, decision, reason, result)
     if decision in ("reject", "error", "reverted"):
         record_lehre(spec, decision, result_path)
     if decision == "pass" and spec.get("audit") and not spec.get("is_audit"):   # dev pass earns ONE audit look (DESIGN 18c)
@@ -169,18 +173,31 @@ def skipped(reason):
     return {"decision": "skip", "reason": reason}
 
 
-def tick(root, udb, state, dry):
-    if (state / "KILL").exists():
-        return skipped("KILL file exists")
-    if os.getloadavg()[0] > float(os.getenv("MG_MAX_LOAD", "14")):
-        return skipped("load above MG_MAX_LOAD")
-    if available_kib() < 3 * 1024 * 1024:
-        return skipped("MemAvailable below 3 GiB")
+@contextmanager
+def loop_lock(state):
     state.mkdir(parents=True, exist_ok=True)
     with (state / "loop.lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
+            yield False
+        else:
+            yield True
+
+
+def killed(state):
+    return (state / "KILL").exists()
+
+
+def tick(root, udb, state, dry):
+    if killed(state):
+        return skipped("KILL file exists")
+    if os.getloadavg()[0] > float(os.getenv("MG_MAX_LOAD", "14")):
+        return skipped("load above MG_MAX_LOAD")
+    if available_kib() < 3 * 1024 * 1024:
+        return skipped("MemAvailable below 3 GiB")
+    with loop_lock(state) as acquired:
+        if not acquired:
             return skipped("loop lock held")
         with closing(connect(udb)) as db:
             reverted = db.execute(
