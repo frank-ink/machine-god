@@ -3,6 +3,7 @@ import argparse
 from collections import defaultdict
 from contextlib import closing
 import hashlib
+import inspect
 from itertools import groupby
 import json
 import os
@@ -86,12 +87,13 @@ def main():
         elif (hashlib.sha256(sid.encode()).hexdigest()[-1] < "8") == (args.split == "dev"):
             held_out.append(row)
 
-    base, auc_old = score(G.fit(train, rounds=60, minleaf=20), held_out)
+    live = {k: v.default for k, v in inspect.signature(J.cmd_fit).parameters.items() if k in ("rounds", "minleaf", "lr")}
+    base, auc_old = score(G.fit(train, **live), held_out)   # base = live fit defaults (60/20/0.1 until MG-RL2-004)
     cand, auc_new = score(G.fit(train, **params), held_out)
     pooled = paired_bootstrap(base, cand, n=10000, seed=0)
     result = dict(PASS=pooled["ci_low"] > 0 and auc_new >= auc_old - 0.005,
                   pooled=pooled, auc_old=auc_old, auc_new=auc_new,
-                  n_sessions=len(base), n_rows=len(held_out), params=params, fit_accepted=True)
+                  n_sessions=len(base), n_rows=len(held_out), params=params, base=live, fit_accepted=True)
     output = json.dumps(result, indent=2)
     (HERE / f"tpl_rl2_hparam_{args.split}.json").write_text(output + "\n")
     print(output)

@@ -900,3 +900,19 @@ refit itself (served model v40 vs a fresh fit), not the synthetic rows. Audit st
 - rl2_hparam rounds 100 / minleaf 20 / lr 0.1 vs live 60/20/0.1: dev per-session Brier +0.0035 [0.0011, 0.0058], AUC 0.660 -> 0.672 (32 sessions).
 - Audit: same command with split audit, PASS = ci_low > 0 and AUC >= base - 0.005. Adoption only if audit passes.
 - RESULT audit (39 sessions): Brier +0.0029 [0.0004, 0.0054] but AUC 0.7158 -> 0.7101 (-0.0057, bound -0.005): FAIL, not adopted.
+
+## 18e. MG-RL2-004: confirm the best rl2_hparam config before adoption (PREREGISTERED 2026-11-26, before any run)
+Why: 14 rl2_hparam audit passes all reused the same 41 blind audit sessions while the proposer hill-climbed on them, so that split is
+no longer held out. No session was labelled after the last trial (max label 02:35, last trial 13:34), so a time-fresh set does not exist.
+The NON-blind sessions were never a test set for any config (selection saw only blind sessions): they are the confirmation set.
+- Exactly ONE candidate, fixed now: rounds=300, minleaf=55, lr=0.3 (best audit, MG-AUTO-0018). Base = live defaults 60/20/0.1.
+- 5-fold grouped CV over non-blind real-label sessions, fold = int(sha256(sid),16) % 5; train both on 4 folds, score the 5th.
+- Metric: per-session negative Brier pooled over folds, paired bootstrap n=10000 seed 0; AUC pooled over all held-out rows.
+- PASS = ci_low > 0 AND auc_new >= auc_old - 0.005 AND per-hit predict time <= 1.25 x base + 0.05 ms. One look; no retune.
+- If PASS: back up rl2.db + rl2_judge.py, set cmd_fit defaults to 300/55/0.3 (lr passed through), run the live fit; RL2's own blind
+  acceptance gate must accept, else roll back. If FAIL: not adopted, rl2_hparam template retired.
+- RESULT (one look, 2026-11-26): 365 non-blind sessions / 9148 rows: Brier +0.0095 [0.0067, 0.0123], AUC 0.621 -> 0.654, predict
+  0.055 ms/hit (limit 0.063): PASS. Adopted: cmd_fit defaults 300/55/0.3; live fit accepted by RL2's blind gate (auc 0.694 vs pool-only
+  reference 0.659; that fold includes the selection sessions, so it is a sanity check, not the evidence). Live model v43, serving p95
+  157 ms. Backup + ROLLBACK.sh in ~/backups/rl2-hparam-20261126/. tpl_rl2_hparam now uses the live defaults as its base.
+- Known limit: the blind dev/audit split has been looked at ~15 times; future rl2_hparam audits on it are weaker evidence.

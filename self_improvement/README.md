@@ -16,6 +16,7 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
 
 ## What it has measured (details and every number in DESIGN.md, sections 14-18d)
 - Adopted live: full-text memory index + spell-fix/AND-first recall lane (sealed audit PASS, rollback tested).
+- Adopted live: RL2 ranker 300 rounds / minleaf 55 / lr 0.3 (found by the loop, confirmed by one-look 5-fold CV on unused sessions; DESIGN 18e).
 - Rejected, with reasons: normalisation arm E; synthetic known-item rows for the RL2 ranker (gains lookup, loses held-out
   usefulness AUC 0.683 -> 0.607); RL2 rounds=100 (dev pass, audit AUC guard missed by 0.0007).
 
