@@ -87,6 +87,31 @@ describe("unified.db: created from the frankenstein3 schema", () => {
     db2.close();
     if (process.platform !== "win32") expect(fs.statSync(path.join(d, "unified.db")).mode & 0o077).toBe(0);
   });
+  test("German GRID databases retain their stored persona and settings after reopening", () => {
+    const env = { MG_DATA_DIR: tmp() };
+    const original = U.openDb({ env });
+    original.close();
+    const fixture = new Database(U.dbFile(env));
+    fixture.exec(`
+      DROP TABLE IF EXISTS entityos_profile;
+      DROP TABLE IF EXISTS star_config;
+      CREATE TABLE IF NOT EXISTS entityos_profil(user_id TEXT, feld TEXT, wert TEXT, herkunft TEXT, beleg TEXT, erfasst REAL, PRIMARY KEY(user_id, feld));
+      CREATE TABLE IF NOT EXISTS star_konfig(schluessel TEXT PRIMARY KEY, wert TEXT, typ TEXT, quelle TEXT, geaendert REAL);
+      INSERT INTO entityos_profil VALUES ('machine-god', 'persona', 'Original', 'eigner', 'fixture', 1);
+      INSERT INTO star_konfig VALUES ('mg.sync', 'off', 'string', 'fixture', 1);
+    `);
+    fixture.close();
+    const db = U.openDb({ env, create: false });
+    expect(U.getPersonaOverride(db)).toBe("Original");
+    expect(U.confGet(db, "mg.sync")).toBe("off");
+    U.setPersonaOverride(db, "Neu");
+    U.confSet(db, "mg.sync", "on");
+    db.close();
+    const saved = new Database(U.dbFile(env), { readonly: true });
+    expect(saved.query("SELECT wert FROM entityos_profil WHERE feld='persona'").get().wert).toBe("Neu");
+    expect(saved.query("SELECT wert FROM star_konfig WHERE schluessel='mg.sync'").get().wert).toBe("on");
+    saved.close();
+  });
   test("a database without the needed tables is refused, not modified", () => {
     const d = tmp();
     const f = path.join(d, "unified.db");
@@ -152,7 +177,7 @@ describe("memories: store, dedupe, refuse secrets, recall ranking", () => {
     expect(U.stats(db).memories).toBe(1);
     db.close();
   });
-  test("persona override lives in entityos_profil, config in star_konfig", () => {
+  test("persona and settings can be updated and cleared", () => {
     const db = fresh();
     expect(U.getPersonaOverride(db)).toBeNull();
     U.setPersonaOverride(db, "Be terse.");

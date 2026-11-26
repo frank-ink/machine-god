@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" role="img" aria-labelledby="title desc">
+<title id="title">Machine God runtime map</title>
+<desc id="desc">The inline Rust terminal exchanges NDJSON with a bridge to the Claude Agent SDK. GRID clients enter a separate router that recalls SQLite memories, calls a connected provider through Fusion and records the result.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 8 4 0 8Z" fill="#a5b6bd"/></marker></defs>
+<rect width="900" height="440" rx="15" fill="#101419"/>
+<g font-family="monospace" font-size="15" letter-spacing="2"><text x="35" y="44" fill="#ffb477">TERMINAL SESSION</text><text x="35" y="213" fill="#70ded0">OPTIONAL GRID</text></g>
+<path d="M35 168H865" stroke="#39404a"/>
+<g stroke-width="1.5" fill="#201c1b" stroke="#976341"><rect x="35" y="65" width="220" height="73" rx="7"/><rect x="340" y="65" width="220" height="73" rx="7"/><rect x="645" y="65" width="220" height="73" rx="7"/></g>
+<g stroke-width="1.5" fill="#142323" stroke="#48857e"><rect x="35" y="236" width="220" height="75" rx="7"/><rect x="340" y="236" width="220" height="75" rx="7"/><rect x="645" y="236" width="220" height="75" rx="7"/><rect x="340" y="357" width="220" height="57" rx="7"/></g>
+<g stroke="#a5b6bd" stroke-width="1.7" marker-end="url(#arrow)"><path d="M260 102H334" marker-start="url(#arrow)"/><path d="M565 102H639" marker-start="url(#arrow)"/><path d="M258 274H334"/><path d="M565 274H639" marker-start="url(#arrow)"/><path d="M450 317V351" marker-start="url(#arrow)"/></g>
+<g text-anchor="middle" font-family="sans-serif" font-weight="bold" fill="#f1f0e9" font-size="22"><text x="145" y="98">Rust terminal</text><text x="450" y="98">Local bridge</text><text x="755" y="98">Claude Agent SDK</text><text x="145" y="269">GRID clients</text><text x="450" y="269">GRID core</text><text x="755" y="269">Fusion</text><text x="450" y="392">unified.db</text></g>
+<g text-anchor="middle" font-family="sans-serif" fill="#becbcf" font-size="16"><text x="145" y="121">inline scrollback</text><text x="450" y="121">TypeScript on Bun</text><text x="755" y="121">session and tool events</text><text x="145" y="293">CLI or MCP</text><text x="450" y="293">rank, recall, assemble</text><text x="755" y="293">provider adapters</text><text x="298" y="89" font-size="12">NDJSON</text><text x="578" y="344">recall / record</text></g></svg>

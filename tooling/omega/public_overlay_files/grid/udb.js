@@ -41,7 +41,21 @@ export function schemaFile(env = process.env) {
   throw new Error(`unified.db schema (schema_empty.sql) not found; looked in: ${candidates.join(", ")}`);
 }
 
-export const REQUIRED_TABLES = ["users", "sessions", "turns", "durable_memory", "entityos_profil", "star_konfig", "meta"];
+export const REQUIRED_TABLES = ["users", "sessions", "turns", "durable_memory", "meta"];
+
+// A database keeps the vocabulary it was created with. Only these two table families differ.
+const layouts = [
+  {
+    config: "star_konfig", key: "schluessel", value: "wert", type: "typ", source: "quelle", changed: "geaendert",
+    profile: "entityos_profil", field: "feld", origin: "herkunft", evidence: "beleg", captured: "erfasst", owner: "eigner",
+  },
+  {
+    config: "star_config", key: "key", value: "value", type: "type", source: "source", changed: "changed",
+    profile: "entityos_profile", field: "field", origin: "origin", evidence: "evidence", captured: "captured", owner: "owner",
+  },
+];
+const layoutByDb = new WeakMap();
+
 
 // ---------- secrets: nothing that looks like a key is ever stored or sent ----------
 const SECRET_SOURCES = [
@@ -104,10 +118,13 @@ export function openDb({ env = process.env, create = true } = {}) {
   db.exec("PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=OFF;");
   const have = new Set(db.query("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name));
   const missing = REQUIRED_TABLES.filter((t) => !have.has(t));
+  const layout = layouts.find(({ config, profile }) => have.has(config) && have.has(profile));
+  if (!layout) missing.push("star_konfig + entityos_profil (or star_config + entityos_profile)");
   if (missing.length) {
     db.close();
     throw new Error(`${file} is not a frankenstein3 unified.db (missing tables: ${missing.join(", ")})`);
   }
+  layoutByDb.set(db, layout);
   const now = Date.now() / 1000;
   db.query("INSERT OR IGNORE INTO users(user_id, display_name) VALUES ('owner', 'Owner')").run();
   db.query("INSERT OR IGNORE INTO users(user_id, display_name) VALUES ('machine-god', 'Machine God')").run();
@@ -124,22 +141,33 @@ export const metaSet = (db, key, value) => db.query("INSERT INTO meta(key, value
 export const instanceId = (db) => metaGet(db, "mg_instance");
 
 export function confGet(db, key, fallback = null) {
-  const r = db.query("SELECT wert FROM star_konfig WHERE schluessel=?").get(key);
-  return r ? r.wert : fallback;
+  const c = layoutByDb.get(db);
+  const row = db.query(`SELECT ${c.value} AS value FROM ${c.config} WHERE ${c.key}=?`).get(key);
+  return row ? row.value : fallback;
 }
+
 export function confSet(db, key, value, type = "string") {
+  const c = layoutByDb.get(db);
   db.query(
-    "INSERT INTO star_konfig(schluessel, wert, typ, quelle, geaendert) VALUES (?, ?, ?, 'machine-god', ?) ON CONFLICT(schluessel) DO UPDATE SET wert=excluded.wert, geaendert=excluded.geaendert",
+    `INSERT INTO ${c.config}(${c.key}, ${c.value}, ${c.type}, ${c.source}, ${c.changed})
+     VALUES (?, ?, ?, 'machine-god', ?) ON CONFLICT(${c.key}) DO UPDATE SET
+     ${c.value}=excluded.${c.value}, ${c.changed}=excluded.${c.changed}`,
   ).run(key, String(value), type, Date.now() / 1000);
 }
 
-export const getPersonaOverride = (db) => db.query("SELECT wert FROM entityos_profil WHERE user_id='machine-god' AND feld='persona'").get()?.wert ?? null;
+export function getPersonaOverride(db) {
+  const p = layoutByDb.get(db);
+  return db.query(`SELECT ${p.value} AS value FROM ${p.profile} WHERE user_id='machine-god' AND ${p.field}='persona'`).get()?.value ?? null;
+}
+
 export function setPersonaOverride(db, text) {
-  if (text === null) return db.query("DELETE FROM entityos_profil WHERE user_id='machine-god' AND feld='persona'").run();
+  const p = layoutByDb.get(db);
+  if (text === null) return db.query(`DELETE FROM ${p.profile} WHERE user_id='machine-god' AND ${p.field}='persona'`).run();
   db.query(
-    "INSERT INTO entityos_profil(user_id, feld, wert, herkunft, beleg, erfasst) VALUES ('machine-god', 'persona', ?, 'eigner', 'machine-god grid persona set', ?) " +
-      "ON CONFLICT(user_id, feld) DO UPDATE SET wert=excluded.wert, erfasst=excluded.erfasst",
-  ).run(text, Date.now() / 1000);
+    `INSERT INTO ${p.profile}(user_id, ${p.field}, ${p.value}, ${p.origin}, ${p.evidence}, ${p.captured})
+     VALUES ('machine-god', 'persona', ?, ?, 'machine-god grid persona set', ?)
+     ON CONFLICT(user_id, ${p.field}) DO UPDATE SET ${p.value}=excluded.${p.value}, ${p.captured}=excluded.${p.captured}`,
+  ).run(text, p.owner, Date.now() / 1000);
 }
 
 // ---------- turns ----------
