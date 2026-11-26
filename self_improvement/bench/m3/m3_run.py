@@ -25,10 +25,11 @@ ARMS = {"on": "with memory/organs", "off": "without memory/organs",
         "oracle_raw": "with memory/organs and the exact stored record placed first in its memory block",
         "oracle_struct": "with memory/organs and the exact stored record shown as a labelled block",
         "vorstufe": "with memory/organs and the Vorstufe pre-stage entity (NVIDIA) choosing and packaging memory first",
-        "vorstufe2": "the thinker sees only the world model the Vorstufe builds (memory tools off), strong NVIDIA model chosen by OMNI-BRAIN"}
+        "vorstufe2": "the thinker sees only the world model the Vorstufe builds (memory tools off), strong NVIDIA model chosen by OMNI-BRAIN",
+        "vorstufe2fast": "as vorstufe2, but the pre-stage writes its search queries on a fast model with a parallel relevance gate, then one strong round"}
 DEFAULT_ARMS = ("on", "off")
 CONTRASTS = (("on", "off"), ("oracle_raw", "off"), ("oracle_struct", "off"), ("oracle_raw", "on"), ("oracle_struct", "oracle_raw"),
-             ("vorstufe", "on"), ("vorstufe2", "on"))
+             ("vorstufe", "on"), ("vorstufe2", "on"), ("vorstufe2fast", "vorstufe2"))
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
 FLOAT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
 
@@ -141,8 +142,12 @@ def run_pair(run_id, task, arm):
     elif arm.startswith("oracle_"):
         # Only this agent process gets the record, by environment; frank-agent strips it before its shell starts.
         env.update(FRANK_AGENT_ORACLE_TEXT=task["oracle"], FRANK_AGENT_ORACLE_MODE=arm.split("_", 1)[1])
-    elif arm in ("vorstufe", "vorstufe2"):
+    elif arm in ("vorstufe", "vorstufe2", "vorstufe2fast"):
         env["FRANK_AGENT_VORSTUFE"] = "1" if arm == "vorstufe" else "2"
+        env["VORSTUFE_FAST"] = "1" if arm == "vorstufe2fast" else "0"
+        # OMNI-BRAIN's own Vorstufe route (added live 2026-11-27 01:28, after MG-M3-004) is off in every Vorstufe arm: the arms
+        # keep the direct path frozen in 23, so a fast-vs-normal contrast changes only the fast step (MG-M3-005, DESIGN 24).
+        env["VORSTUFE_OMNI"] = "0"
     started, started_wall = time.monotonic(), time.time()
     agent_rc = run_command(
         [env.get("M3_AGENT", "frank-agent"), "-C", str(directory), task["prompt"]],

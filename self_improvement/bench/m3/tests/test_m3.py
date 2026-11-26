@@ -225,21 +225,24 @@ def test_vorstufe_arms_set_the_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.delenv("FRANK_AGENT_ORGANS", raising=False)
     monkeypatch.delenv("FRANK_AGENT_VORSTUFE", raising=False)
+    monkeypatch.delenv("VORSTUFE_FAST", raising=False)
+    monkeypatch.delenv("VORSTUFE_OMNI", raising=False)
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     monkeypatch.setenv("PATH", str(fake_bin) + ":" + m3_run.os.environ["PATH"])
     monkeypatch.setenv("M3_AGENT", "fake-agent")
     monkeypatch.setenv("M3_ASK", "fake-ask")
     agent = fake_bin / "fake-agent"
-    agent.write_text('#!/bin/bash\nprintf "%s" "${FRANK_AGENT_VORSTUFE-unset}" > mode\n', encoding="utf-8")
+    agent.write_text('#!/bin/bash\nprintf "%s/%s/%s" "${FRANK_AGENT_VORSTUFE-unset}" "${VORSTUFE_FAST-unset}" "${VORSTUFE_OMNI-unset}" > mode\n', encoding="utf-8")
     agent.chmod(0o700)
     (fake_bin / "fake-ask").write_text("echo 0.5\n", encoding="utf-8")
     task = {"id": "memory-v", "kind": "memory", "prompt": "Recall", "seed": {}, "oracle": "x",
             "check": "raise SystemExit(0)\n"}
-    for arm, mode in (("vorstufe", "1"), ("vorstufe2", "2"), ("on", "unset")):
+    for arm, mode in (("vorstufe", "1/0/0"), ("vorstufe2", "2/0/0"), ("vorstufe2fast", "2/1/0"), ("on", "unset/unset/unset")):
         m3_run.run_pair("t", task, arm)
         assert (m3_run.data_dir() / "t-work" / f"memory-v-{arm}" / "mode").read_text() == mode
     assert ("vorstufe2", "on") in m3_run.CONTRASTS and "vorstufe2" in m3_run.ARMS
+    assert ("vorstufe2fast", "vorstufe2") in m3_run.CONTRASTS and "vorstufe2fast" in m3_run.ARMS
 
 
 def test_run_command_timeout_kills_the_whole_tree(tmp_path):

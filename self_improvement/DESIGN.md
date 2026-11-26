@@ -1184,3 +1184,85 @@ Paired bootstrap (n=10000, seed 0): vorstufe2-on +0.200 [0.083, 0.317].
 - Reference only (other tasks, not a contrast): mode 1 in 22b reached 0.483; mode 2 here 0.350 overall, 0.54 on finished runs.
 - Consequence: the time budget is now the main loss (21/60). The next lever is a faster pre-stage, or a preregistered test
   whose limit fits the stack. A test with the same model on both arms would separate prompt from model.
+
+## 24. PREREGISTRATION MG-M3-005 fast pre-stage: search queries on a fast model, one strong round (frozen before the run, 2026-11-27)
+Immortal 2026-11-27, after 23b (21/60 runs lost to the 600 s limit; pre-stage median 144 s, thinker median 25 s), on a
+context-engineering note (split the work into minimal steps, a cheap relevance gate in parallel, early exit): "Yes, build it".
+- Measured motive: in 105 of 105 Vorstufe turns of MG-M3-003/004 the task's own row was not among the first-round candidates;
+  only the round-1 self-queries found it. Round 1's strong call (nemotron-3-ultra-550b, ~70 s) mostly writes search queries.
+- Build (`VORSTUFE_FAST=1`, live stack outside this repo, off by default): the first retrieval runs; a fast model
+  (nemotron-3.5-super-vl-120b, thinking off) writes up to 3 keyword queries while the GRID sense runs alongside; their rows are
+  added; then ONE strong round builds the envelope and world model over all candidates (same system text plus one paragraph:
+  final round, no self-queries). The strong round has a deadline (300 s from the pass start); past it the Vorstufe fails and
+  frank-agent works without it. If the fast step gives no queries, the normal two-round path runs.
+- Dev (12 old MG-M3-003 tasks, not used again):
+  - The parallel one-token relevance gate with early exit was built and rejected: it named a candidate in 7 of 9 tasks, wrong 7
+    of 7, and its early exit skipped the queries that find the row.
+  - With thinking on, the fast model spent its whole token budget on reasoning and returned empty answers (5 of 5); thinking off
+    answers in about 1 s.
+  - Final build, pre-stage alone: the row was found and chosen in 9 of 9 finished passes, pass median 61 s (23b: 144 s); 1 pass
+    stopped at the 300 s deadline (the strong model chain timed out on that task; without the deadline it ran 1400 s).
+  - End to end through frank-agent (2 tasks): in one run the mode-2 thinker re-ran the recorded action itself (a read-only
+    public market-data fetch script; it failed with HTTP 500 and changed nothing) instead of writing the recalled token, until
+    the 600 s limit. Since then the world model says that its records are history and must not be re-run unless the message
+    asks for it; this line reaches every mode-2 thinker alike. Rerun: both runs finished (167 s, 314 s), no re-run, both
+    failed the checker (one wrong number from the right row; one revision round dropped the row).
+- Since 23, applied to both arms alike:
+  - The retired NVIDIA models (23b) are replaced in the strength floors by their successors (nemotron-3.5-super-vl-120b,
+    kimi-k3.1-pro), also as Crush models for the thinker.
+  - Retrieval (a separate session, preregistered on a DB copy, 848 private probes, MRR@10 +0.231 [0.204, 0.258]): the
+    Vorstufe's query lane in the frank-brain bridge ranks all query words by curated-only document frequency instead of
+    taking the first 8. On live probes the target row is now in the first 10 candidates for M3-shaped queries in 41 of 48
+    (before: 0 of 48). So the motive above may be weaker now: the fast step still saves the second strong round.
+  - OMNI-BRAIN gained its own Vorstufe route on 2026-11-27 01:28 (after MG-M3-004; another session); every Vorstufe arm turns
+    it off (`VORSTUFE_OMNI=0`), so both arms keep the direct path of 23 and differ only in the fast step.
+- Tasks: 57 fresh private memory tasks (all eligible actions not used before; the generator found 57, not 60; set before the
+  run), seed "m3f-2026-W48", excluding every task used before (m3, m3b, m3c, m3d, m3e); same generator and checker. Arms: **vorstufe2fast** and **vorstufe2** (both mode 2: the world model is the thinker's only view).
+  Arm-major order, 4 workers, 600 s per task as before.
+- H0: pass(vorstufe2fast) - pass(vorstufe2) <= 0. Rejected only if the paired-bootstrap CI lower bound (n=10000, seed 0) is
+  above 0. One look, no reruns. Recorded too: timeouts per arm, Vorstufe ms and rounds, deadline failures, fast-step failures,
+  the model that answered, chosen-row hit rate and first-round hit rate (private join, aggregate only), lessons written, M8.
+- Live files at freeze (sha256 prefix): vorstufe.py 81cfe70b, frank_agent.py 93f5ee4d, vorstufe_sinne.py 64d77762,
+  omni_wahl.py fd3a5e97, raum_pool.py d2de8749, frank-brain bridge.py bd6ff84e (switch RECALL_IDF_OFF absent);
+  bench/m3/m3_run.py f10588cd. The other session holds every live retrieval change until this run's summary.
+
+## 24b. RESULT MG-M3-005 (run m3f-20261127, 57 fresh private memory tasks x 2 arms, one look, 2026-11-27)
+| arm | pass | rate | mean wall s | Brier (M8) |
+|---|---|---|---|---|
+| vorstufe2fast | 2/57 | 0.035 | 288 | 0.422 |
+| vorstufe2 | 24/57 | 0.421 | 229 | 0.293 |
+
+Paired bootstrap (n=10000, seed 0): vorstufe2fast-vorstufe2 -0.386 [-0.509, -0.263].
+- Reading by the frozen rule of 24: the CI lower bound is not above 0, so **H0 is not rejected**. The fast arm measured far
+  worse. This run does not show that the fast path itself is worse: almost all of its loss comes from an NVIDIA outage, and
+  arm-major order put that outage on one arm (below).
+- How the fast arm failed: 53 of 57 runs ended at about 301 s with frank-agent rc 3. The fast pre-stage's strong round hit its
+  300 s deadline, and in mode 2 frank-agent stops when the Vorstufe fails ("Vorstufe-only mode but the Vorstufe failed"). It
+  does not work on without it. The build note in 24 ("frank-agent works without it") was wrong for mode 2; this is declared
+  here, not changed after the look. The 4 runs that got a package finished (97-123 s), and 2 of them passed.
+- Provider window, measured after the look in OMNI-BRAIN's request log (only successes and non-key HTTP errors are logged;
+  timeouts and 429 are not):
+  - The fast arm ran about 03:08-04:34. In that window the Vorstufe's strong model answered once in 80 minutes. The 4 fast
+    packages took 79-108 s, and 3 of them came from the fallback model mistral-large-4, not nemotron-3-ultra.
+  - From 04:30, when vorstufe2 ran, ultra answered 13-21 Vorstufe calls per 10 minutes again.
+  - Probe after the run (same live files, 4 fast passes on m3f tasks in parallel, not a rerun): 4 of 4 finished on ultra in
+    44-145 s, quick step 1-4 s, no deadline failure.
+- Recorded diagnostics (aggregate; the row join is private):
+  - vorstufe2:
+    - 15 of 57 runs hit the 600 s limit (rc 124; 23b: 21/60). Of the 42 that finished, 24 passed (0.57).
+    - 43 runs stored a Vorstufe turn: median 32 s, max 193 s (23b: median 151 s). Rounds: round 1 only in 27, with
+      reflection in 16. Self-queries in 16. Model: nemotron-3-ultra-550b in all 43. Outcomes: 39 ok, 4 asked for a better
+      package. Invented ids 0.
+    - The task's own row was among the first 10 candidates in 41 of 43 turns (MG-M3-003/004: 0 of 105). This is the
+      retrieval change declared in 24. It was chosen in 43 of 43; all 24 passes had it chosen.
+  - vorstufe2fast: 4 turns stored. In all 4 the row was in the first 10 candidates and chosen. Quick queries in 4 of 4,
+    invented ids 0.
+  - Lessons written: 0. M8: Brier 0.293 (vorstufe2), 0.422 (fast; its runs mostly had no package).
+- Consequences:
+  - Arm-major order with a shared free provider confounds arm with time. Later M3 runs interleave the arms task by task, so
+    a provider window hits both arms alike.
+  - With the IDF retrieval lane, the plain two-round pre-stage is already fast (median 32 s; most turns need no second round).
+    The motive of 24, that round 1 exists only to write queries, no longer holds in 41 of 43 turns.
+  - Mode 2 has no fallback when the Vorstufe fails. A failed or late package ends the run.
+  - The fast path is not shipped as a default (it stays off by default, `VORSTUFE_FAST`). A new test of it would need its
+    own preregistration with interleaved arms.

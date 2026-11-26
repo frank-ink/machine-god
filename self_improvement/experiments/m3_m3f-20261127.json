@@ -1,0 +1,93 @@
+{
+  "by_arm": {
+    "on": {
+      "n": 0,
+      "pass_rate": null,
+      "brier_score": null,
+      "mean_wall_s": null
+    },
+    "off": {
+      "n": 0,
+      "pass_rate": null,
+      "brier_score": null,
+      "mean_wall_s": null
+    },
+    "vorstufe2": {
+      "n": 57,
+      "pass_rate": 0.42105263157894735,
+      "brier_score": 0.29326315789473684,
+      "mean_wall_s": 228.88693003503764
+    },
+    "vorstufe2fast": {
+      "n": 57,
+      "pass_rate": 0.03508771929824561,
+      "brier_score": 0.4223701754385965,
+      "mean_wall_s": 287.5246798234365
+    }
+  },
+  "by_kind": {
+    "code": {
+      "on": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe2": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe2fast": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      }
+    },
+    "memory": {
+      "on": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe2": {
+        "n": 57,
+        "pass_rate": 0.42105263157894735,
+        "brier_score": 0.29326315789473684,
+        "mean_wall_s": 228.88693003503764
+      },
+      "vorstufe2fast": {
+        "n": 57,
+        "pass_rate": 0.03508771929824561,
+        "brier_score": 0.4223701754385965,
+        "mean_wall_s": 287.5246798234365
+      }
+    }
+  },
+  "real_task_memory_delta": null,
+  "contrasts": {
+    "on-off": null,
+    "vorstufe2-on": null,
+    "vorstufe2fast-vorstufe2": {
+      "delta": -0.38596491228070173,
+      "ci_low": -0.5087719298245614,
+      "ci_high": -0.2631578947368421,
+      "n_items": 57
+    }
+  }
+}

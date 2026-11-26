@@ -33,6 +33,9 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
   reflection) reaches 0.483 vs 0.083 for the plain stack, +0.400 [0.283, 0.533]; it chose the task's own row in 58/60.
 - M3 memory, full stack (DESIGN 23b): world model as the thinker's only view, GRID/TITAN-MX through the Vorstufe,
   OMNI-BRAIN model choice: 0.350 vs 0.150, +0.200 [0.083, 0.317]; 21/60 runs hit the 600 s limit (0.54 on finished runs).
+- M3 memory, fast pre-stage (DESIGN 24b): 0.035 vs 0.421, -0.386 [-0.509, -0.263], H0 not rejected; confounded by an NVIDIA
+  outage during the fast arm's window (53/57 pre-stages hit their deadline). With the IDF retrieval lane the plain pre-stage
+  now takes median 32 s and has the task's row in its first 10 candidates in 41/43 turns.
 - M8: Brier 0.325 (organs on) / 0.224 (off); the predictor is overconfident about memory.
 - Fresh set week 48: live hit@1 0.833, hit@5 0.967, MRR@5 0.882.
 - M4: the 60-move run (bare 1/12, OMEGA 2/12) is withdrawn as a harness verdict (DESIGN 19e): the cap is below the 80-159 moves
