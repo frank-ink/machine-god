@@ -21,6 +21,7 @@
     "HOME",
     "USERPROFILE"
   ],
+  "hook_env_writes": [],
   "ambient_passthrough": [
     "F3_DRY_RUN",
     "XDG_DATA_HOME",
@@ -30,6 +31,7 @@
     "semantics": "F3_DRY_RUN=1 (truthy: 1|true|yes|on, case-insensitive) activates dry-run. In dry-run: F3_DB_PATH is mandatory; all other path variables (FRANK3_DATA, FRANKENSTEIN3_ROOT, CLAUDE_PLUGIN_DATA, XDG_DATA_HOME, HOME, USERPROFILE) are ignored. The resolver returns F3_DB_PATH (tilde-expanded) directly. ensure_db_with_env performs zero filesystem writes: no mkdir, no DB init, no fixture creation, no self-check, no registration. Invalid F3_DRY_RUN values fail closed (dry-run not activated).",
     "flag": "F3_DRY_RUN",
     "truthy_values": ["1", "true", "yes", "on"],
+    "falsy_values": ["0", "false", "no", "off"],
     "mandatory_db_path": "F3_DB_PATH",
     "writes_skipped": ["mkdir", "db_init", "fixture_creation", "self_check", "registration"]
   },

@@ -4,34 +4,45 @@
   "description": "Machine-readable environment contract for FranKenstein 3.0. Precedence and field names are verified against plugins/frankenstein3/scripts/star/f3_paths.py and plugins/frankenstein3/README.md. Every entry of sources is a repo-root-relative path written in the canonical ../../<repo-root-relative> form and resolved from this file's directory (docs/zero). Tests fail closed: a missing or unreadable contract is an error, never a skip.",
   "precedence": [
     "FRANK3_DATA",
+    "FRANKENSTEIN3_ROOT",
+    "F3_DB_PATH",
     "CLAUDE_PLUGIN_DATA",
     "XDG_DATA_HOME",
-    "HOME"
+    "HOME",
+    "USERPROFILE"
   ],
   "data_dir_precedence": [
     "FRANK3_DATA",
+    "FRANKENSTEIN3_ROOT",
     "CLAUDE_PLUGIN_DATA",
     "XDG_DATA_HOME",
-    "HOME"
+    "HOME",
+    "USERPROFILE"
   ],
-  "hook_env_writes": [
-    "FRANK3_DATA",
-    "CLAUDE_PLUGIN_DATA",
-    "F3_DB_PATH"
-  ],
+  "hook_env_writes": [],
   "ambient_passthrough": [
     "F3_DRY_RUN",
     "XDG_DATA_HOME",
     "HOME"
   ],
+  "dry_run": {
+    "semantics": "F3_DRY_RUN=1 (truthy: 1|true|yes|on, case-insensitive) activates dry-run. In dry-run: F3_DB_PATH is mandatory; all other path variables (FRANK3_DATA, FRANKENSTEIN3_ROOT, CLAUDE_PLUGIN_DATA, XDG_DATA_HOME, HOME, USERPROFILE) are ignored. The resolver returns F3_DB_PATH (tilde-expanded) directly. ensure_db_with_env performs zero filesystem writes: no mkdir, no DB init, no fixture creation, no self-check, no registration. Invalid F3_DRY_RUN values fail closed (dry-run not activated).",
+    "flag": "F3_DRY_RUN",
+    "truthy_values": ["1", "true", "yes", "on"],
+    "falsy_values": ["0", "false", "no", "off"],
+    "mandatory_db_path": "F3_DB_PATH",
+    "writes_skipped": ["mkdir", "db_init", "fixture_creation", "self_check", "registration"]
+  },
   "admissibility_space": {
     "kind": "AdmissibilitySpace",
     "path_variables": [
       "F3_DB_PATH",
       "FRANK3_DATA",
+      "FRANKENSTEIN3_ROOT",
       "CLAUDE_PLUGIN_DATA",
       "XDG_DATA_HOME",
-      "HOME"
+      "HOME",
+      "USERPROFILE"
     ],
     "mode_flags": [
       "F3_DRY_RUN"
@@ -39,15 +50,19 @@
     "resolution_rules": {
       "F3_DB_PATH": "file path to the database file; it never selects the data directory",
       "FRANK3_DATA": "canonical data root directory",
+      "FRANKENSTEIN3_ROOT": "plugin/data root override; second in precedence",
       "CLAUDE_PLUGIN_DATA": "Claude Code plugin data directory",
       "XDG_DATA_HOME": "XDG base directory; frankenstein3 subdirectory appended",
-      "HOME": "legacy fallback; ~/.local/share/frankenstein3 appended"
+      "HOME": "legacy fallback; ~/.local/share/frankenstein3 appended",
+      "USERPROFILE": "Windows fallback; %USERPROFILE%\\AppData\\Local\\frankenstein3 appended"
     },
     "invariants": [
       "F3_DRY_RUN never participates in path precedence",
       "Exactly one data directory is selected (first match wins)",
       "Missing or unreadable contract is a hard error",
-      "F3_DB_PATH resolves the database file only and never selects the data directory"
+      "F3_DB_PATH resolves the database file only and never selects the data directory",
+      "F3_DRY_RUN=1 (or --dry-run) skips ALL writes: no mkdir, no DB init, no self-check, no registration",
+      "Temp directory uses explicit fallback chain TMPDIR -> TEMP -> TMP; fail-closed if none set or none is an existing directory (no hard-coded /tmp)"
     ]
   },
   "sources": {

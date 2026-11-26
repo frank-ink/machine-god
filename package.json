@@ -1,6 +1,6 @@
 {
   "name": "machine-god",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Machine God - native Rust terminal interface for Claude Code",
   "keywords": [
     "cli",

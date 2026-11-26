@@ -47,6 +47,7 @@ Dry-Run (F3_DRY_RUN truthy: 1|true|yes|on, case-insensitive):
     no DB initialization, no fixture creation, no self-check,
     no registration).
   - Invalid F3_DRY_RUN values raise PathsError (fail-closed).
+  - Whitespace-only input is rejected (fail-closed), not mapped to '0'.
 
 Bundle layout (relative, host-independent):
   - resolve_plugin_root() returns the directory of this file.
@@ -91,12 +92,22 @@ _WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
 def _normalize_dry_run(raw: Optional[str]) -> str:
     """Normalizes F3_DRY_RUN to '1' (active) or '0' (inactive).
 
-    Contract rule (contract_env.json -> dry_run): only '1|true|yes|on'
-    (case-insensitive) activates dry-run. Only '0|false|no|off'
-    (case-insensitive) explicitly deactivates it. Any other value raises
-    PathsError (fail-closed: no default, no silent fallback).
+    Contract rule (contract_env.json -> dry_run):
+      - unset/empty          -> '0' (inactive)
+      - truthy (1|true|yes|on, case-insensitive) -> '1' (active)
+      - falsy (0|false|no|off, case-insensitive) -> '0' (inactive)
+      - whitespace-only      -> PathsError (fail-closed: no default)
+      - any other value      -> PathsError (fail-closed: no default, no silent fallback)
     """
-    lower = (raw or "").strip().lower()
+    if raw is None or raw == "":
+        return "0"
+    stripped = raw.strip()
+    if stripped == "":
+        raise PathsError(
+            "Invalid F3_DRY_RUN value: whitespace-only. Allowed: truthy=%s, falsy=%s"
+            % (sorted(_TRUTHY), sorted(_FALSY))
+        )
+    lower = stripped.lower()
     if lower in _TRUTHY:
         return "1"
     if lower in _FALSY:
@@ -468,15 +479,16 @@ module f3_paths {
     stateAuthority: resolve_db_path, resolve_data_dir, ensure_db
     path env -> _normalize_dry_run -> _is_dry_run -> resolve_db_path
     path env -> _normalize_dry_run -> _is_dry_run -> resolve_data_dir
-    invariant dry_run_fail_closed: F3_DRY_RUN in _TRUTHY union _FALSY else PathsError
+    invariant dry_run_fail_closed: F3_DRY_RUN in _TRUTHY union _FALSY union {unset, empty} else PathsError
     invariant dry_run_requires_f3_db_path: _is_dry_run() -> F3_DB_PATH != empty else PathsError
     invariant dry_run_isolated: _is_dry_run() -> ignores(FRANK3_DATA, FRANKENSTEIN3_ROOT, CLAUDE_PLUGIN_DATA, XDG_DATA_HOME, HOME, USERPROFILE)
     invariant ensure_db_no_write_in_dry_run: _is_dry_run() -> ensure_db() performs zero fs writes
+    invariant whitespace_rejected: raw.strip() == "" -> PathsError (never maps to '0')
   }
   invariant dry_run_normalization: _normalize_dry_run(raw) in {"1", "0"} else PathsError
   fn _normalize_dry_run(raw: Optional[str]) -> str { ... }
   fn _is_dry_run() -> bool { ... }
-  hypothesis H_DRY_RUN_FAIL_CLOSED: invalid F3_DRY_RUN raises PathsError
+  hypothesis H_DRY_RUN_MATRIX: 9 cases (unset, "", "1", "true", "0", "false", "maybe", "999", "  ") map to expected normalized values or PathsError
   promotion MEASURE -> FALSIFY -> MATCHED_ABLATION -> VERIFIED_OUTCOME -> CAUSAL_CREDIT -> BOUNDED_ADMISSION -> REENTRY_TEST -> CONTROL_INFLUENCE
 }
 """

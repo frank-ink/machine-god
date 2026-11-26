@@ -1088,44 +1088,65 @@ export async function reportHealth(
 }
 
 /* ------------------------------------------------------------------ *
- * GRID error code mapping (for Rust GridError -> TS error codes).
- * INVALID_PORT replaces the removed INVALID_ENDPOINT.
+ * GRID error code mapping (single registry).
+ *
+ * All six codes live here. grid-error.ts is deleted.
+ * mapGridErrorToCode is pure: same input, same output, no ambient
+ * environment, no wall clock, no network. Case-insensitive via toUpperCase.
+ * null / undefined / missing / non-string code -> UNKNOWN (fail closed).
  * ------------------------------------------------------------------ */
 
 export type GridErrorCode =
   | "INVALID_PORT"
-  | "INVALID_PATH"
+  | "INVALID_HOST"
   | "TRANSPORT_FAILED"
   | "SERIALIZATION_FAILED"
-  | "REJECTED";
+  | "REJECTED"
+  | "UNKNOWN";
 
-export function mapGridErrorToCode(error: Error & { code?: string }): GridErrorCode {
-  // Rust GridError variants (post-rename): InvalidPort, InvalidPath, Transport, Serialization, Rejected
-  // The Rust side serializes errors with a `code` field matching the variant name in SCREAMING_SNAKE_CASE.
-  const code = error.code?.toUpperCase();
+const KNOWN_GRID_ERROR_CODES: ReadonlySet<GridErrorCode> = new Set([
+  "INVALID_PORT",
+  "INVALID_HOST",
+  "TRANSPORT_FAILED",
+  "SERIALIZATION_FAILED",
+  "REJECTED",
+  "UNKNOWN",
+]);
+
+/**
+ * Map an arbitrary error-like value to a GridErrorCode.
+ *
+ * Handles null / undefined safely. Unrecognised codes map to UNKNOWN;
+ * no specific failure is ever invented.
+ */
+export function mapGridErrorToCode(
+  error: Error & { code?: string } | null | undefined,
+): GridErrorCode {
+  const rawCode =
+    error === null || error === undefined ? undefined : error.code;
+  if (typeof rawCode !== "string") {
+    return "UNKNOWN";
+  }
+  const code = rawCode.toUpperCase();
   switch (code) {
     case "INVALID_PORT":
       return "INVALID_PORT";
-    case "INVALID_PATH":
-      return "INVALID_PATH";
-    case "TRANSPORT":
+    case "INVALID_HOST":
+      return "INVALID_HOST";
+    case "TRANSPORT_FAILED":
       return "TRANSPORT_FAILED";
-    case "SERIALIZATION":
+    case "SERIALIZATION_FAILED":
       return "SERIALIZATION_FAILED";
     case "REJECTED":
       return "REJECTED";
     default:
-      // Fail closed: unknown codes map to TRANSPORT_FAILED for safety
-      return "TRANSPORT_FAILED";
+      return "UNKNOWN";
   }
 }
 
+/**
+ * Type guard for GridErrorCode. Narrows `string` to `GridErrorCode`.
+ */
 export function isGridErrorCode(code: string): code is GridErrorCode {
-  return [
-    "INVALID_PORT",
-    "INVALID_PATH",
-    "TRANSPORT_FAILED",
-    "SERIALIZATION_FAILED",
-    "REJECTED",
-  ].includes(code);
+  return KNOWN_GRID_ERROR_CODES.has(code as GridErrorCode);
 }

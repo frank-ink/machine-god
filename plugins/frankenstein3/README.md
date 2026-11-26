@@ -31,7 +31,7 @@ Data Root (without unified.db):
    directory itself if directory)
 4. `$CLAUDE_PLUGIN_DATA` - absolute path or `~`/`~/...`
 5. `$XDG_DATA_HOME/frankenstein3` - XDG Base Directory Specification
-6. `~/.local/share/frankenstein3` - XDG fallback via `$HOME`
+6. `$HOME/.local/share/frankenstein3` - XDG fallback via `$HOME`
 7. `%USERPROFILE%\AppData\Local\frankenstein3` - Windows fallback via `$USERPROFILE`
 
 DB Path (`unified.db`):
@@ -40,7 +40,7 @@ DB Path (`unified.db`):
 3. `$F3_DB_PATH` (file or directory; if directory, `unified.db` is appended)
 4. `$CLAUDE_PLUGIN_DATA/unified.db`
 5. `$XDG_DATA_HOME/frankenstein3/unified.db`
-6. `~/.local/share/frankenstein3/unified.db`
+6. `$HOME/.local/share/frankenstein3/unified.db`
 7. `%USERPROFILE%\AppData\Local\frankenstein3/unified.db`
 
 Paths are tilde-expanded (`$HOME`, otherwise `$USERPROFILE`), but not
@@ -116,7 +116,7 @@ deleted immediately and does not persist.
 
 The dry-run of the hooks (`digest`, `reentry`, `room_pulse`) writes
 exclusively to the fixture database passed via `F3_DB_PATH`, never to
-the real data directory (`~/.local/share/frankenstein3` or the actual
+the real data directory (`$HOME/.local/share/frankenstein3` or the actual
 file resolved via `$FRANK3_DATA` / `$CLAUDE_PLUGIN_DATA`).
 ### Behavior on a Fresh Machine
 On a machine without a Frankenstein3 data folder, `status.py` reports **UNKNOWN** for the data folder and database checks (or FAIL if the resolved path exists but is empty/unreadable). After the first `install.sh` (or manual `ensure_db()`), the status changes to PASS.
@@ -168,7 +168,7 @@ F3_DRY_RUN=on F3_DB_PATH="$PWD/fixture/unified.db" ./install.sh
    If all three are missing or none is an existing directory, the
    resolver aborts with an error (no fallback to `/tmp`).
 - It never writes to the real data directory
-   (`~/.local/share/frankenstein3` or `$FRANK3_DATA`/`$CLAUDE_PLUGIN_DATA`).
+   (`$HOME/.local/share/frankenstein3` or `$FRANK3_DATA`/`$CLAUDE_PLUGIN_DATA`).
 - **No directories are created, no database initialized, no self-check
    executed, no registration performed** - the installer exits immediately
    after path resolution.
@@ -229,7 +229,7 @@ The bundle contains no source-machine paths. The data directory is resolved anew
    ```bash
    ssh <targethost> 'cd "$HOME/apps/frankenstein3" && ./install.sh'
    ```
-   The installer resolves the data directory **on the target machine** using the same precedence (FRANK3_DATA -> FRANKENSTEIN3_ROOT -> F3_DB_PATH -> CLAUDE_PLUGIN_DATA -> `$XDG_DATA_HOME/frankenstein3` -> `~/.local/share/frankenstein3`).
+   The installer resolves the data directory **on the target machine** using the same precedence (FRANK3_DATA -> FRANKENSTEIN3_ROOT -> F3_DB_PATH -> CLAUDE_PLUGIN_DATA -> `$XDG_DATA_HOME/frankenstein3` -> `$HOME/.local/share/frankenstein3`).
 6. **Optional: custom data directory** (e.g., portable on a USB drive):
    ```bash
    FRANK3_DATA="$HOME/apps/f3-data" ./install.sh
@@ -298,7 +298,7 @@ The dry run documents the actual resolver behavior:
 6. Without dry-run mode, the normal resolution order applies:
    `FRANK3_DATA` -> `FRANKENSTEIN3_ROOT` -> `F3_DB_PATH` ->
    `CLAUDE_PLUGIN_DATA` -> `$XDG_DATA_HOME/frankenstein3` ->
-   `~/.local/share/frankenstein3`.
+   `$HOME/.local/share/frankenstein3`.
 
 ## Questions / Open Points (UNKNOWN)
 
@@ -333,8 +333,8 @@ The dry run documents the actual resolver behavior:
 | File / Folder | Reason |
 |---|---|
 | `unified.db` | Created fresh from `data/schema_empty.sql`, never shipped |
-| `~/.local/share/frankenstein3` | Created at runtime on target machine |
-| `~/.claude/star` | Never read or modified |
+| `$HOME/.local/share/frankenstein3` | Created at runtime on target machine |
+| `$HOME/.claude/star` | Never read or modified |
 | Legacy variables (`FRANKENSTEIN_DB`, `FRANKENSTEIN3_DB`, `F3_DB`, `UNIFIED_DB`) | Never set |
 | Hardcoded user paths or machine names | Violates portability, not in bundle |
 | Network calls | Plugin operates without network |

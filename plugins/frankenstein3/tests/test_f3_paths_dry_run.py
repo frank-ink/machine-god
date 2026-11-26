@@ -6,8 +6,12 @@ Tests verify:
 - Dry-run requires F3_DB_PATH env var
 - Dry-run ignores FRANK3_DATA, FRANKENSTEIN3_ROOT, CLAUDE_PLUGIN_DATA env vars
 - Dry-run never writes to real data directory
-- Fail-closed on typo values (maybe/false/0 treated as false)
+- Fail-closed on typo values (maybe/999 raise PathsError)
+- Valid falsy values (0, false, no, off) normalize to '0' (inactive)
+- Unset/empty normalize to '0' (inactive)
+- Whitespace-only input raises PathsError (fail-closed)
 - Dry-run ensure_db_with_env performs zero filesystem writes (no fixture DB created)
+- Hermetic matrix test covering 9 cases: unset, "", "1", "true", "0", "false", "maybe", "999", "  "
 """
 
 import os
@@ -19,16 +23,81 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from f3_paths import (
-    _resolve_db_path,
+    _normalize_dry_run,
     _is_dry_run,
+    _resolve_db_path,
     _get_data_root,
     ensure_db_with_env,
     PathsError,
 )
 
 
+class TestNormalizeDryRunMatrix:
+    """Hermetic matrix test for _normalize_dry_run covering 9 cases."""
+
+    def test_unset_returns_zero(self):
+        """unset (None) -> '0' (inactive)."""
+        assert _normalize_dry_run(None) == "0"
+
+    def test_empty_string_returns_zero(self):
+        """empty string -> '0' (inactive)."""
+        assert _normalize_dry_run("") == "0"
+
+    def test_one_returns_one(self):
+        """'1' -> '1' (active)."""
+        assert _normalize_dry_run("1") == "1"
+
+    def test_true_returns_one(self):
+        """'true' -> '1' (active)."""
+        assert _normalize_dry_run("true") == "1"
+
+    def test_zero_returns_zero(self):
+        """'0' -> '0' (inactive)."""
+        assert _normalize_dry_run("0") == "0"
+
+    def test_false_returns_zero(self):
+        """'false' -> '0' (inactive)."""
+        assert _normalize_dry_run("false") == "0"
+
+    def test_maybe_raises_paths_error(self):
+        """'maybe' -> PathsError (invalid)."""
+        with pytest.raises(PathsError, match="Invalid F3_DRY_RUN value"):
+            _normalize_dry_run("maybe")
+
+    def test_999_raises_paths_error(self):
+        """'999' -> PathsError (invalid)."""
+        with pytest.raises(PathsError, match="Invalid F3_DRY_RUN value"):
+            _normalize_dry_run("999")
+
+    def test_whitespace_only_raises_paths_error(self):
+        """whitespace-only -> PathsError (fail-closed, not mapped to '0')."""
+        with pytest.raises(PathsError, match="whitespace-only"):
+            _normalize_dry_run("  ")
+        with pytest.raises(PathsError, match="whitespace-only"):
+            _normalize_dry_run("\t\n")
+        with pytest.raises(PathsError, match="whitespace-only"):
+            _normalize_dry_run("   \t  \n  ")
+
+    def test_case_insensitive_truthy(self):
+        """Truth values are case-insensitive."""
+        for val in ["TRUE", "True", "YES", "yes", "ON", "on"]:
+            assert _normalize_dry_run(val) == "1", f"Value '{val}' should normalize to '1'"
+
+    def test_case_insensitive_falsy(self):
+        """Falsy values are case-insensitive."""
+        for val in ["FALSE", "False", "NO", "no", "OFF", "off"]:
+            assert _normalize_dry_run(val) == "0", f"Value '{val}' should normalize to '0'"
+
+    def test_whitespace_around_values_is_stripped(self):
+        """Whitespace around valid values is stripped."""
+        assert _normalize_dry_run("  true  ") == "1"
+        assert _normalize_dry_run("\tfalse\n") == "0"
+        assert _normalize_dry_run("  yes  ") == "1"
+        assert _normalize_dry_run("  no  ") == "0"
+
+
 class TestDryRunResolver:
-    """Tests for dry-run behavior in f3_paths resolver."""
+    """Tests for dry-run behavior in f3_paths resolver via _is_dry_run()."""
 
     def setup_method(self):
         """Save original environment."""
@@ -108,49 +177,89 @@ class TestDryRunResolver:
             assert result == dry_run_db.resolve()
             assert list(real_data_dir.iterdir()) == []
 
-    def test_fail_closed_on_typo_maybe(self):
-        """Typo value 'maybe' does NOT activate dry-run (fail-closed)."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            real_db = Path(tmpdir) / "real.db"
-            real_db.write_text("real")
-
-            os.environ['F3_DRY_RUN'] = 'maybe'
-            os.environ['F3_DB_PATH'] = str(real_db)
-            os.environ.pop('FRANK3_DATA', None)
-
-            assert _is_dry_run() is False
-
-    def test_fail_closed_on_typo_false_string(self):
-        """String 'false' does NOT activate dry-run (fail-closed)."""
-        os.environ['F3_DRY_RUN'] = 'false'
+    def test_unset_dry_run_is_inactive(self):
+        """Unset F3_DRY_RUN -> inactive (False)."""
+        os.environ.pop('F3_DRY_RUN', None)
         os.environ.pop('F3_DB_PATH', None)
         os.environ.pop('FRANK3_DATA', None)
 
         assert _is_dry_run() is False
 
-    def test_fail_closed_on_typo_zero(self):
-        """String '0' does NOT activate dry-run (fail-closed)."""
-        os.environ['F3_DRY_RUN'] = '0'
-        os.environ.pop('F3_DB_PATH', None)
-        os.environ.pop('FRANK3_DATA', None)
-
-        assert _is_dry_run() is False
-
-    def test_fail_closed_on_empty_string(self):
-        """Empty string does NOT activate dry-run (fail-closed)."""
+    def test_empty_dry_run_is_inactive(self):
+        """Empty F3_DRY_RUN -> inactive (False)."""
         os.environ['F3_DRY_RUN'] = ''
         os.environ.pop('F3_DB_PATH', None)
         os.environ.pop('FRANK3_DATA', None)
 
         assert _is_dry_run() is False
 
-    def test_fail_closed_on_random_string(self):
-        """Random string does NOT activate dry-run (fail-closed)."""
-        os.environ['F3_DRY_RUN'] = 'yes_please'
+    def test_false_string_is_inactive(self):
+        """'false' -> inactive (False)."""
+        os.environ['F3_DRY_RUN'] = 'false'
         os.environ.pop('F3_DB_PATH', None)
         os.environ.pop('FRANK3_DATA', None)
 
         assert _is_dry_run() is False
+
+    def test_zero_string_is_inactive(self):
+        """'0' -> inactive (False)."""
+        os.environ['F3_DRY_RUN'] = '0'
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        assert _is_dry_run() is False
+
+    def test_no_string_is_inactive(self):
+        """'no' -> inactive (False)."""
+        os.environ['F3_DRY_RUN'] = 'no'
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        assert _is_dry_run() is False
+
+    def test_off_string_is_inactive(self):
+        """'off' -> inactive (False)."""
+        os.environ['F3_DRY_RUN'] = 'off'
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        assert _is_dry_run() is False
+
+    def test_maybe_raises_paths_error(self):
+        """'maybe' -> PathsError (invalid)."""
+        os.environ['F3_DRY_RUN'] = 'maybe'
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        with pytest.raises(PathsError, match="Invalid F3_DRY_RUN value"):
+            _is_dry_run()
+
+    def test_999_raises_paths_error(self):
+        """'999' -> PathsError (invalid)."""
+        os.environ['F3_DRY_RUN'] = '999'
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        with pytest.raises(PathsError, match="Invalid F3_DRY_RUN value"):
+            _is_dry_run()
+
+    def test_yes_please_raises_paths_error(self):
+        """'yes_please' -> PathsError (invalid)."""
+        os.environ['F3_DRY_RUN'] = 'yes_please'
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        with pytest.raises(PathsError, match="Invalid F3_DRY_RUN value"):
+            _is_dry_run()
+
+    def test_whitespace_only_raises_paths_error(self):
+        """whitespace-only F3_DRY_RUN -> PathsError (fail-closed)."""
+        os.environ['F3_DRY_RUN'] = '  '
+        os.environ.pop('F3_DB_PATH', None)
+        os.environ.pop('FRANK3_DATA', None)
+
+        with pytest.raises(PathsError, match="whitespace-only"):
+            _is_dry_run()
 
     def test_dry_run_true_activates(self):
         """Explicit 'true' activates dry-run."""
@@ -170,7 +279,7 @@ class TestDryRunResolver:
 
     def test_dry_run_case_insensitive(self):
         """Dry-run activation is case-insensitive for valid values."""
-        for val in ['TRUE', 'True', '1', 'YES', 'yes']:
+        for val in ['TRUE', 'True', '1', 'YES', 'yes', 'ON', 'on']:
             os.environ['F3_DRY_RUN'] = val
             os.environ.pop('F3_DB_PATH', None)
             os.environ.pop('FRANK3_DATA', None)
