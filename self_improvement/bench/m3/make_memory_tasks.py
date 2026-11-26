@@ -2,7 +2,9 @@
 
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
+import base64
 import hashlib
+import zlib
 import json
 import os
 from pathlib import Path
@@ -17,9 +19,9 @@ from m3_run import REPO, data_dir
 TOKEN = re.compile(r"(?<![\w.])(?:[0-9]+\.[0-9]+|[0-9a-fA-F]{7,16})(?!\w|\.[0-9])")
 
 
-def build_tasks(database, now):
+def build_tasks(database, now, n=15, seed=None, exclude=()):
     cutoff = (now - timedelta(days=2)).timestamp()
-    candidates = {}
+    candidates, rows_by = {}, {}
     with closing(sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         rows = db.execute(
             """SELECT value FROM durable_memory
@@ -39,14 +41,16 @@ def build_tasks(database, now):
             description = re.sub(re.escape(token), "", was, flags=re.IGNORECASE).strip()
             if description:
                 candidates.setdefault(description, set()).add(token)
+                rows_by[description] = value
 
     eligible = sorted((description, next(iter(tokens)))
-                      for description, tokens in candidates.items() if len(tokens) == 1)
-    if len(eligible) < 15:
-        raise ValueError(f"Need 15 eligible memory actions, found {len(eligible)}")
+                      for description, tokens in candidates.items() if len(tokens) == 1
+                      and memory_task(description, "0")["id"] not in exclude)
+    if len(eligible) < n:
+        raise ValueError(f"Need {n} eligible memory actions, found {len(eligible)}")
     week = now.strftime("%G-W%V")
-    return [memory_task(description, token)
-            for description, token in random.Random(week).sample(eligible, 15)]
+    return [dict(memory_task(description, token), oracle=rows_by[description])   # oracle: the stored row, M3-002 oracle arms only
+            for description, token in random.Random(seed or week).sample(eligible, n)]
 
 
 def memory_task(description, token):
@@ -75,18 +79,27 @@ def write_tasks(tasks, output):
     fd, temporary = tempfile.mkstemp(dir=output.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            for task in tasks:
-                stream.write(json.dumps(task, ensure_ascii=False) + "\n")
+            for task in tasks:   # obfuscated so a plain-text search cannot find descriptions or answers (DESIGN 21a)
+                stream.write("z:" + base64.b64encode(zlib.compress(json.dumps(task).encode())).decode() + "\n")
         os.replace(temporary, output)
     finally:
         Path(temporary).unlink(missing_ok=True)
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--n", type=int, default=15)
+    parser.add_argument("--seed")
+    parser.add_argument("--out", default="tasks_memory.jsonl", help="file name inside the private data dir")
+    parser.add_argument("--exclude", default="", help="comma list of task files in the private data dir whose tasks are skipped")
+    args = parser.parse_args()
+    from m3_run import read_jsonl
+    exclude = {task["id"] for name in filter(None, args.exclude.split(",")) for task in read_jsonl(data_dir() / Path(name).name)}
     database = Path.home() / ".local/share/agentzero/unified.db"
-    output = data_dir() / "tasks_memory.jsonl"
+    output = data_dir() / Path(args.out).name
     try:
-        write_tasks(build_tasks(database, datetime.now(timezone.utc)), output)
+        write_tasks(build_tasks(database, datetime.now(timezone.utc), args.n, args.seed, exclude), output)
     except (OSError, sqlite3.Error, ValueError) as error:
         raise SystemExit(str(error)) from None
     print(output)

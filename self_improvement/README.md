@@ -15,8 +15,9 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
 - `mg_watch.py tick` (same cycle): re-measures every adoption after its due time on live data and runs its rollback on FAIL.
 - `mg_fresh.py`: once per ISO week (inside the cycle) rebuilds 60 known-item probes from the last 30 days and measures live.
 - `mg_report.py`: the loop's own metrics (trials/week, acceptance, revert rate, held-out gain per compute hour).
-- `bench/m3/`: M3 task benchmark (15 code tasks here; 15 memory tasks are generated privately), run with organs on/off;
-  M8 = Brier score of the free pool's p(success) stated before each run.
+- `bench/m3/`: M3 task benchmark (15 code tasks here; memory tasks are generated privately per preregistration), arms
+  on/off, oracle_raw/oracle_struct, vorstufe (pre-stage entity) and vorstufe2 (world model only); M8 = Brier score of the free
+  pool's p(success) stated before each run.
 - Unit files: `deploy/`. Tests: `python3 -m pytest -q tests/ bench/m3/tests`.
 
 ## What it has measured (details and every number in DESIGN.md, sections 14-18d)
@@ -27,6 +28,9 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
 
 ## First baselines of the other loops (DESIGN 19b, 19e)
 - M3: memory on vs off, 30 tasks: real_task_memory_delta +0.033 [0.000, 0.100]; code 13/15 both arms, memory tasks 1/15 vs 0/15.
+- M3 memory, later runs (DESIGN 21b, 22b; 60 fresh private tasks each): the exact stored row as a labelled record lifts
+  pass from 0.15 to 0.583 (oracle_struct), as raw context only to 0.25; the Vorstufe pre-stage entity (retrieval coupled with
+  reflection) reaches 0.483 vs 0.083 for the plain stack, +0.400 [0.283, 0.533]; it chose the task's own row in 58/60.
 - M8: Brier 0.325 (organs on) / 0.224 (off); the predictor is overconfident about memory.
 - Fresh set week 48: live hit@1 0.833, hit@5 0.967, MRR@5 0.882.
 - M4: the 60-move run (bare 1/12, OMEGA 2/12) is withdrawn as a harness verdict (DESIGN 19e): the cap is below the 80-159 moves

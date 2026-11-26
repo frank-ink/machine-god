@@ -148,7 +148,7 @@ def test_run_resume_and_summary(tmp_path, monkeypatch):
         assert row["passed"] is on
         assert row["agent_rc"] == (0 if on else 9)
         assert row["wall_s"] >= 0
-        directory = m3_run.cache_dir() / "trial" / f"{row['task_id']}-{row['arm']}"
+        directory = m3_run.data_dir() / "trial-work" / f"{row['task_id']}-{row['arm']}"
         assert (directory / "arm").read_text() == ("on" if on else "0")
         assert not (directory / "check.py").exists()
     assert not (interrupted / "stale").exists()
@@ -180,3 +180,81 @@ def test_code_suite_shape():
     assert len({task["id"] for task in CODE_TASKS}) == 15
     for task in CODE_TASKS:
         assert task.keys() == {"id", "prompt", "seed", "check"}
+
+
+def test_oracle_arms_pass_the_record_outside_the_workdir(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("FRANK_AGENT_ORGANS", raising=False)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    monkeypatch.setenv("PATH", str(fake_bin) + ":" + m3_run.os.environ["PATH"])
+    monkeypatch.setenv("M3_AGENT", "fake-agent")
+    monkeypatch.setenv("M3_ASK", "fake-ask")
+    agent = fake_bin / "fake-agent"
+    agent.write_text('#!/bin/bash\nset -eu\n[[ -z "${FRANK_AGENT_ORACLE_FILE-}" ]]\n'
+                     'printf "%s" "$FRANK_AGENT_ORACLE_MODE" > mode\n'
+                     'ls -A .. | grep -v "^$(basename "$PWD")$" > siblings || true\n'
+                     'printf "%s" "$FRANK_AGENT_ORACLE_TEXT" | cut -d"|" -f3 | tr -d " \\n" > answer.txt\n', encoding="utf-8")
+    agent.chmod(0o700)
+    (fake_bin / "fake-ask").write_text("echo 0.5\n", encoding="utf-8")
+    task = {"id": "memory-x", "kind": "memory", "prompt": "Recall", "seed": {}, "oracle": "Action x | result | 0.4242",
+            "check": "from pathlib import Path\nraise SystemExit(Path('answer.txt').read_bytes() != b'0.4242')\n"}
+    for arm, mode in (("oracle_raw", "raw"), ("oracle_struct", "struct")):
+        row = m3_run.run_pair("t", task, arm)
+        assert row["passed"] is True and row["arm"] == arm
+        done = m3_run.data_dir() / "t-work" / f"memory-x-{arm}"
+        assert (done / "mode").read_text() == mode
+        assert (done / "siblings").read_text() == ""          # earlier arm's directory is gone from the run directory
+    assert list((m3_run.cache_dir() / "t").iterdir()) == []
+
+
+def test_seal_agent_logs_moves_matching_run_logs(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    runs = tmp_path / "fa" / "runs"
+    runs.mkdir(parents=True)
+    monkeypatch.setenv("FRANK_AGENT_DIR", str(tmp_path / "fa"))
+    task = {"prompt": "Recall this exact thing please"}
+    (runs / "a.md").write_text("## Task\nRecall this exact thing please\n## Answer\n0.4242")
+    (runs / "b.md").write_text("## Task\nother\n")
+    m3_run.seal_agent_logs("r", task, 0)
+    assert not (runs / "a.md").exists() and (runs / "b.md").exists()
+    assert "0.4242" not in (m3_run.data_dir() / "r-agentlogs" / "a.md.z").read_text()
+
+
+def test_vorstufe_arms_set_the_mode(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("FRANK_AGENT_ORGANS", raising=False)
+    monkeypatch.delenv("FRANK_AGENT_VORSTUFE", raising=False)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    monkeypatch.setenv("PATH", str(fake_bin) + ":" + m3_run.os.environ["PATH"])
+    monkeypatch.setenv("M3_AGENT", "fake-agent")
+    monkeypatch.setenv("M3_ASK", "fake-ask")
+    agent = fake_bin / "fake-agent"
+    agent.write_text('#!/bin/bash\nprintf "%s" "${FRANK_AGENT_VORSTUFE-unset}" > mode\n', encoding="utf-8")
+    agent.chmod(0o700)
+    (fake_bin / "fake-ask").write_text("echo 0.5\n", encoding="utf-8")
+    task = {"id": "memory-v", "kind": "memory", "prompt": "Recall", "seed": {}, "oracle": "x",
+            "check": "raise SystemExit(0)\n"}
+    for arm, mode in (("vorstufe", "1"), ("vorstufe2", "2"), ("on", "unset")):
+        m3_run.run_pair("t", task, arm)
+        assert (m3_run.data_dir() / "t-work" / f"memory-v-{arm}" / "mode").read_text() == mode
+    assert ("vorstufe2", "on") in m3_run.CONTRASTS and "vorstufe2" in m3_run.ARMS
+
+
+def test_run_command_timeout_kills_the_whole_tree(tmp_path):
+    pidfile = tmp_path / "child.pid"
+    rc = m3_run.run_command(["bash", "-c", f"sleep 30 & echo $! > {pidfile}; wait"], tmp_path, timeout=1)
+    assert rc == 124
+    child = int(pidfile.read_text())
+    m3_run.time.sleep(0.2)
+    try:
+        m3_run.os.kill(child, 0)
+        alive = Path(f"/proc/{child}/stat").read_text().split()[2] != "Z"
+    except ProcessLookupError:
+        alive = False
+    assert not alive
+
+
+def test_run_command_missing_binary(tmp_path):
+    assert m3_run.run_command(["/nonexistent/agent"], tmp_path, timeout=1) == 127

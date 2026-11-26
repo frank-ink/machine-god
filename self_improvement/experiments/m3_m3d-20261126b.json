@@ -1,0 +1,74 @@
+{
+  "by_arm": {
+    "on": {
+      "n": 60,
+      "pass_rate": 0.08333333333333333,
+      "brier_score": 0.5647716666666667,
+      "mean_wall_s": 34.51131531548405
+    },
+    "off": {
+      "n": 0,
+      "pass_rate": null,
+      "brier_score": null,
+      "mean_wall_s": null
+    },
+    "vorstufe": {
+      "n": 60,
+      "pass_rate": 0.48333333333333334,
+      "brier_score": 0.36391999999999997,
+      "mean_wall_s": 147.36357022848338
+    }
+  },
+  "by_kind": {
+    "code": {
+      "on": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      }
+    },
+    "memory": {
+      "on": {
+        "n": 60,
+        "pass_rate": 0.08333333333333333,
+        "brier_score": 0.5647716666666667,
+        "mean_wall_s": 34.51131531548405
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe": {
+        "n": 60,
+        "pass_rate": 0.48333333333333334,
+        "brier_score": 0.36391999999999997,
+        "mean_wall_s": 147.36357022848338
+      }
+    }
+  },
+  "real_task_memory_delta": null,
+  "contrasts": {
+    "on-off": null,
+    "vorstufe-on": {
+      "delta": 0.4,
+      "ci_low": 0.2833333333333333,
+      "ci_high": 0.5333333333333333,
+      "n_items": 60
+    }
+  }
+}

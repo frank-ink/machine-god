@@ -967,9 +967,21 @@ Immortal pointed out that the arc repo's numbers say something else. Checked aga
   Metric and rule unchanged from 19a (levels out of 12; harness helps only if better on at least 3 of 4 games; cost must be 0).
   The full FranKenstein stack of round 1 was played interactively and is not automated here; it is not part of M4-002.
 
+### 19f. RESULT MG-M4-002 (200 moves, rules 19a/19e, 2026-11-26 18:22-19:59)
+- Bare (nemotron free): a 0 (dead at 99), b 0 (200 moves, alive), c 1 (dead at 164), d 1 (dead at 38) = **2/12**, no game won.
+- OMEGA harness, same model: a 0 (ABORTED at move 40 by an infrastructure error, omega_vault exec failed, not a game outcome),
+  b 0 (dead at 141), c **3, game won in 80 moves**, d 1 (dead at 44) = **4/12**, one game won.
+- Harness better on 1 game (c), equal on b and d, a not comparable. Frozen rule (better on >=3 of 4): not met. Paid cost $0 both arms.
+- Reading: with enough moves the harness doubles the levels (4 vs 2) and is the only arm that wins a game, which agrees with the arc
+  repo's runs; n = 4 games is too small for the rule to pass, and 19c's 60-move cap had hidden exactly this.
+- Declared deviation: harness game a alone is rerun once because of the infra abort (same seed, same settings); the result is
+  appended here and replaces nothing above.
+- Rerun of harness game a (same seed/settings): dead at move 94, 0 levels (bare: dead at 99, 0). Final: bare **2/12**, harness
+  **4/12**; harness better on c, equal on a, b and d. Frozen rule (>=3 of 4) not met; harness the only arm that won a game.
+
 ### 19d. v1 status against section 19 (2026-11-26 ~16:45)
 1 DONE (17t, 18e) · 2 DONE (mg_fresh.py, weekly inside the cycle; a separate timer was refused by the permission layer) · 3 DONE
-(mg_watch.py; MG-RL2-004 due 2026-11-27 14:14, soft rollback) · 4 DONE (mg_report.py) · 5 DONE (19b) · 6 DONE (19b) · 7 REOPENED (19c withdrawn, 19e; MG-M4-002 at 200 moves running) ·
+(mg_watch.py; MG-RL2-004 due 2026-11-27 14:14, soft rollback) · 4 DONE (mg_report.py) · 5 DONE (19b) · 6 DONE (19b) · 7 DONE again (19f: MG-M4-002 at 200 moves) ·
 8 DONE (52 tests; PR #6). Every loop now has a measured baseline. Only Loop 1 also has an automatic proposer, and it has two templates;
 Loops 2-4 are measured but have no proposer yet. That is v2.
 
@@ -996,3 +1008,146 @@ First outside review since loop 4 (2026-11-25 06:01). Sent: aggregate v1 numbers
 - **Laptop's own GitHub search, added (ChatGPT's list missed them):** LongMemEval (xiaowu0162, 1245 stars, MIT), a ready benchmark for
   long-term memory and the natural set for the four-arm M3; agent-memory-benchmark (vectorize-io, 172); reef (Human-Agent-Society,
   7621, Apache-2.0) and HyperAgents (facebookresearch, 2933) for self-improving agents. Not yet read or run: metadata only.
+
+## 21. PREREGISTRATION MG-M3-002 four-arm memory test (frozen before any code or run, 2026-11-26 ~20:00)
+Question (loop 5, DESIGN 20): when memory tasks fail, is it retrieval or the use of what was retrieved?
+- Tasks: 60 private memory tasks drawn with seed "m3b-2026-W48" from the 305 eligible recorded actions older than 2 days (same
+  generator and checker as 19b: recover one exact token from a past action into answer.txt). Stored outside the repo, mode 600.
+- Arms, same model chain and frank-agent for all: **off** (FRANK_AGENT_ORGANS=0) · **on** (normal organs and retrieval) ·
+  **oracle_raw** (on, plus the task's own stored row placed first in the memory block, raw, the way a perfect retrieval hit would
+  arrive) · **oracle_struct** (on, plus the same row as a labelled block Action / Ergebnis / Beleg right before the task).
+- Metric: pass rate per arm; paired bootstrap (n=10000, seed 0) of each arm against off, and oracle_raw against on, and
+  oracle_struct against oracle_raw.
+- Reading, fixed now: on ~ off and oracle_raw >> on means **retrieval** fails; oracle_raw ~ on and oracle_struct >> oracle_raw means
+  **context use** fails; both oracle arms low means the **agent/model** fails even with the answer in front of it. A difference
+  counts only if its CI lower bound is above 0. One look, no reruns of failed tasks.
+- M8 is recorded too (p before each run), not a gate here.
+
+### 21a. MG-M3-002 first run (m3b-20261126) INVALID: answer leak; fixes; rerun on fresh tasks (2026-11-26 ~21:00)
+- Raw numbers, NOT a result: off 18/60, on 3/60, oracle_raw 12/60, oracle_struct 28/60. The off arm took 139 s per task (others ~39 s)
+  and one off-arm answer says it took the token "from the oracle record".
+- Leak paths found (every arm's agent can read the whole machine as the same user): oracle record files and other arms' answer.txt in
+  sibling directories of the same run; plain-text private task files (descriptions + checks); frank-agent's own plain-text run logs
+  (task + answer). Measured clean: memory rows written during the run link no description to a token (0 of 39 new rows).
+- Also found: FranKenstein's oracle edit to frank_agent.py named a variable `record`, shadowing the function `record()`. From ~19:45
+  to ~20:55 every frank-agent run (all callers, not only M3) crashed at the end before writing to unified.db; files were still
+  written. Fixed (renamed), canary run rc=0, db=ok.
+- Fixes: oracle passed only by environment and stripped before the agent's shell (a hook also blocks env reads); anonymous work
+  directory moved out of the run directory after each check; arm-major job order; private task files obfuscated (zlib+base64);
+  frank-agent run logs of each job sealed into the private archive; old run directories packed away.
+- Rerun = same arms, metric and reading as 21, on 60 FRESH tasks (seed "m3c-2026-W48", excluding all 75 tasks used before), run id
+  m3c-20261126. Declared deviation from 21: new task sample, because the first sample's answers were exposed.
+
+## 21b. RESULT MG-M3-002 (run m3c-20261126, 60 fresh private memory tasks x 4 arms, one look, 2026-11-26 ~22:35)
+| arm | pass | rate | mean wall s | Brier (M8) |
+|---|---|---|---|---|
+| off | 5/60 | 0.083 | 191 | 0.249 |
+| on | 9/60 | 0.150 | 45 | 0.589 |
+| oracle_raw | 15/60 | 0.250 | 44 | 0.504 |
+| oracle_struct | 35/60 | 0.583 | 49 | 0.535 |
+
+Paired bootstrap (n=10000, seed 0): on-off +0.067 [-0.050, 0.183] · oracle_raw-off +0.167 [0.050, 0.283] · oracle_struct-off
++0.500 [0.367, 0.633] · oracle_raw-on +0.100 [0.000, 0.200] · oracle_struct-oracle_raw +0.333 [0.217, 0.450].
+- Reading by the frozen rule of 21: oracle_raw-on has CI lower bound 0.000, not above 0, so oracle_raw ~ on; oracle_struct >>
+  oracle_raw. Verdict: **context use fails**. Handing the agent the exact stored row the way retrieval delivers it lifts success
+  only from 15% to 25%; the same row as a labelled record right before the task lifts it to 58%.
+- Diagnostic (infra check during the run, not a reading): a dry-run canary showed the oracle row does reach the prompt and the
+  redactor keeps the token; in failed oracle_raw runs the agent wrote a hex string from a different memory row it found with its
+  own recall tool (the same wrong string 9 times across the sealed logs).
+- Even oracle_struct fails 42%: part of the failure is the agent/model itself. The memory benefit of the plain stack (on-off) is
+  still not shown. M8: the predictor stays overconfident with organs on.
+- Consequence: the next lever is packaging and selection before the thinker sees context, not a better index. Prereg 22.
+
+## 22. PREREGISTRATION MG-M3-003 Vorstufe entity (frozen before the run, 2026-11-26 ~22:40)
+Immortal 2026-11-26: retrieval must be coupled with reflection; a pre-stage like EntityOS/Agent Zero had (mistral_prestage),
+now on NVIDIA free models, that is itself an entity (own DB, knows what it is and its job, all organs, learns from mistakes),
+takes cognitive load off the thinker (Machine God), holds the possibility space of hypotheses and counter-hypotheses, chooses,
+names the tools needed (Needle), and hands over; the thinker reflects and decides and may still query the retrieval entity.
+- Build (live stack, outside this repo): `~/.claude/star/vorraum/vorstufe.py` (+ 6 offline tests), wired into frank-agent by
+  `FRANK_AGENT_VORSTUFE=1`. Per task: senses (udb recall lane, Titan organs incl. GRID10/GWT/rule loop/body/goals, state line,
+  own lessons) -> Needle (mechanical route + tool hint, port of NeedleRouter) -> NVIDIA envelope (nemotron-3-ultra-550b, 5
+  rotating keys): intent, hypotheses AND counter-hypotheses with refs, max 3 chosen items (full stored text), tool pick from the
+  real tool list, known/unknown, up to 3 self-queries -> second retrieval -> forced final reflection round -> package placed
+  before TASK, replacing the raw organ dump. The thinker may send it back once (`NEED_BETTER_PACKAGE:`), one revision, no third
+  round. Own DB `~/.local/share/vorstufe/vorstufe.db` (mode 600; selbst/turns/lehren); every package's outcome as frank-agent
+  sees it (rc, send-back, error) is fed back; a failure triggers a self-review call that stores one rule with evidence; the most
+  related lessons go into the next envelope. The checker result is never fed back.
+- Tasks: 60 fresh private memory tasks, seed "m3d-2026-W48", excluding all 128 distinct tasks used before (m3 15, m3b 60, m3c 60; 7 repeat across the first two); same
+  generator and checker. Arms: **on** and **vorstufe**, same model chain otherwise. Arm-major order, 4 workers.
+- H0: pass(vorstufe) - pass(on) <= 0. Rejected only if the paired-bootstrap CI lower bound (n=10000, seed 0) is above 0.
+  One look, no reruns. Recorded too: pre-stage ms and rounds, invented ids, whether the task's own row was among the chosen items
+  (private join, aggregate only), lessons written during the run, M8.
+- Reference only (other tasks, not a contrast): oracle_struct 0.583 from 21b is the packaging ceiling seen so far.
+- Declared infra deviation before any result (2026-11-26 ~22:55): the first start m3d-20261126 was stopped with 0 completed rows
+  (file set aside unread as aborted-m3d-20261126.jsonl) because a standalone test showed the reflection round could fail with
+  truncated JSON on all keys, which would silently drop the pre-stage on exactly the tasks with self-queries. Fix: token cap 3000,
+  at most 2 no-JSON attempts per prompt, reflection failure keeps the round-1 envelope (7 offline tests). Same tasks, arms, H0 and
+  reading; run id m3d-20261126b.
+
+## 22b. RESULT MG-M3-003 (run m3d-20261126b, 60 fresh private memory tasks x 2 arms, one look, 2026-11-27 ~00:10)
+| arm | pass | rate | mean wall s | Brier (M8) |
+|---|---|---|---|---|
+| on | 5/60 | 0.083 | 35 | 0.565 |
+| vorstufe | 29/60 | 0.483 | 147 | 0.364 |
+
+Paired bootstrap (n=10000, seed 0): vorstufe-on +0.400 [0.283, 0.533].
+- Reading by the frozen rule of 22: the CI lower bound 0.283 is above 0, so **H0 is rejected**: the Vorstufe entity (retrieval
+  coupled with reflection, hypotheses and counter-hypotheses, chosen items as full stored text) beats the plain stack on these
+  tasks. The rate (0.483) comes close to the oracle_struct packaging ceiling seen in 21b (0.583, other tasks, reference only).
+- Recorded diagnostics (aggregate; the row join is private):
+  - The pre-stage took median 93 s (mean 107 s, max 304 s); it is most of the extra wall time.
+  - Rounds: 58 reflection rounds, 1 failed reflection that kept round 1, 1 run with round 1 only. Self-queries in 59 of 60.
+    Model: nemotron-3-ultra-550b in all 60.
+  - Invented ids: 0. Chosen items per task: 1 item in 49, 2 in 7, 3 in 2, none in 2.
+  - The task's own stored row was chosen in 58 of 60 (1 was retrieved but not chosen, 1 was not retrieved). Of those 58 the
+    thinker passed 29; `on` passed 5 of the same 58.
+  - Lessons written: 0. frank-agent saw rc 0 and no send-back in all 60, and by design the checker result is never fed back,
+    so the entity had no failure to learn from. Its learning loop is untested by this run.
+  - M8: the predictor is less overconfident with the Vorstufe (0.364) than with `on` (0.565).
+- Consequence: selection is now nearly solved (58/60). Half the failures happen after the right row is in front of the
+  thinker, so the next lever is how the thinker gets and uses it. Prereg 23 (the world model as the thinker's only view,
+  strong model through OMNI-BRAIN) tests the full stack; the learning loop needs an outcome signal other than the checker.
+
+## 23. PREREGISTRATION MG-M3-004 full stack: Vorstufe-only thinker prompt, GRID/TITAN-MX/EntityOS through the Vorstufe, OMNI-BRAIN model choice (frozen before the run, 2026-11-27)
+Immortal 2026-11-26 (after 22 was frozen, built while MG-M3-003 ran, applied only after its summary):
+"the Machine God gets ONLY the Vorstufe's prompt and runs on a strong NVIDIA model"; "GRID and entity OS directly integrated";
+"even TITAN-MX is processed by the Vorstufe"; "OMNI-BRAIN directly connected to the Vorstufe and the Machine God, always the
+model that fits the task, fully wired".
+- Build (live stack, outside this repo; staged and tested before applying, scratch `apply_all.sh`):
+  - GRID sense (`vorstufe_sinne.py`): the task runs through the Titan pipeline under the Vorstufe's own session id, so the 10
+    cells compete over THIS task; the Vorstufe gets that session's own fresh GRID row (winner cell, its organ focus, max score vs
+    threshold, ABSTAIN, top cell scores, frame broadcast). Never another session's row.
+  - TITAN-MX through the Vorstufe: the same run forces the largest TITAN-MX profile (inert hook seam `TC_PROFILE`, set only by
+    the Vorstufe) and passes the whole compile (budget 1400, room/Sight/money filter kept) to the Vorstufe, which condenses it.
+    Measured on one task: profile klein 1320 chars, 14/18 sections dropped; gross 3259 chars, 4/17 dropped.
+  - EntityOS sense: the EntityOS HyperpositionProjector (copied, one change: sorted words, deterministic subject) over the
+    candidates names subjects with several different stored values; ids/hashes/generic words are stripped before grouping.
+    The EntityOS runtime is not on this machine and its knowledge store is empty; that sense reads nothing today.
+  - Mode 2 (`FRANK_AGENT_VORSTUFE=2`), Immortal: "the only thing the thinker may access is the world model, and seeing how
+    what is said acts on him and his world and what it means". The thinker's whole prompt is the WORLD MODEL the Vorstufe
+    builds: laws (harness rules verbatim, memory-tool line removed), self (state, GRID), world (chosen rows as structured
+    records copied mechanically, never rewritten; model-written facts tagged FACT/OBSERVATION/PROPOSAL/EFFECT/AUTHORITY, kept
+    apart as in EntityOS law G5; contested subjects as parallel readings, none chosen, law G1), possibility space, known /
+    unknown, the message verbatim, and what it does to him and his world (touches, changes, for him, meaning, effect gate).
+    The thinker's recall and RL2 memory tools are off: memory reaches him only through the world model (one revision via
+    `NEED_BETTER_PACKAGE:`). Shell tools stay: they are how he acts on the world. No raw TITAN-MX, kontext, identity or
+    oracle text reaches the thinker. The EntityOS world-model store (wiki.db, `unterbau/weltmodell.py`) is not on this machine;
+    only its laws G1/G5 are carried over.
+  - OMNI-BRAIN link: new endpoints `POST /api/waehle` (OMNI ranks a caller's allowed models for one class with its own
+    Thompson ranking and breaker) and `POST /api/lerne` (outside outcomes into its class stats, half weight). Strength floor per
+    role, because OMNI's probes saturate (strong and small models both ~1.0): Vorstufe {nemotron-3-ultra-550b, mistral-large-4-1t,
+    kimi-k3.1-pro, kimi-k3}; thinker {nemotron-3-ultra-550b, kimi-k3, nemotron-3-super-120b} (the strong NVIDIA models Crush runs).
+    Class per task is mechanical (tool if the Vorstufe picked an effect tool, long, code, de, reason). Every Vorstufe call and
+    every thinker task reports its outcome back to OMNI.
+- Tasks: 60 fresh private memory tasks, seed "m3e-2026-W48", excluding every task used before (m3, m3b, m3c, m3d); same
+  generator and checker. Arms: **on** and **vorstufe2**. Arm-major order, 4 workers.
+- What the contrast measures: the full stack (prompt AND model choice change together: `on` uses the normal free chain with
+  weaker fallbacks). It does not separate prompt from model; that is a later test if this one rejects H0.
+- H0: pass(vorstufe2) - pass(on) <= 0. Rejected only if the paired-bootstrap CI lower bound (n=10000, seed 0) is above 0.
+  One look, no reruns. Recorded too: Vorstufe ms and rounds, OMNI pick and class per task, the model that actually answered,
+  GRID winner/ABSTAIN rate, EntityOS hyperposition count, invented ids, chosen-row hit rate (private join, aggregate only),
+  lessons written, M8.
+- Reference only (other tasks, not a contrast): MG-M3-003 (22b) vorstufe 0.483 vs on 0.083; oracle_struct 0.583 (21b).
+- Live files at freeze (sha256 prefix): vorstufe.py b0521d45, frank_agent.py 93f5ee4d, vorstufe_sinne.py 64d77762, titan_claude
+  hook.py 779178a7. Canary fixes before the freeze, from one dry canary: list answers in the impact fields are joined; memory
+  tools are not listed as expected tools in mode 2; status words, German participles and machine names are not contested subjects. A live canary then crashed on the summary line after a correct answer (manifest entries without a state); fixed.
