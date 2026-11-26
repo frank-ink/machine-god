@@ -1151,3 +1151,36 @@ model that fits the task, fully wired".
 - Live files at freeze (sha256 prefix): vorstufe.py b0521d45, frank_agent.py 93f5ee4d, vorstufe_sinne.py 64d77762, titan_claude
   hook.py 779178a7. Canary fixes before the freeze, from one dry canary: list answers in the impact fields are joined; memory
   tools are not listed as expected tools in mode 2; status words, German participles and machine names are not contested subjects. A live canary then crashed on the summary line after a correct answer (manifest entries without a state); fixed.
+
+## 23b. RESULT MG-M3-004 (run m3e-20261127, 60 fresh private memory tasks x 2 arms, one look, 2026-11-27)
+| arm | pass | rate | mean wall s | Brier (M8) |
+|---|---|---|---|---|
+| on | 9/60 | 0.150 | 42 | 0.513 |
+| vorstufe2 | 21/60 | 0.350 | 349 | 0.315 |
+
+Paired bootstrap (n=10000, seed 0): vorstufe2-on +0.200 [0.083, 0.317].
+- Reading by the frozen rule of 23: the CI lower bound 0.083 is above 0, so **H0 is rejected**: the full stack (world model as
+  the thinker's only view, GRID/TITAN-MX/EntityOS through the Vorstufe, OMNI-BRAIN model choice) beats the plain stack on these
+  tasks. As preregistered, this does not separate the prompt from the model.
+- Timeouts: 21 of the 60 vorstufe2 runs hit the 600 s per-task limit (rc 124) and count as failures under the frozen rule;
+  `on` had none. Of the 39 vorstufe2 runs that finished, 21 passed (0.54).
+- Deviation, found after the freeze: two models in the frozen floors (moonshotai/kimi-k3, nvidia/nemotron-3-super-120b-a12b)
+  were retired by NVIDIA (HTTP 410). Their successors were not added on this machine before the run. In the 36 finished runs
+  whose log could be joined, OMNI picked nemotron-3-ultra-550b every time and ultra answered every time, so the retired models
+  were never used there; which model the timed-out runs were on is not recorded.
+- Recorded diagnostics (aggregate; the row join is private):
+  - The pre-stage took median 151 s (mean 172 s, max 506 s) over the 45 runs that stored a Vorstufe turn; the other 15 were
+    killed before it did. In 22b it was median 93 s: the GRID and TITAN-MX senses add time.
+  - Rounds: 43 with reflection, 2 with round 1 only. Outcomes: 39 ok, 3 asked for a better package, 3 none recorded.
+    Self-queries in 43 of 45. Vorstufe model: nemotron-3-ultra-550b in all 45.
+  - OMNI: class `tool` and pick nemotron-3-ultra-550b in all 36 joined finished runs, OMNI state ok in all.
+  - GRID: the Vorstufe's self state names the GRID in 43 of 45 turns; the GRID abstained in 39 and a winner cell is named in 30.
+  - EntityOS hyperposition: 0 contested subjects (its knowledge store is empty on this machine, as declared in 23).
+  - Invented ids: 0. Chosen items per task: 1 in 27, 2 in 12, 3 in 4, none in 2.
+  - The task's own stored row was chosen in 43 of 45 (2 not retrieved). Of those 43 the thinker passed 20; `on` passed 6 of
+    the same 43.
+  - Lessons written: 1 (22b: 0).
+  - M8: the predictor is less overconfident with the full stack (0.315) than with `on` (0.513).
+- Reference only (other tasks, not a contrast): mode 1 in 22b reached 0.483; mode 2 here 0.350 overall, 0.54 on finished runs.
+- Consequence: the time budget is now the main loss (21/60). The next lever is a faster pre-stage, or a preregistered test
+  whose limit fits the stack. A test with the same model on both arms would separate prompt from model.

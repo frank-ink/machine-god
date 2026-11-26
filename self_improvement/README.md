@@ -31,6 +31,8 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
 - M3 memory, later runs (DESIGN 21b, 22b; 60 fresh private tasks each): the exact stored row as a labelled record lifts
   pass from 0.15 to 0.583 (oracle_struct), as raw context only to 0.25; the Vorstufe pre-stage entity (retrieval coupled with
   reflection) reaches 0.483 vs 0.083 for the plain stack, +0.400 [0.283, 0.533]; it chose the task's own row in 58/60.
+- M3 memory, full stack (DESIGN 23b): world model as the thinker's only view, GRID/TITAN-MX through the Vorstufe,
+  OMNI-BRAIN model choice: 0.350 vs 0.150, +0.200 [0.083, 0.317]; 21/60 runs hit the 600 s limit (0.54 on finished runs).
 - M8: Brier 0.325 (organs on) / 0.224 (off); the predictor is overconfident about memory.
 - Fresh set week 48: live hit@1 0.833, hit@5 0.967, MRR@5 0.882.
 - M4: the 60-move run (bare 1/12, OMEGA 2/12) is withdrawn as a harness verdict (DESIGN 19e): the cap is below the 80-159 moves
