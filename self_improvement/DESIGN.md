@@ -972,3 +972,27 @@ Immortal pointed out that the arc repo's numbers say something else. Checked aga
 (mg_watch.py; MG-RL2-004 due 2026-11-27 14:14, soft rollback) · 4 DONE (mg_report.py) · 5 DONE (19b) · 6 DONE (19b) · 7 REOPENED (19c withdrawn, 19e; MG-M4-002 at 200 moves running) ·
 8 DONE (52 tests; PR #6). Every loop now has a measured baseline. Only Loop 1 also has an automatic proposer, and it has two templates;
 Loops 2-4 are measured but have no proposer yet. That is v2.
+
+## 20. Loop 5 with ChatGPT (Forscher project, new chat "Machine God Review", 2026-11-26 ~19:30): end product, path, tool search
+First outside review since loop 4 (2026-11-25 06:01). Sent: aggregate v1 numbers and the M4 correction only.
+- **Verdict:** v1 shows bounded autonomous optimisation of retrieval, not general self-improvement. The bottleneck is no longer
+  finding memories but turning them into better task results.
+- **End product (proposed targets, none achieved):** >=3 beneficial adoptions/month across >=4 subsystems; fresh-probe hit@1 >=0.90,
+  MRR@5 >=0.93; memory on vs off >=15 pp on >=300 memory-dependent tasks (CI low >5 pp); self-prediction Brier <=0.15, ECE <=0.05 on
+  >=500 tasks; >=20 pp over the bare model on unseen interactive games at matched budget; positive transfer on >=2 of 3 model
+  families; >=30 % fewer tokens or tool calls at equal success; 100 % rejection of unauthorised mutations, rollback <=60 s.
+- **Path:** v1.1 measurement repair (M4 at matched budgets, fresh one-shot audit shards, independent gate review) -> v2 functional
+  memory -> v3 metacognition -> v4 adaptive reasoning -> v5 proposers for all subsystems -> v6 cross-model transfer -> v7 90 days
+  unattended. Stop: reusing the same audit set, optimising MRR as the main goal, comparing arms at unequal budgets.
+- **Next experiment, highest priority:** M3 with four arms (memory off, normal retrieval, oracle retrieval, oracle + structured
+  injection) to tell retrieval failure from context-use failure. M4 at 60/100/200/400 moves with success curves. M8 calibrated on
+  separate data (Platt/isotonic) against the prevalence baseline. RL2 v43 still needs untouched time-later data.
+- **Tools (all 16 checked with the GitHub API by the laptop, 2026-11-26):** ADOPT inspect_ai (3342 stars, MIT, pushed 2026-11-26),
+  arch (1696, licence NOASSERTION: check before use), ARC-AGI-3-Agents (338, MIT), arc-agi-3-benchmarking (58, MIT), SWE-bench (6254,
+  MIT). TRY dgm (2547, Apache-2.0, last push 2025-08), SICA self_improving_coding_agent (427, MIT, 2025-04), ADAS (1671, Apache-2.0,
+  2025-01), LightGBM (19016, MIT), sentence-transformers (19307, Apache-2.0), mem0 (69498, Apache-2.0), graphiti (33109, Apache-2.0),
+  calibration-framework/netcal (381, Apache-2.0), verified_calibration (155, MIT, 2022), SWE-agent (20873, MIT). SKIP letta as a full
+  framework (25559, Apache-2.0).
+- **Laptop's own GitHub search, added (ChatGPT's list missed them):** LongMemEval (xiaowu0162, 1245 stars, MIT), a ready benchmark for
+  long-term memory and the natural set for the four-arm M3; agent-memory-benchmark (vectorize-io, 172); reef (Human-Agent-Society,
+  7621, Apache-2.0) and HyperAgents (facebookresearch, 2933) for self-improving agents. Not yet read or run: metadata only.
