@@ -29,6 +29,7 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
 - M3: memory on vs off, 30 tasks: real_task_memory_delta +0.033 [0.000, 0.100]; code 13/15 both arms, memory tasks 1/15 vs 0/15.
 - M8: Brier 0.325 (organs on) / 0.224 (off); the predictor is overconfident about memory.
 - Fresh set week 48: live hit@1 0.833, hit@5 0.967, MRR@5 0.882.
+- M4: ARC games, same free model, 60 moves: bare 1/12, OMEGA harness 2/12 (better on 1 of 4 games): harness benefit not shown.
 
 ## Layout
 `DESIGN.md` plan, preregistrations and results · `INVENTORY.md` system inventory · `experiments/` trial scripts and result

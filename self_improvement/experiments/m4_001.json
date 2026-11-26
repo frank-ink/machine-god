@@ -1,0 +1,74 @@
+{
+ "model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "max_moves": 60,
+ "seeds": {
+  "a": 100,
+  "b": 101,
+  "c": 102,
+  "d": 103
+ },
+ "arms": {
+  "bare": {
+   "games": {
+    "a": {
+     "levels_solved": 0,
+     "turns": 60,
+     "status": "play",
+     "cost_usd": 0.0
+    },
+    "b": {
+     "levels_solved": 0,
+     "turns": 60,
+     "status": "play",
+     "cost_usd": 0.0
+    },
+    "c": {
+     "levels_solved": 0,
+     "turns": 60,
+     "status": "play",
+     "cost_usd": 0.0
+    },
+    "d": {
+     "levels_solved": 1,
+     "turns": 48,
+     "status": "dead",
+     "cost_usd": 0.0
+    }
+   },
+   "total": 1,
+   "cost_usd": 0.0
+  },
+  "harness": {
+   "games": {
+    "a": {
+     "levels_solved": 0,
+     "turns": 60,
+     "status": "play",
+     "cost_usd": 0.0
+    },
+    "b": {
+     "levels_solved": 0,
+     "turns": 60,
+     "status": "play",
+     "cost_usd": 0.0
+    },
+    "c": {
+     "levels_solved": 1,
+     "turns": 30,
+     "status": "dead",
+     "cost_usd": 0.0
+    },
+    "d": {
+     "levels_solved": 1,
+     "turns": 32,
+     "status": "dead",
+     "cost_usd": 0.0
+    }
+   },
+   "total": 2,
+   "cost_usd": 0.0
+  }
+ },
+ "harness_better_games": 1,
+ "harness_helps": false
+}

@@ -944,3 +944,16 @@ The NON-blind sessions were never a test set for any config (selection saw only 
 - M8 self-model (free pool predicts p(success) before each run): Brier 0.325 with organs on, 0.224 off (0.25 = always saying 0.5).
   The predictor is overconfident about memory: on memory tasks Brier 0.544 on vs 0.342 off. Loop 4 target: get Brier below 0.25.
 - Mean agent wall time 40.5 s on, 57.7 s off.
+
+### 19c. RESULT MG-M4-001 harness vs bare (2026-11-26 14:26-16:40, rules frozen in 19a)
+- Same model both arms (nemotron-3-ultra, free), 60 moves per game, cost $0.00 in both arms.
+- Levels solved: bare a 0, b 0, c 0, d 1 = **1/12**; harness (OMEGA) a 0, b 0, c 1, d 1 = **2/12**. The harness is better on 1 of 4 games.
+- Against the frozen rule (better on at least 3 of 4 games): **harness benefit NOT shown**. This matches the arc repo's earlier finding
+  that the model, not the harness, moves the score. n = 4 games with bounded moves: a measurement, not a verdict. Loop 3's target is
+  now the harness parts that ablation shows hurt or do nothing.
+
+### 19d. v1 status against section 19 (2026-11-26 ~16:45)
+1 DONE (17t, 18e) · 2 DONE (mg_fresh.py, weekly inside the cycle; a separate timer was refused by the permission layer) · 3 DONE
+(mg_watch.py; MG-RL2-004 due 2026-11-27 14:14, soft rollback) · 4 DONE (mg_report.py) · 5 DONE (19b) · 6 DONE (19b) · 7 DONE (19c) ·
+8 DONE (52 tests; PR #6). Every loop now has a measured baseline. Only Loop 1 also has an automatic proposer, and it has two templates;
+Loops 2-4 are measured but have no proposer yet. That is v2.
