@@ -194,7 +194,7 @@ def tick(root, udb, state, dry):
         return skipped("KILL file exists")
     if os.getloadavg()[0] > float(os.getenv("MG_MAX_LOAD", "14")):
         return skipped("load above MG_MAX_LOAD")
-    if available_kib() < 3 * 1024 * 1024:
+    if available_kib() < float(os.getenv("MG_MIN_AVAIL_KIB", str(3 * 1024 * 1024))):
         return skipped("MemAvailable below 3 GiB")
     with loop_lock(state) as acquired:
         if not acquired:

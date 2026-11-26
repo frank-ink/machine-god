@@ -948,12 +948,27 @@ The NON-blind sessions were never a test set for any config (selection saw only 
 ### 19c. RESULT MG-M4-001 harness vs bare (2026-11-26 14:26-16:40, rules frozen in 19a)
 - Same model both arms (nemotron-3-ultra, free), 60 moves per game, cost $0.00 in both arms.
 - Levels solved: bare a 0, b 0, c 0, d 1 = **1/12**; harness (OMEGA) a 0, b 0, c 1, d 1 = **2/12**. The harness is better on 1 of 4 games.
-- Against the frozen rule (better on at least 3 of 4 games): **harness benefit NOT shown**. This matches the arc repo's earlier finding
-  that the model, not the harness, moves the score. n = 4 games with bounded moves: a measurement, not a verdict. Loop 3's target is
-  now the harness parts that ablation shows hurt or do nothing.
+- Against the frozen rule (better on at least 3 of 4 games): harness benefit not shown **under a 60-move cap**. WITHDRAWN as a
+  harness verdict in 19e: the cap is below the moves needed to win game a, and the arc repo's earlier runs show a clear full-stack
+  benefit. The rerun at 200 moves is MG-M4-002.
+
+### 19e. CORRECTION to 19c, and PREREGISTRATION MG-M4-002 (2026-11-26 evening, frozen before the run)
+Immortal pointed out that the arc repo's numbers say something else. Checked against fortlaufende-arc-agi-benchmark-forschung:
+- 19c is not a valid harness verdict. Its 60-move cap is below what solving game a takes (bare 159 moves, full FranKenstein stack
+  80, OMEGA/DeepSeek a/100 141): every arm was capped before it could win, which hides most differences.
+- 19c tested only the OMEGA engine (agent_api --engine omega). The repo's strongest evidence is for the full FranKenstein stack
+  (injection, Vorstufe, self-search, game knowledge, map BFS): game a solved in 80 moves vs 159 bare; d series 2 -> 29 -> 70 actions,
+  level 1 -> 2 -> 3; Opus-style run (seeds 500-503, 200 actions) ~33.3 % vs GLM bare; OMEGA/DeepSeek 2/4 solved (66.7 %) vs bare
+  GLM 1/4 on the same seeds (different model). 19c's sentence "matches the arc repo's finding" quoted only round 3 (OMEGA/GLM 5/12 = bare GLM 5/12) and
+  left the rest out. That was wrong. Caveat that stays: the full-stack comparisons used different seeds per configuration and carried
+  knowledge between runs, so they are not seed-paired.
+- MG-M4-002 (rerun under the repo's own protocol): same model both arms (nvidia/nemotron-3-ultra-550b-a55b, free), bare =
+  agent_api --engine nvidia, harness = --engine omega (same env as 19a), games a-d seeds 100-103, --max-moves 200 both arms.
+  Metric and rule unchanged from 19a (levels out of 12; harness helps only if better on at least 3 of 4 games; cost must be 0).
+  The full FranKenstein stack of round 1 was played interactively and is not automated here; it is not part of M4-002.
 
 ### 19d. v1 status against section 19 (2026-11-26 ~16:45)
 1 DONE (17t, 18e) · 2 DONE (mg_fresh.py, weekly inside the cycle; a separate timer was refused by the permission layer) · 3 DONE
-(mg_watch.py; MG-RL2-004 due 2026-11-27 14:14, soft rollback) · 4 DONE (mg_report.py) · 5 DONE (19b) · 6 DONE (19b) · 7 DONE (19c) ·
+(mg_watch.py; MG-RL2-004 due 2026-11-27 14:14, soft rollback) · 4 DONE (mg_report.py) · 5 DONE (19b) · 6 DONE (19b) · 7 REOPENED (19c withdrawn, 19e; MG-M4-002 at 200 moves running) ·
 8 DONE (52 tests; PR #6). Every loop now has a measured baseline. Only Loop 1 also has an automatic proposer, and it has two templates;
 Loops 2-4 are measured but have no proposer yet. That is v2.

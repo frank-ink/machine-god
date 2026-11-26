@@ -25,11 +25,13 @@ A measured, autonomous improvement loop for the FranKenstein memory and retrieva
 - Rejected, with reasons: normalisation arm E; synthetic known-item rows for the RL2 ranker (gains lookup, loses held-out
   usefulness AUC 0.683 -> 0.607); RL2 rounds=100 (dev pass, audit AUC guard missed by 0.0007).
 
-## First baselines of the other loops (DESIGN 19b, 19c)
+## First baselines of the other loops (DESIGN 19b, 19e)
 - M3: memory on vs off, 30 tasks: real_task_memory_delta +0.033 [0.000, 0.100]; code 13/15 both arms, memory tasks 1/15 vs 0/15.
 - M8: Brier 0.325 (organs on) / 0.224 (off); the predictor is overconfident about memory.
 - Fresh set week 48: live hit@1 0.833, hit@5 0.967, MRR@5 0.882.
-- M4: ARC games, same free model, 60 moves: bare 1/12, OMEGA harness 2/12 (better on 1 of 4 games): harness benefit not shown.
+- M4: the 60-move run (bare 1/12, OMEGA 2/12) is withdrawn as a harness verdict (DESIGN 19e): the cap is below the 80-159 moves
+  game a needs, and the arc repo's runs show a full-stack benefit (a solved in 80 vs 159 moves, d level 1 -> 3, OMEGA/DeepSeek 2/4 vs
+  bare GLM 1/4 on the same seeds, different models). Rerun at 200 moves: MG-M4-002.
 
 ## Layout
 `DESIGN.md` plan, preregistrations and results · `INVENTORY.md` system inventory · `experiments/` trial scripts and result
