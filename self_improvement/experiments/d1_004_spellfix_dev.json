@@ -1,0 +1,164 @@
+{
+ "tail_P1": {
+  "n": 85,
+  "BD": 0.8112,
+  "E": 0.8112,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "tail_P2": {
+  "n": 85,
+  "BD": 0.112,
+  "E": 0.112,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "tail_P3": {
+  "n": 85,
+  "BD": 0.0929,
+  "E": 0.751,
+  "E_minus_BD": [
+   0.658,
+   0.5624,
+   0.749
+  ],
+  "better": 63,
+  "worse": 0,
+  "rule": "ci_low>0",
+  "pass": true
+ },
+ "tail_P4": {
+  "n": 85,
+  "BD": 0.0137,
+  "E": 0.0137,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P1": {
+  "n": 107,
+  "BD": 0.7534,
+  "E": 0.7534,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P2": {
+  "n": 107,
+  "BD": 0.9058,
+  "E": 0.9058,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P3": {
+  "n": 107,
+  "BD": 0.8064,
+  "E": 0.903,
+  "E_minus_BD": [
+   0.0966,
+   0.0526,
+   0.1467
+  ],
+  "better": 17,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P4": {
+  "n": 107,
+  "BD": 0.6178,
+  "E": 0.6178,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "tail_P0": {
+  "n": 85,
+  "BD": 0.8373,
+  "E": 0.8373,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "ordinary_P0": {
+  "n": 107,
+  "BD": 0.9076,
+  "E": 0.9076,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "legacy_P0": {
+  "n": 200,
+  "BD": 0.6455,
+  "E": 0.6455,
+  "E_minus_BD": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "better": 0,
+  "worse": 0,
+  "rule": "ci_low>=-0.02",
+  "pass": true
+ },
+ "latency_p95_ms": {
+  "A_OR": 84.2,
+  "B_D": 88.8,
+  "E": 85.4
+ },
+ "latency_ratio_E_over_A": 1.014,
+ "latency_pass": true,
+ "ALL_PASS": true
+}

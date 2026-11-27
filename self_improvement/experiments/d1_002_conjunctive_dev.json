@@ -1,0 +1,109 @@
+{
+ "tail_P1": {
+  "n": 85,
+  "B": 0.06,
+  "D": 0.8112,
+  "D_minus_B": [
+   0.7512,
+   0.6675,
+   0.831
+  ],
+  "worse": 0,
+  "better": 72,
+  "pass": true
+ },
+ "tail_P2": {
+  "n": 85,
+  "B": 0.112,
+  "D": 0.112,
+  "D_minus_B": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "worse": 0,
+  "better": 0,
+  "pass": true
+ },
+ "tail_P3": {
+  "n": 85,
+  "B": 0.0929,
+  "D": 0.0929,
+  "D_minus_B": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "worse": 0,
+  "better": 0,
+  "pass": true
+ },
+ "tail_P4": {
+  "n": 85,
+  "B": 0.0137,
+  "D": 0.0137,
+  "D_minus_B": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "worse": 0,
+  "better": 0,
+  "pass": true
+ },
+ "ordinary_P1": {
+  "n": 107,
+  "B": 0.7319,
+  "D": 0.7534,
+  "D_minus_B": [
+   0.0215,
+   0.0009,
+   0.0472
+  ],
+  "worse": 1,
+  "better": 5,
+  "pass": true
+ },
+ "ordinary_P2": {
+  "n": 107,
+  "B": 0.9058,
+  "D": 0.9058,
+  "D_minus_B": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "worse": 0,
+  "better": 0,
+  "pass": true
+ },
+ "ordinary_P3": {
+  "n": 107,
+  "B": 0.8064,
+  "D": 0.8064,
+  "D_minus_B": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "worse": 0,
+  "better": 0,
+  "pass": true
+ },
+ "ordinary_P4": {
+  "n": 107,
+  "B": 0.6201,
+  "D": 0.6178,
+  "D_minus_B": [
+   -0.0023,
+   -0.007,
+   0.0
+  ],
+  "worse": 1,
+  "better": 0,
+  "pass": true
+ },
+ "p95_ms_B": 131.4,
+ "p95_ms_D": 129.2,
+ "ALL_PASS": true
+}

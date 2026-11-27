@@ -1,0 +1,1 @@
+status: NOT team-accepted. Laptop spec check 13/13 (scratchpad check_mx02.py). The team's own tests were wrong 3/3 tries (word length >= 5 rule, duplicate dict keys).

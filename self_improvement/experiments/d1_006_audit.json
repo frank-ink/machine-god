@@ -1,0 +1,97 @@
+{
+ "T1_tail_F_vs_A": {
+  "n": 59,
+  "base": 0.0,
+  "cand": 0.8311,
+  "delta": 0.8311,
+  "ci": [
+   0.7429,
+   0.9124
+  ],
+  "better": 53,
+  "worse": 0,
+  "decide_v2": {
+   "decision": "PASS",
+   "reasons": [],
+   "contract": "v2",
+   "min_effect": 0.1,
+   "ci_low": 0.7429378531073446,
+   "ci_high": 0.9124293785310734
+  },
+  "original_rule_delta>=0.10_ci_low>0": true
+ },
+ "T2_tailP3_F_vs_BD": {
+  "n": 59,
+  "base": 0.141,
+  "cand": 0.752,
+  "delta": 0.611,
+  "ci": [
+   0.4929,
+   0.7237
+  ],
+  "better": 43,
+  "worse": 2,
+  "decide_v2": {
+   "decision": "PASS",
+   "reasons": [],
+   "contract": "v2",
+   "min_effect": 0.05,
+   "ci_low": 0.4929378531073446,
+   "ci_high": 0.7237288135593221
+  },
+  "original_rule_delta>=0.10_ci_low>0": null
+ },
+ "guard_ordinary_F_vs_A": {
+  "n": 63,
+  "base": 0.8683,
+  "cand": 0.8783,
+  "delta": 0.0101,
+  "ci": [
+   0.0,
+   0.0278
+  ],
+  "better": 3,
+  "worse": 0
+ },
+ "guard_ordinaryP3_F_vs_BD": {
+  "n": 63,
+  "base": 0.7876,
+  "cand": 0.8704,
+  "delta": 0.0828,
+  "ci": [
+   0.0106,
+   0.1635
+  ],
+  "better": 11,
+  "worse": 3
+ },
+ "latency_p95_ms": {
+  "A_OR": 76.9,
+  "F": 96.1
+ },
+ "restart_identical": true,
+ "index_size_ratio": 1.049,
+ "guards": [
+  {
+   "name": "ordinary_F_vs_A_ci_low>=-0.02",
+   "passed": true
+  },
+  {
+   "name": "ordinary_P3_F_vs_BD_ci_low>=-0.02",
+   "passed": true
+  },
+  {
+   "name": "p95_F<=1.25xA",
+   "passed": true
+  },
+  {
+   "name": "restart_identical",
+   "passed": true
+  },
+  {
+   "name": "index_size_B/A<=1.5",
+   "passed": true
+  }
+ ],
+ "overall": "PASS"
+}

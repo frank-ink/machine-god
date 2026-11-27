@@ -1,0 +1,74 @@
+{
+  "by_arm": {
+    "on": {
+      "n": 60,
+      "pass_rate": 0.15,
+      "brier_score": 0.51323,
+      "mean_wall_s": 41.56860753265064
+    },
+    "off": {
+      "n": 0,
+      "pass_rate": null,
+      "brier_score": null,
+      "mean_wall_s": null
+    },
+    "vorstufe2": {
+      "n": 60,
+      "pass_rate": 0.35,
+      "brier_score": 0.31475166666666665,
+      "mean_wall_s": 348.55093766854844
+    }
+  },
+  "by_kind": {
+    "code": {
+      "on": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe2": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      }
+    },
+    "memory": {
+      "on": {
+        "n": 60,
+        "pass_rate": 0.15,
+        "brier_score": 0.51323,
+        "mean_wall_s": 41.56860753265064
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "vorstufe2": {
+        "n": 60,
+        "pass_rate": 0.35,
+        "brier_score": 0.31475166666666665,
+        "mean_wall_s": 348.55093766854844
+      }
+    }
+  },
+  "real_task_memory_delta": null,
+  "contrasts": {
+    "on-off": null,
+    "vorstufe2-on": {
+      "delta": 0.2,
+      "ci_low": 0.08333333333333333,
+      "ci_high": 0.31666666666666665,
+      "n_items": 60
+    }
+  }
+}

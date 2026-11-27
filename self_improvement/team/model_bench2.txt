@@ -1,0 +1,13 @@
+moonshotai/kimi-k3.1-pro                   ok=False repaired=False ms=310408 lines=0 err='empty ClayCode'
+    
+mistralai/mistral-large-4-1t-a52b          ERROR HTTP -1: TimeoutError
+nvidia/nemotron-3-ultra-550b-a55b          ok=False repaired=False ms=18566 lines=0 err='empty ClayCode'
+    
+z-ai/glm-5.3-flash                         ok=False repaired=False ms=359295 lines=0 err='empty ClayCode'
+    
+minimaxai/minimax-m3.1-flash               ok=False repaired=False ms=56284 lines=0 err='empty ClayCode'
+    
+nvidia/nemotron-3.5-lightning-30b-a3b      ok=False repaired=False ms=19156 lines=0 err='empty ClayCode'
+    
+stepfun-ai/step-5-preview                  ok=False repaired=False ms=179250 lines=0 err='empty ClayCode'
+    

@@ -1,0 +1,24 @@
+{
+  "PASS": false,
+  "pooled": {
+    "delta": -0.0007697240142181339,
+    "ci_low": -0.0015608068690508051,
+    "ci_high": 0.00012006815068213153,
+    "n_items": 34
+  },
+  "auc_old": 0.6856175990518469,
+  "auc_new": 0.6854070716416979,
+  "n_sessions": 34,
+  "n_rows": 939,
+  "params": {
+    "rounds": 300,
+    "minleaf": 70,
+    "lr": 0.25
+  },
+  "base": {
+    "rounds": 300,
+    "minleaf": 55,
+    "lr": 0.3
+  },
+  "fit_accepted": true
+}

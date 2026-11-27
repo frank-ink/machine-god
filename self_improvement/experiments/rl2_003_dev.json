@@ -1,0 +1,16 @@
+{
+ "0.015": {
+  "dev_pooled": {
+   "delta": 0.2512954369682908,
+   "ci_low": 0.22743619489559166,
+   "ci_high": 0.2751933488012374,
+   "n_items": 862
+  },
+  "auc_old": 0.6275461220189427,
+  "auc_new": 0.6194225007408057,
+  "n_dev": 431,
+  "n_train_docs": 63,
+  "fit_accepted": true,
+  "qualifies": true
+ }
+}

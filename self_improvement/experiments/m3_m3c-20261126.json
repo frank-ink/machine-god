@@ -1,0 +1,120 @@
+{
+  "by_arm": {
+    "on": {
+      "n": 60,
+      "pass_rate": 0.15,
+      "brier_score": 0.5885283333333333,
+      "mean_wall_s": 44.70155317669851
+    },
+    "off": {
+      "n": 60,
+      "pass_rate": 0.08333333333333333,
+      "brier_score": 0.249055,
+      "mean_wall_s": 191.14778277453442
+    },
+    "oracle_raw": {
+      "n": 60,
+      "pass_rate": 0.25,
+      "brier_score": 0.5035483333333334,
+      "mean_wall_s": 43.79838661683267
+    },
+    "oracle_struct": {
+      "n": 60,
+      "pass_rate": 0.5833333333333334,
+      "brier_score": 0.5352333333333333,
+      "mean_wall_s": 49.44591595500096
+    }
+  },
+  "by_kind": {
+    "code": {
+      "on": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "off": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "oracle_raw": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      },
+      "oracle_struct": {
+        "n": 0,
+        "pass_rate": null,
+        "brier_score": null,
+        "mean_wall_s": null
+      }
+    },
+    "memory": {
+      "on": {
+        "n": 60,
+        "pass_rate": 0.15,
+        "brier_score": 0.5885283333333333,
+        "mean_wall_s": 44.70155317669851
+      },
+      "off": {
+        "n": 60,
+        "pass_rate": 0.08333333333333333,
+        "brier_score": 0.249055,
+        "mean_wall_s": 191.14778277453442
+      },
+      "oracle_raw": {
+        "n": 60,
+        "pass_rate": 0.25,
+        "brier_score": 0.5035483333333334,
+        "mean_wall_s": 43.79838661683267
+      },
+      "oracle_struct": {
+        "n": 60,
+        "pass_rate": 0.5833333333333334,
+        "brier_score": 0.5352333333333333,
+        "mean_wall_s": 49.44591595500096
+      }
+    }
+  },
+  "real_task_memory_delta": {
+    "delta": 0.06666666666666667,
+    "ci_low": -0.05,
+    "ci_high": 0.18333333333333332,
+    "n_items": 60
+  },
+  "contrasts": {
+    "on-off": {
+      "delta": 0.06666666666666667,
+      "ci_low": -0.05,
+      "ci_high": 0.18333333333333332,
+      "n_items": 60
+    },
+    "oracle_raw-off": {
+      "delta": 0.16666666666666666,
+      "ci_low": 0.05,
+      "ci_high": 0.2833333333333333,
+      "n_items": 60
+    },
+    "oracle_struct-off": {
+      "delta": 0.5,
+      "ci_low": 0.36666666666666664,
+      "ci_high": 0.6333333333333333,
+      "n_items": 60
+    },
+    "oracle_raw-on": {
+      "delta": 0.1,
+      "ci_low": 0,
+      "ci_high": 0.2,
+      "n_items": 60
+    },
+    "oracle_struct-oracle_raw": {
+      "delta": 0.3333333333333333,
+      "ci_low": 0.21666666666666667,
+      "ci_high": 0.45,
+      "n_items": 60
+    }
+  }
+}

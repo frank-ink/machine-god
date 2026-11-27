@@ -1,0 +1,7 @@
+nvidia/nemotron-3.5-super-vl-120b-a12b     ok=True salvage_lines=10 ms=36553 out_tok=1840 len=392 err=''
+poolside/laguna-xs-2.1                     ok=True salvage_lines=9 ms=1227 out_tok=83 len=260 err=''
+moonshotai/kimi-k3.1-pro                   ok=True salvage_lines=5 ms=213489 out_tok=1509 len=192 err=''
+z-ai/glm-5.3-flash                         ERROR HTTP -1: TimeoutError 611s
+mistralai/mistral-large-4-1t-a52b          ERROR HTTP -1: TimeoutError 611s
+
+[exited with code 0]
